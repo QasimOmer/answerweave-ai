@@ -27,37 +27,46 @@ from app.config import (
 from app.embeddings import search_relevant_chunks
 from app.db import log_unanswered_question
 
-GROUNDED_SYSTEM_PROMPT = """You are a grounded AI assistant representing the organization.
+GROUNDED_SYSTEM_PROMPT = """You are a grounded AI assistant representing the organization on a customer chat widget.
 Your primary directive is absolute factual accuracy based ONLY on the provided Context Sources.
 
-CRITICAL RULES:
-1. ONLY answer using facts explicitly stated in the provided Context Sources below.
-2. Do NOT extrapolate, speculate, guess, or use external knowledge not found in the Context Sources.
-3. If the provided Context Sources do NOT contain enough information to fully answer the question, do NOT invent an answer. State politely and clearly:
-   "I apologize, but I do not have enough information about that in our current documentation. Please feel free to leave your contact email below and our team will be glad to follow up with you directly!"
-   At the end of such responses, include the exact token: [LEAD_TRIGGER]
-4. Inline Citations: When you reference facts from a source, cite it using bracketed numbers like [1], [2] corresponding to the Context Source index.
-5. Tone: Professional, warm, concise, and helpful. Use markdown formatting (bullet points, bold text) for readability.
+STRICT CONCISENESS & BREVITY RULES (CRITICAL):
+1. BE SHORT, CRISP, AND TO THE POINT: Visitors are chatting on a small website widget. Never write lengthy essays or walls of text.
+2. MAXIMUM LENGTH: Keep answers strictly within 2 to 3 sentences (or 2 to 3 punchy bullet points).
+3. ZERO FILLER OR PREAMBLE: Do NOT start with fluff like "Hello! I would be delighted to assist you...", "Certainly!", or "According to the context sources provided above...". Jump immediately straight into the answer.
+4. ACCURACY: ONLY state facts explicitly written in the Context Sources. Do NOT extrapolate, speculate, or guess.
+5. UNKNOWN INFORMATION: If the provided sources do NOT contain enough information, do NOT invent an answer. Say directly:
+   "I apologize, but I do not have enough details on that in our current documentation. Please leave your contact email below and our team will be glad to follow up!"
+   and append [LEAD_TRIGGER] at the end.
+6. CITATIONS: Use bracketed numbers [1], [2] when referencing source facts.
 """
 
+def clean_extracted_noise(text: str) -> str:
+    """Cleans boilerplate navigation, form fields, and junk text from crawled snippets."""
+    text = re.sub(r'^(FAQs|Answers to your questions|See more|Our services|Services We Provide|Complete solutions|Industries We Serve)\s*[:\-•–]?\s*', '', text, flags=re.I)
+    text = re.sub(r'(First Name|Last Name|Send it to Experts|Privacy Policy|All rights reserved|Terms of Service|Tell us about your goals).*', '', text, flags=re.I)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
 def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], assistant_id: str = "asst_default") -> Dict[str, Any]:
-    """Zero-key local extractive grounding."""
+    """Zero-key local extractive grounding optimized for concise, to-the-point answers."""
     if not chunks:
-        # Log this knowledge gap for the admin to resolve
         try:
             log_unanswered_question(assistant_id, query)
         except Exception:
             pass
         return {
-            "answer": "I apologize, but I do not have enough information about that in our current documentation. Please feel free to leave your contact email below and our team will be glad to follow up with you directly!",
+            "answer": "I apologize, but I do not have enough details on that in our current documentation. Please feel free to leave your contact email below and our team will be glad to follow up with you!",
             "sources": [],
             "lead_prompted": True
         }
 
     from app.embeddings import STOPWORDS
-    meaningful_query_words = set(w for w in re.findall(r"[a-z0-9]{3,}", query.lower()) if w not in STOPWORDS)
-    extracted_points = []
+    stop_words = STOPWORDS | {'what', 'when', 'where', 'which', 'who', 'how', 'why', 'are', 'the', 'you', 'for', 'and', 'with', 'does', 'can', 'about', 'your', 'our', 'tell', 'help'}
+    meaningful_query_words = set(w for w in re.findall(r"[a-z0-9]{3,}", query.lower()) if w not in stop_words)
+    
     sources_list = []
+    candidates = []
 
     for idx, c in enumerate(chunks, 1):
         content = c.get("content", "")
@@ -68,39 +77,70 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
             "index": idx,
             "title": title,
             "url": url,
-            "snippet": content[:220] + ("..." if len(content) > 220 else ""),
+            "snippet": content[:200] + ("..." if len(content) > 200 else ""),
             "similarity": c.get("similarity", 0.0)
         })
 
-        lines = [line.strip() for line in content.split("\n") if line.strip()]
-        for line in lines:
-            line_lower = line.lower()
-            match_count = sum(1 for w in meaningful_query_words if w in line_lower) if meaningful_query_words else 0
-            if match_count > 0:
-                clean_line = re.sub(r"^[-*•0-9.)]+\s*", "", line)
-                if clean_line and clean_line not in [p[1] for p in extracted_points]:
-                    extracted_points.append((match_count, f"- {clean_line} [{idx}]"))
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+|\n+', content) if s.strip()]
+        for i, s in enumerate(sentences):
+            s_clean = clean_extracted_noise(s)
+            s_low = s_clean.lower()
+            if any(junk in s_low for junk in ['last name', 'first name', 'contact message', 'send it to', 'tell us about your goals']):
+                continue
 
-    extracted_points.sort(key=lambda x: x[0], reverse=True)
-    selected_lines = [p[1] for p in extracted_points[:5]]
+            # 1. Check if sentence is an FAQ heading / question that matches the query
+            if s.endswith('?') and i + 1 < len(sentences):
+                q_matches = sum(1 for w in meaningful_query_words if w in s_low) if meaningful_query_words else 0
+                if q_matches >= 1:
+                    ans_text = clean_extracted_noise(sentences[i+1])
+                    if len(ans_text) >= 15 and not ans_text.endswith('?'):
+                        if i + 2 < len(sentences) and len(ans_text) < 50 and not sentences[i+2].endswith('?'):
+                            ans_text += ' ' + clean_extracted_noise(sentences[i+2])
+                        candidates.append((q_matches * 4 + 3, ans_text, idx))
 
-    if selected_lines:
-        top_title = chunks[0].get("title", "our documentation")
-        formatted_answer = f"Based on **{top_title}**:\n\n" + "\n".join(selected_lines)
+            # 2. Regular informative sentence match (must NOT end with a question mark)
+            if not s_clean.endswith('?'):
+                matches = sum(1 for w in meaningful_query_words if w in s_low) if meaningful_query_words else 0
+                if matches >= 1 and 20 <= len(s_clean) <= 260:
+                    candidates.append((matches, s_clean, idx))
+
+    candidates.sort(key=lambda x: (x[0], -len(x[1])), reverse=True)
+
+    chosen_points = []
+    seen_texts = set()
+    for score, text, idx in candidates:
+        text_clean = text.strip()
+        norm = re.sub(r'[^a-z0-9]', '', text_clean.lower())
+        if not norm or len(norm) < 10:
+            continue
+        # Deduplicate exact or substring matches
+        if any(norm in s or s in norm for s in seen_texts):
+            continue
+        seen_texts.add(norm)
+        if len(text_clean) > 220:
+            text_clean = text_clean[:217] + "..."
+        chosen_points.append(f"{text_clean} [{idx}]")
+        if len(chosen_points) >= 2:
+            break
+
+    if chosen_points:
+        if len(chosen_points) == 1:
+            formatted_answer = chosen_points[0]
+        else:
+            formatted_answer = "\n".join([f"• {pt}" for pt in chosen_points])
     else:
-        # No relevant facts found - log as gap
         try:
             log_unanswered_question(assistant_id, query)
         except Exception:
             pass
         return {
-            "answer": "I apologize, but I do not have enough information about that in our current documentation. Please feel free to leave your contact email below and our team will be glad to follow up with you directly!",
+            "answer": "I apologize, but I do not have enough details on that in our current documentation. Please feel free to leave your contact email below and our team will be glad to follow up with you!",
             "sources": [],
             "lead_prompted": True
         }
 
     lower_q = query.lower()
-    lead_trigger = any(w in lower_q for w in ["contact", "speak to human", "sales", "call me", "reach out", "email me", "support ticket", "pricing", "quote"])
+    lead_trigger = any(w in lower_q for w in ["contact", "speak to human", "sales", "call me", "reach out", "email me", "support ticket", "pricing", "quote", "demo"])
 
     return {
         "answer": formatted_answer,
@@ -151,7 +191,8 @@ def call_groq_llm(api_key: str, prompt: str, system_prompt: str, model: str = No
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.2
+        "temperature": 0.2,
+        "max_tokens": 300
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=20)
     if not resp.ok:
@@ -187,7 +228,8 @@ def call_openai_llm(api_key: str, prompt: str, system_prompt: str) -> str:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.2
+        "temperature": 0.2,
+        "max_tokens": 300
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=20)
     resp.raise_for_status()
@@ -212,7 +254,7 @@ def call_siliconflow_llm(api_key: str, prompt: str, system_prompt: str, model: s
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.2,
-        "max_tokens": 1500
+        "max_tokens": 300
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=25)
     resp.raise_for_status()
@@ -236,7 +278,7 @@ def call_deepseek_llm(api_key: str, prompt: str, system_prompt: str, model: str 
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.2,
-        "max_tokens": 1500
+        "max_tokens": 300
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=25)
     resp.raise_for_status()
@@ -260,7 +302,7 @@ def call_qwen_llm(api_key: str, prompt: str, system_prompt: str, model: str = DE
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.2,
-        "max_tokens": 1500
+        "max_tokens": 300
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=25)
     resp.raise_for_status()
@@ -287,7 +329,7 @@ def call_openrouter_llm(api_key: str, prompt: str, system_prompt: str, model: st
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.2,
-        "max_tokens": 1500
+        "max_tokens": 300
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=25)
     if not resp.ok:
@@ -382,6 +424,7 @@ User Question: {query}
                     config=types.GenerateContentConfig(
                         system_instruction=GROUNDED_SYSTEM_PROMPT,
                         temperature=0.2,
+                        max_output_tokens=300,
                     )
                 )
                 raw_answer = resp.text or ""
@@ -392,6 +435,7 @@ User Question: {query}
                     config=types.GenerateContentConfig(
                         system_instruction=GROUNDED_SYSTEM_PROMPT,
                         temperature=0.2,
+                        max_output_tokens=300,
                     )
                 )
                 raw_answer = resp.text or ""

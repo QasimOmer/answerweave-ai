@@ -195,12 +195,12 @@
             position: fixed !important;
             bottom: 96px !important;
             right: 24px !important;
-            width: 390px !important;
-            height: 620px !important;
-            max-width: calc(100vw - 32px) !important;
-            max-height: calc(100vh - 120px) !important;
+            width: 395px !important;
+            height: 630px !important;
+            max-width: calc(100vw - 36px) !important;
+            max-height: calc(100dvh - 120px) !important;
             background: #ffffff !important;
-            border-radius: 24px !important;
+            border-radius: 22px !important;
             box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.28), 0 4px 16px rgba(0, 0, 0, 0.08) !important;
             display: flex !important;
             flex-direction: column !important;
@@ -359,6 +359,38 @@
             font-size: 13.5px !important;
             line-height: 1.55 !important;
             animation: wfFadeUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+        }
+        .wf-msg-p {
+            margin: 0 0 6px 0 !important;
+            line-height: 1.5 !important;
+        }
+        .wf-msg-p:last-child {
+            margin-bottom: 0 !important;
+        }
+        .wf-msg-list {
+            margin: 6px 0 6px 18px !important;
+            padding: 0 !important;
+            list-style-type: disc !important;
+        }
+        .wf-msg-list li {
+            margin-bottom: 5px !important;
+            line-height: 1.45 !important;
+        }
+        .wf-msg-list li:last-child {
+            margin-bottom: 0 !important;
+        }
+        .wf-citation-inline {
+            display: inline-block !important;
+            background: rgba(99, 102, 241, 0.12) !important;
+            color: #4338ca !important;
+            font-weight: 700 !important;
+            font-size: 11px !important;
+            padding: 1px 5px !important;
+            border-radius: 5px !important;
+            margin: 0 2px !important;
+            vertical-align: middle !important;
         }
         @keyframes wfFadeUp {
             from { opacity: 0; transform: translateY(8px); }
@@ -777,6 +809,189 @@
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1); }
         }
+
+        /* ================= RESPONSIVE STYLES FOR ALL SCREEN SIZES ================= */
+
+        /* Tablets & Foldables (481px to 768px) */
+        @media (max-width: 768px) and (min-width: 641px) {
+            .wf-window {
+                width: 375px !important;
+                max-width: calc(100vw - 28px) !important;
+                height: 580px !important;
+                max-height: calc(100dvh - 100px) !important;
+                bottom: 84px !important;
+                right: 18px !important;
+                border-radius: 20px !important;
+            }
+            .wf-position-left .wf-window {
+                left: 18px !important;
+                right: auto !important;
+            }
+        }
+
+        /* Mobile Phones & Small Handhelds (<= 640px) */
+        @media (max-width: 640px) {
+            .wf-root {
+                bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+                right: max(16px, env(safe-area-inset-right, 16px)) !important;
+            }
+            .wf-position-left {
+                left: max(16px, env(safe-area-inset-left, 16px)) !important;
+                right: auto !important;
+            }
+
+            button.wf-launcher {
+                width: 56px !important;
+                height: 56px !important;
+                min-width: 56px !important;
+                min-height: 56px !important;
+            }
+
+            .wf-teaser-bubble {
+                bottom: 68px !important;
+                max-width: calc(100vw - 90px) !important;
+                white-space: normal !important;
+                font-size: 12px !important;
+                line-height: 1.35 !important;
+                padding: 8px 14px !important;
+            }
+
+            /* Hide launcher button when modal window is active on mobile */
+            .wf-is-open .wf-launcher-wrap {
+                display: none !important;
+            }
+
+            /* Fullscreen Mobile Viewport */
+            .wf-window {
+                position: fixed !important;
+                inset: 0 !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
+                height: 100% !important;
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                border-radius: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                transform: translateY(100%) !important;
+                transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease !important;
+                z-index: 2147483647 !important;
+            }
+            .wf-position-left .wf-window {
+                left: 0 !important;
+                right: 0 !important;
+            }
+            .wf-window.wf-open {
+                transform: translateY(0) !important;
+                opacity: 1 !important;
+            }
+
+            .wf-header {
+                padding: max(14px, env(safe-area-inset-top, 14px)) 16px 14px 16px !important;
+                border-radius: 0 !important;
+            }
+            .wf-header-title {
+                font-size: 15px !important;
+            }
+            .wf-status-row {
+                font-size: 11px !important;
+            }
+
+            .wf-chat-body {
+                padding: 14px !important;
+                gap: 12px !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            .wf-bubble {
+                max-width: 92% !important;
+                font-size: 13.5px !important;
+            }
+            .wf-welcome-bubble {
+                font-size: 13.5px !important;
+                padding: 12px 15px !important;
+            }
+            .wf-popular-cards {
+                gap: 8px !important;
+            }
+            button.wf-question-card {
+                padding: 10px 14px !important;
+                border-radius: 14px !important;
+            }
+            .wf-question-text {
+                font-size: 12.5px !important;
+            }
+
+            .wf-lead-card {
+                max-width: 100% !important;
+            }
+
+            /* Bottom input bar with mobile safe area */
+            form.wf-input-wrap {
+                padding: 10px 14px max(14px, env(safe-area-inset-bottom, 14px)) 14px !important;
+                gap: 8px !important;
+            }
+            /* Crucial: 16px font size prevents iOS Safari from auto-zooming page on input focus */
+            input.wf-field {
+                font-size: 16px !important;
+                padding: 7px 4px !important;
+            }
+            input.wf-lead-input {
+                font-size: 16px !important;
+                padding: 10px 12px !important;
+            }
+
+            .wf-drawer {
+                inset: 0 !important;
+                height: 100dvh !important;
+            }
+            .wf-drawer-header {
+                padding: max(16px, env(safe-area-inset-top, 16px)) 18px 14px 18px !important;
+            }
+        }
+
+        /* Landscape Mobile Devices (Height <= 520px) */
+        @media (max-height: 520px) {
+            .wf-window {
+                position: fixed !important;
+                inset: 0 !important;
+                top: 0 !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                width: 100vw !important;
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                border-radius: 0 !important;
+                transform: translateY(100%) !important;
+            }
+            .wf-window.wf-open {
+                transform: translateY(0) !important;
+            }
+            .wf-header {
+                padding: 8px 14px !important;
+            }
+            .wf-avatar-circle {
+                width: 32px !important;
+                height: 32px !important;
+                min-width: 32px !important;
+                font-size: 15px !important;
+            }
+            form.wf-input-wrap {
+                padding: 6px 12px !important;
+            }
+            .wf-chat-body {
+                padding: 10px !important;
+                gap: 8px !important;
+            }
+            .wf-popular-section {
+                display: none !important;
+            }
+        }
     `;
     shadow.appendChild(style);
 
@@ -1024,6 +1239,12 @@
         isOpen = !isOpen;
         if (isOpen) {
             win.classList.add('wf-open');
+            root.classList.add('wf-is-open');
+            if (window.innerWidth <= 640) {
+                hostContainer.style.width = '100vw';
+                hostContainer.style.height = '100vh';
+                hostContainer.style.pointerEvents = 'auto';
+            }
             if (teaserBubble) teaserBubble.style.display = 'none';
             const iconEl = $('wf-btn-icon');
             if (iconEl) {
@@ -1036,6 +1257,10 @@
             setTimeout(() => inputEl.focus(), 200);
         } else {
             win.classList.remove('wf-open');
+            root.classList.remove('wf-is-open');
+            hostContainer.style.width = '0';
+            hostContainer.style.height = '0';
+            hostContainer.style.pointerEvents = 'none';
             const iconEl = $('wf-btn-icon');
             if (iconEl) {
                 iconEl.innerHTML = `
@@ -1046,6 +1271,18 @@
             }
         }
     }
+
+    window.addEventListener('resize', () => {
+        if (isOpen && window.innerWidth <= 640) {
+            hostContainer.style.width = '100vw';
+            hostContainer.style.height = '100vh';
+            hostContainer.style.pointerEvents = 'auto';
+        } else if (!isOpen) {
+            hostContainer.style.width = '0';
+            hostContainer.style.height = '0';
+            hostContainer.style.pointerEvents = 'none';
+        }
+    });
 
     triggerBtn.addEventListener('click', toggleChat);
     closeBtn.addEventListener('click', toggleChat);
@@ -1205,11 +1442,49 @@
         }
     }
 
+    function formatMessageText(text) {
+        if (!text) return '';
+        let escaped = escapeHtml(text);
+        // Bold: **text**
+        escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        // Italic: *text*
+        escaped = escaped.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        // Inline Citations: [1], [2]
+        escaped = escaped.replace(/\[(\d+)\]/g, '<span class="wf-citation-inline">[$1]</span>');
+        
+        // Lists with bullet points
+        const lines = escaped.split(/\n+/);
+        let inList = false;
+        let formatted = '';
+        for (let line of lines) {
+            line = line.trim();
+            if (line.startsWith('• ') || line.startsWith('- ')) {
+                if (!inList) {
+                    formatted += '<ul class="wf-msg-list">';
+                    inList = true;
+                }
+                formatted += `<li>${line.substring(2)}</li>`;
+            } else {
+                if (inList) {
+                    formatted += '</ul>';
+                    inList = false;
+                }
+                if (line) {
+                    formatted += `<p class="wf-msg-p">${line}</p>`;
+                }
+            }
+        }
+        if (inList) formatted += '</ul>';
+        return formatted || escaped;
+    }
+
     function appendMsg(role, text, sources = []) {
         const bubble = document.createElement('div');
         bubble.className = `wf-bubble ${role === 'user' ? 'wf-bubble-user' : 'wf-bubble-bot'}`;
 
-        let html = `<div>${(text || '').replace(/\n/g, '<br>')}</div>`;
+        let html = role === 'user'
+            ? `<div>${escapeHtml(text || '').replace(/\n/g, '<br>')}</div>`
+            : `<div>${formatMessageText(text)}</div>`;
 
         if (sources && sources.length > 0) {
             html += `<div class="wf-citations">`;
