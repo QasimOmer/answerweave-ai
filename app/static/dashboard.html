@@ -1,0 +1,2188 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeaveFlow AI — Grounded Chatbot & Lead Intelligence SaaS</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        },
+                        obsidian: {
+                            950: '#07090e',
+                            900: '#0b0f17',
+                            850: '#0f141f',
+                            800: '#141b2a',
+                            750: '#1a2236',
+                            700: '#222d46',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        
+        .glass-panel {
+            background: rgba(15, 20, 31, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        .glass-panel-elevated {
+            background: rgba(18, 24, 38, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-input {
+            background: rgba(11, 15, 23, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f1f5f9;
+        }
+        .glass-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 1px #6366f1, 0 0 16px rgba(99, 102, 241, 0.25);
+        }
+        .gradient-border {
+            position: relative;
+        }
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(168, 85, 247, 0.2), rgba(255, 255, 255, 0.05));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+        }
+        .animate-pulse-glow {
+            animation: pulseGlow 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-obsidian-950 text-slate-200 font-sans antialiased h-screen flex overflow-hidden selection:bg-brand-500 selection:text-white">
+
+    <!-- Ambient Mesh Glow Background -->
+    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div class="absolute -top-[20%] left-[15%] w-[650px] h-[650px] bg-brand-600/10 rounded-full blur-[140px] animate-pulse-glow"></div>
+        <div class="absolute top-[40%] right-[10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[140px] animate-pulse-glow" style="animation-delay: 1.5s;"></div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-4 py-3 rounded-2xl glass-panel-elevated text-slate-100 text-xs font-semibold shadow-2xl border border-white/10">
+        <div id="toastIcon" class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+        </div>
+        <span id="toastMessage">Action completed successfully</span>
+    </div>
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="w-64 bg-obsidian-900 border-r border-white/5 flex flex-col justify-between shrink-0 select-none z-10 relative">
+        <div class="flex flex-col h-full">
+            <!-- Brand Header -->
+            <div class="h-16 px-5 border-b border-white/5 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                        <i data-lucide="zap" class="w-4 h-4 fill-white"></i>
+                    </div>
+                    <div>
+                        <div class="font-extrabold text-sm text-white tracking-tight leading-none flex items-center gap-1">
+                            WeaveFlow<span class="text-brand-400">.ai</span>
+                        </div>
+                        <div class="text-[10px] font-medium text-slate-400 mt-1 uppercase tracking-wider">Enterprise Suite</div>
+                    </div>
+                </div>
+                <div class="w-2 h-2 rounded-full bg-emerald-400 animate-ping" title="System Live"></div>
+            </div>
+
+            <!-- Workspace / Assistant Switcher Card -->
+            <div class="p-3">
+                <div class="glass-panel rounded-2xl p-3 border border-white/5 hover:border-white/10 transition">
+                    <div class="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-1.5 px-1">
+                        <span class="flex items-center gap-1.5">
+                            <i data-lucide="globe" class="w-3 h-3 text-brand-400"></i>
+                            ACTIVE WEBSITE
+                        </span>
+                        <button onclick="openNewAssistantModal()" class="text-brand-400 hover:text-brand-300 transition text-[11px] font-bold flex items-center gap-0.5">
+                            <i data-lucide="plus" class="w-3 h-3"></i> New
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <select id="assistantSelector" onchange="onAssistantChange()" class="w-full text-xs font-semibold bg-obsidian-950 text-slate-200 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-brand-500 cursor-pointer appearance-none transition pr-7">
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2.5 flex items-center justify-between px-1 text-[10px] text-slate-400">
+                        <span class="flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>Grounded RAG</span>
+                        </span>
+                        <span class="font-mono text-slate-500 truncate max-w-[100px]" id="sidebarDomainPreview">*</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Navigation Links -->
+            <nav class="px-3 py-1 space-y-1 flex-1 overflow-y-auto">
+                <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
+                    <span>Overview &amp; Metrics</span>
+                </button>
+
+                <button onclick="switchTab('knowledge')" id="nav-knowledge" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
+                    <i data-lucide="database" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
+                    <span>Knowledge Vault</span>
+                </button>
+
+                <button onclick="switchTab('inbox')" id="nav-inbox" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
+                    <i data-lucide="message-square" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
+                    <span>Visitor Inbox</span>
+                    <span id="navInboxBadge" class="ml-auto text-[10px] font-mono font-bold bg-white/10 text-slate-300 px-1.5 py-0.5 rounded-md">0</span>
+                </button>
+
+                <button onclick="switchTab('gaps')" id="nav-gaps" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
+                    <i data-lucide="help-circle" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
+                    <span>Knowledge Gaps</span>
+                    <span id="navGapsBadge" class="ml-auto text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-md">0</span>
+                </button>
+
+                <button onclick="switchTab('leads')" id="nav-leads" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
+                    <i data-lucide="users" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
+                    <span>Leads &amp; Call-Prep</span>
+                    <span id="navLeadsBadge" class="ml-auto text-[10px] font-mono font-bold bg-brand-500/20 text-brand-300 px-1.5 py-0.5 rounded-md">0</span>
+                </button>
+
+                <button onclick="switchTab('widget')" id="nav-widget" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
+                    <i data-lucide="sliders" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
+                    <span>Widget Studio</span>
+                </button>
+
+                <button onclick="switchTab('billing')" id="nav-billing" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
+                    <i data-lucide="credit-card" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
+                    <span>Plans &amp; Billing</span>
+                </button>
+
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
+                    <i data-lucide="cpu" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
+                    <span>AI Engines &amp; Hooks</span>
+                </button>
+            </nav>
+
+            <!-- Bottom Tier Status & Simulator Link -->
+            <div class="p-3 border-t border-white/5 mt-auto">
+                <div class="glass-panel rounded-2xl p-3 border border-white/5">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-slate-300 mb-1.5">
+                        <span id="sidebarPlanName">Starter Plan</span>
+                        <span class="text-brand-400 font-mono" id="sidebarQuotaText">0%</span>
+                    </div>
+                    <div class="w-full bg-obsidian-950 h-1.5 rounded-full overflow-hidden border border-white/5">
+                        <div id="sidebarQuotaBar" class="bg-gradient-to-r from-brand-500 to-purple-500 h-full w-[0%] rounded-full transition-all duration-500"></div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-2.5 flex items-center justify-between">
+                        <button onclick="switchTab('billing')" class="text-brand-400 hover:text-brand-300 font-semibold flex items-center gap-1">
+                            <span>Manage Plan</span>
+                            <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                        </button>
+                        <a href="/demo" target="_blank" class="text-slate-400 hover:text-slate-200 flex items-center gap-1 font-medium transition">
+                            <span>Live Demo</span>
+                            <i data-lucide="external-link" class="w-3 h-3"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN APP CANVAS -->
+    <div class="flex-1 flex flex-col bg-obsidian-950 overflow-hidden relative z-10">
+
+        <!-- TOP BAR -->
+        <header class="h-16 bg-obsidian-900/80 backdrop-blur-md border-b border-white/5 px-8 flex items-center justify-between shrink-0 z-10 shadow-sm">
+            <div class="flex items-center gap-3.5">
+                <div class="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold" id="topAvatarBadge">
+                    <i data-lucide="bot" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm font-extrabold text-white tracking-tight leading-none" id="topAsstName">AcmeCloud Assistant</h1>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="text-[11px] text-slate-400 font-mono" id="topAsstId">asst_default</span>
+                        <span class="text-slate-600">&bull;</span>
+                        <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Vector Store Active
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Actions -->
+            <div class="flex items-center gap-3">
+                <div id="engineStatusPill" class="text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-2 bg-brand-500/10 text-brand-300 border border-brand-500/20">
+                    <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
+                    <span id="engineStatusText">Zero-Key Grounded RAG</span>
+                </div>
+
+                <a href="/demo" target="_blank" class="text-xs bg-white/10 hover:bg-white/15 text-white font-semibold px-3.5 py-2 rounded-xl flex items-center gap-2 border border-white/10 transition shadow-sm">
+                    <i data-lucide="eye" class="w-3.5 h-3.5 text-slate-300"></i>
+                    <span>Client Website Simulator</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- SCROLLABLE TAB CONTENT -->
+        <main class="flex-1 overflow-y-auto p-8">
+            <div class="max-w-6xl mx-auto space-y-6">
+
+                <!-- ================= TAB 1: OVERVIEW & ANALYTICS ================= -->
+                <section id="tab-analytics" class="tab-pane space-y-6">
+                    <!-- Metric Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="glass-panel p-5 rounded-2xl border border-white/5 hover:border-white/10 transition group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Conversations</span>
+                                <div class="w-8 h-8 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400">
+                                    <i data-lucide="message-square" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black text-white mt-2 font-mono tracking-tight" id="kpiQueries">0</div>
+                            <div class="mt-2 text-[11px] text-emerald-400 font-semibold flex items-center gap-1.5">
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                                <span>100% Grounded Citations</span>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel p-5 rounded-2xl border border-white/5 hover:border-white/10 transition group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Captured Leads</span>
+                                <div class="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                                    <i data-lucide="target" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black text-purple-400 mt-2 font-mono tracking-tight" id="kpiLeads">0</div>
+                            <div class="mt-2 text-[11px] text-purple-300 font-semibold flex items-center gap-1.5">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                <span>AI Call-Prep Dossiers Generated</span>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel p-5 rounded-2xl border border-white/5 hover:border-white/10 transition group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Lead Conversion Rate</span>
+                                <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black text-emerald-400 mt-2 font-mono tracking-tight" id="kpiConversion">0.0%</div>
+                            <div class="mt-2 text-[11px] text-slate-400 font-medium">Inquiries converted to contacts</div>
+                        </div>
+
+                        <div class="glass-panel p-5 rounded-2xl border border-white/5 hover:border-white/10 transition group">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Knowledge Gaps</span>
+                                <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black text-amber-400 mt-2 font-mono tracking-tight" id="kpiGaps">0</div>
+                            <div class="mt-2 text-[11px] text-slate-400 font-medium">Questions requiring documentation</div>
+                        </div>
+                    </div>
+
+                    <!-- Hero Feature Banner -->
+                    <div class="glass-panel-elevated rounded-3xl p-7 text-white shadow-2xl relative overflow-hidden gradient-border">
+                        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div class="space-y-2">
+                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-[11px] font-semibold text-brand-300">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse"></span>
+                                    AnswerWeave Commercial SaaS Architecture
+                                </div>
+                                <h2 class="text-2xl font-extrabold tracking-tight text-white" id="bannerAsstTitle">AcmeCloud Assistant</h2>
+                                <p class="text-xs text-slate-300 max-w-xl leading-relaxed">
+                                    Embed on any website with 1 line of code. Visitors ask questions via text or voice, receive strictly grounded answers with source citations, and high-intent visitors are automatically summarized into sales call briefs.
+                                </p>
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-3 shrink-0">
+                                <button onclick="switchTab('widget')" class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-lg shadow-brand-500/25 transition text-center flex items-center justify-center gap-2">
+                                    <i data-lucide="code" class="w-4 h-4"></i>
+                                    <span>Get Embed Script</span>
+                                </button>
+                                <button onclick="switchTab('knowledge')" class="bg-white/10 hover:bg-white/15 text-white font-semibold text-xs px-5 py-3 rounded-xl transition text-center border border-white/10 flex items-center justify-center gap-2">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                    <span>Upload Knowledge</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB 2: KNOWLEDGE VAULT ================= -->
+                <section id="tab-knowledge" class="tab-pane hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Card 1: PDF & Documents Drag-and-Drop -->
+                        <div class="glass-panel rounded-2xl p-6 border border-white/5 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center gap-2.5 mb-2">
+                                    <div class="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center">
+                                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                                    </div>
+                                    <h3 class="text-sm font-bold text-white">Upload Documents &amp; PDFs</h3>
+                                </div>
+                                <p class="text-xs text-slate-400 mb-4">Directly parse PDF manuals, product specs, markdown or text files.</p>
+                                
+                                <form id="uploadForm" class="space-y-4">
+                                    <div id="dropZone" class="border-2 border-dashed border-white/10 hover:border-brand-500/50 rounded-2xl p-6 text-center cursor-pointer transition bg-obsidian-900/50 group" onclick="document.getElementById('fileInput').click()">
+                                        <div class="w-10 h-10 rounded-xl bg-white/5 mx-auto flex items-center justify-center text-slate-400 group-hover:text-brand-400 transition mb-2">
+                                            <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                                        </div>
+                                        <span class="text-xs font-bold text-slate-200 block" id="uploadLabel">Click or drop file here</span>
+                                        <span class="text-[10px] text-slate-500 block mt-1">Supports PDF, TXT, MD, CSV</span>
+                                        <input type="file" id="fileInput" accept=".pdf,.txt,.md,.csv,.json" class="hidden" onchange="onFileSelected(this)" />
+                                    </div>
+                                    <button type="submit" id="uploadSubmitBtn" disabled class="w-full text-xs bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-brand-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-brand-500/20 transition flex items-center justify-center gap-2">
+                                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                        <span>Index &amp; Vectorize Document</span>
+                                    </button>
+                                </form>
+                            </div>
+                            <div id="uploadStatus" class="mt-3 text-xs hidden font-medium"></div>
+                        </div>
+
+                        <!-- Card 2: URL & Sitemap Crawler -->
+                        <div class="glass-panel rounded-2xl p-6 border border-white/5 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center gap-2.5 mb-2">
+                                    <div class="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+                                        <i data-lucide="globe" class="w-4 h-4"></i>
+                                    </div>
+                                    <h3 class="text-sm font-bold text-white">Crawl Website / Sitemap</h3>
+                                </div>
+                                <p class="text-xs text-slate-400 mb-4">Ingest live web pages, strip HTML templates, and extract clean knowledge.</p>
+                                
+                                <form id="urlForm" class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Target Website or Sitemap URL</label>
+                                        <input type="url" id="urlInput" required placeholder="https://docs.mycompany.com" class="glass-input w-full text-xs font-mono rounded-xl px-3.5 py-2.5 outline-none" />
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1.5">Crawl Depth</label>
+                                            <select id="crawlDepth" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2.5 outline-none cursor-pointer">
+                                                <option value="1">Single Page</option>
+                                                <option value="3">Up to 3 pages</option>
+                                                <option value="5">Up to 5 pages</option>
+                                            </select>
+                                        </div>
+                                        <div class="pt-6">
+                                            <button type="submit" id="urlSubmitBtn" class="w-full text-xs bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-brand-500/20 transition flex items-center justify-center gap-1.5">
+                                                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                                <span>Crawl URL</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div id="urlStatus" class="mt-3 text-xs hidden font-medium"></div>
+                        </div>
+
+                        <!-- Card 3: Direct FAQ & Policy Ingestion -->
+                        <div class="glass-panel rounded-2xl p-6 border border-white/5 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center gap-2.5 mb-2">
+                                    <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                                        <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                    </div>
+                                    <h3 class="text-sm font-bold text-white">Add Policies &amp; FAQs</h3>
+                                </div>
+                                <p class="text-xs text-slate-400 mb-4">Paste internal guides, pricing terms, refund rules, or custom answers.</p>
+
+                                <form id="textForm" class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Document Title</label>
+                                        <input type="text" id="textTitle" required placeholder="e.g. Return Policy" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Content Text</label>
+                                        <textarea id="textContent" rows="3" required placeholder="Paste knowledge text or FAQ pairs..." class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none"></textarea>
+                                    </div>
+                                    <button type="submit" class="w-full text-xs bg-white/10 hover:bg-white/15 text-white font-bold py-2.5 rounded-xl border border-white/10 transition flex items-center justify-center gap-1.5">
+                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                        <span>Ingest Text Document</span>
+                                    </button>
+                                </form>
+                            </div>
+                            <div id="textStatus" class="mt-3 text-xs hidden font-medium"></div>
+                        </div>
+                    </div>
+
+                    <!-- Sources Table -->
+                    <div class="glass-panel rounded-2xl border border-white/5 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                                <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                    <i data-lucide="layers" class="w-4 h-4 text-brand-400"></i>
+                                    Active Indexed Knowledge Base
+                                </h4>
+                                <p class="text-xs text-slate-400 mt-0.5">Every response is strictly grounded in these verified sources.</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="text" id="sourceSearchInput" oninput="filterSourcesTable()" placeholder="Search indexed sources..." class="glass-input text-xs rounded-xl px-3 py-1.5 outline-none w-56" />
+                                <button onclick="loadSources()" class="text-xs text-brand-400 hover:text-brand-300 font-bold flex items-center gap-1">
+                                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-white/5 text-xs">
+                                <thead class="bg-obsidian-900/60 text-slate-400 uppercase font-semibold">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left">Type</th>
+                                        <th class="px-6 py-3 text-left">Title &amp; Reference</th>
+                                        <th class="px-6 py-3 text-left">Chunks</th>
+                                        <th class="px-6 py-3 text-left">Indexed Date</th>
+                                        <th class="px-6 py-3 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sourcesTableBody" class="divide-y divide-white/5">
+                                    <tr><td colspan="5" class="px-6 py-8 text-center text-slate-500">Loading sources...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB 3: VISITOR CONVERSATIONS INBOX ================= -->
+                <section id="tab-inbox" class="tab-pane hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[680px]">
+                        <!-- Left Session Master List (5 cols) -->
+                        <div class="lg:col-span-5 glass-panel rounded-2xl border border-white/5 flex flex-col overflow-hidden">
+                            <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                        <i data-lucide="inbox" class="w-4 h-4 text-brand-400"></i>
+                                        Visitor Chat Sessions
+                                    </h4>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">Real-time transcripts from embedded widgets</p>
+                                </div>
+                                <button onclick="loadConversations()" class="text-xs text-brand-400 hover:text-brand-300 font-bold flex items-center gap-1">
+                                    <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                                </button>
+                            </div>
+                            <!-- Sessions List -->
+                            <div id="inboxSessionsList" class="flex-1 overflow-y-auto divide-y divide-white/5">
+                                <div class="p-8 text-center text-slate-500 text-xs">Loading sessions...</div>
+                            </div>
+                        </div>
+
+                        <!-- Right Detail Transcript Pane (7 cols) -->
+                        <div class="lg:col-span-7 glass-panel rounded-2xl border border-white/5 flex flex-col overflow-hidden">
+                            <div class="p-4 border-b border-white/5 flex items-center justify-between bg-obsidian-900/60">
+                                <div>
+                                    <h4 class="text-xs font-bold text-white flex items-center gap-2" id="detailTranscriptTitle">
+                                        <i data-lucide="message-circle" class="w-4 h-4 text-brand-400"></i>
+                                        Select a Session
+                                    </h4>
+                                    <div class="text-[11px] text-slate-400 font-mono mt-0.5" id="detailSessionSub">Click any conversation on the left to inspect</div>
+                                </div>
+                                <div id="detailLeadBadge" class="hidden">
+                                    <span class="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                                        Lead Captured
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Messages Scroll -->
+                            <div id="detailMessagesContainer" class="flex-1 p-6 overflow-y-auto space-y-4 text-xs bg-obsidian-950/40">
+                                <div class="h-full flex flex-col items-center justify-center text-center text-slate-500 space-y-2">
+                                    <i data-lucide="message-square" class="w-8 h-8 opacity-40"></i>
+                                    <p class="text-xs font-medium">No session selected</p>
+                                    <p class="text-[11px] text-slate-600 max-w-xs">Select a visitor conversation from the left inbox to view the full dialogue and citations.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB 4: KNOWLEDGE GAPS ================= -->
+                <section id="tab-gaps" class="tab-pane hidden space-y-6">
+                    <div class="glass-panel rounded-2xl border border-white/5 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                                <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                    <i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i>
+                                    Knowledge Gaps &amp; Unanswered Questions Queue
+                                </h4>
+                                <p class="text-xs text-slate-400 mt-0.5">Questions visitors asked that were missing from documentation. Resolve them in 1 click.</p>
+                            </div>
+                            <button onclick="loadGaps()" class="text-xs text-brand-400 hover:text-brand-300 font-bold flex items-center gap-1">
+                                <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh Queue
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-white/5 text-xs">
+                                <thead class="bg-obsidian-900/60 text-slate-400 uppercase font-semibold">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left">Question Asked by Visitors</th>
+                                        <th class="px-6 py-3 text-left">Times Asked</th>
+                                        <th class="px-6 py-3 text-left">Status</th>
+                                        <th class="px-6 py-3 text-left">Date Logged</th>
+                                        <th class="px-6 py-3 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gapsTableBody" class="divide-y divide-white/5">
+                                    <tr><td colspan="5" class="px-6 py-8 text-center text-slate-500">Loading knowledge gaps...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB 5: LEADS & CALL-PREP ================= -->
+                <section id="tab-leads" class="tab-pane hidden space-y-6">
+                    <div class="glass-panel rounded-2xl border border-white/5 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                    <i data-lucide="users" class="w-4 h-4 text-brand-400"></i>
+                                    Captured Leads &amp; AI Call-Prep Briefs
+                                </h4>
+                                <p class="text-xs text-slate-400 mt-0.5">High-intent visitors synthesized into actionable sales intelligence dossiers.</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onclick="exportLeadsCsv()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-2 rounded-xl shadow-lg shadow-emerald-600/20 transition flex items-center gap-1.5">
+                                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                    <span>Export Leads CSV</span>
+                                </button>
+                                <button onclick="loadLeads()" class="text-xs text-brand-400 hover:text-brand-300 font-bold flex items-center gap-1">
+                                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-white/5 text-xs">
+                                <thead class="bg-obsidian-900/60 text-slate-400 uppercase font-semibold">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left">Contact Info</th>
+                                        <th class="px-6 py-3 text-left">Pipeline Status</th>
+                                        <th class="px-6 py-3 text-left">AI Sales Brief</th>
+                                        <th class="px-6 py-3 text-left">Captured Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leadsTableBody" class="divide-y divide-white/5">
+                                    <tr><td colspan="4" class="px-6 py-8 text-center text-slate-500">Loading leads...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB 6: WIDGET STUDIO ================= -->
+                <section id="tab-widget" class="tab-pane hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <!-- Customization Controls (5 cols) -->
+                        <div class="lg:col-span-5 glass-panel rounded-2xl p-6 border border-white/5 space-y-5">
+                            <div>
+                                <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                    <i data-lucide="palette" class="w-4 h-4 text-brand-400"></i>
+                                    Widget Customizer &amp; Embed
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Customize styling, popular questions, voice mode, and copy embed tag.</p>
+                            </div>
+
+                            <form id="assistantBrandingForm" class="space-y-4">
+                                <!-- Bot Name & Subtitle -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Bot Name</label>
+                                        <input type="text" id="asstName" oninput="onLiveNameChange(this.value)" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Status / Subtitle</label>
+                                        <input type="text" id="asstSubtitle" oninput="onLiveSubtitleChange(this.value)" placeholder="Online" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                    </div>
+                                </div>
+
+                                <!-- Theme Color & Avatar -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Header Background</label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="color" id="asstColorPicker" oninput="onLiveColorChange(this.value)" class="w-9 h-9 rounded-lg border border-white/10 bg-transparent cursor-pointer" />
+                                            <input type="text" id="asstColorText" oninput="onLiveColorChange(this.value)" class="glass-input w-full text-xs font-mono rounded-lg px-2 py-2 outline-none" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Avatar Symbol / Logo</label>
+                                        <select id="asstAvatar" onchange="onLiveAvatarChange(this.value)" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <option value="⚡">⚡ Lightning</option>
+                                            <option value="♾️">♾️ Infinity Logo</option>
+                                            <option value="✨">✨ Sparkle</option>
+                                            <option value="🤖">🤖 Robot</option>
+                                            <option value="💼">💼 Business</option>
+                                            <option value="💬">💬 Chat</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Placement & Voice -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Corner Placement</label>
+                                        <select id="asstPosition" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <option value="bottom-right">Bottom-Right Corner</option>
+                                            <option value="bottom-left">Bottom-Left Corner</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Voice Input (Mic 🎤)</label>
+                                        <select id="asstVoice" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <option value="true">Enabled (Speech-to-Text)</option>
+                                            <option value="false">Disabled</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Welcome Greeting Message -->
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-300 mb-1">Welcome Message</label>
+                                    <textarea id="asstWelcome" oninput="onLiveWelcomeChange(this.value)" rows="2" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none"></textarea>
+                                </div>
+
+                                <!-- Popular Questions / Starter Prompts -->
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label class="block text-xs font-semibold text-slate-300">Popular Questions (Cards with Arrow)</label>
+                                        <span class="text-[10px] text-slate-500">One question per line</span>
+                                    </div>
+                                    <textarea id="asstQuestions" oninput="onLiveQuestionsChange(this.value)" rows="3" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none leading-relaxed" placeholder="What legal process outsourcing services do you offer?&#10;Can you build a custom AI solution for my business?&#10;How does HazenTech save firms 50% on back-office costs?"></textarea>
+                                </div>
+
+                                <!-- Proactive Greeting Teaser Bubble -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Proactive Teaser Popup</label>
+                                        <input type="text" id="asstTeaser" oninput="onLiveTeaserChange(this.value)" placeholder="👋 Hi! Need quick answers?" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">White-Label Branding</label>
+                                        <select id="asstShowBranding" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <option value="true">Show "Powered by WeaveFlow"</option>
+                                            <option value="false">Hidden (White-Label)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-1.5">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                    <span>Save Widget Customization</span>
+                                </button>
+                            </form>
+
+                            <!-- Embed Script Snippet -->
+                            <div class="pt-4 border-t border-white/5">
+                                <label class="block text-xs font-bold text-white mb-1.5 flex items-center justify-between">
+                                    <span>1-Line Drop-in Script Tag</span>
+                                    <span class="text-[10px] text-slate-400 font-normal">Paste before &lt;/body&gt;</span>
+                                </label>
+                                <div class="relative">
+                                    <pre id="embedScriptBlock" class="bg-obsidian-950 text-slate-200 p-3 rounded-xl text-[11px] font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed border border-white/10"></pre>
+                                    <button onclick="copyEmbedScript()" class="absolute top-2.5 right-2.5 bg-white/10 hover:bg-white/20 text-white px-2.5 py-1 rounded-lg text-[10px] font-bold border border-white/10 transition flex items-center gap-1">
+                                        <i data-lucide="copy" class="w-3 h-3"></i>
+                                        <span>Copy</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Interactive Sandbox Preview (7 cols) -->
+                        <div class="lg:col-span-7 flex flex-col items-center justify-center">
+                            <div class="w-full max-w-md bg-obsidian-900 rounded-[32px] p-3 shadow-2xl border border-white/10 relative">
+                                <!-- Browser Header Bar -->
+                                <div class="px-4 py-2 border-b border-white/5 flex items-center justify-between text-xs text-slate-400">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 font-mono text-[11px] text-slate-400 bg-obsidian-950 px-3 py-1 rounded-lg border border-white/5">
+                                        <i data-lucide="lock" class="w-3 h-3 text-emerald-400"></i>
+                                        <span id="previewDomainText">acmecloud.io</span>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">Interactive Sandbox</span>
+                                </div>
+
+                                <!-- Sandbox Canvas with Dotted Pattern -->
+                                <div class="bg-obsidian-950 h-[560px] rounded-[24px] p-4 flex flex-col justify-end items-end relative overflow-hidden">
+                                    <!-- Background Site Mockup -->
+                                    <div class="absolute inset-0 p-6 flex flex-col justify-center items-center text-center text-slate-600 pointer-events-none">
+                                        <i data-lucide="globe" class="w-10 h-10 opacity-20 mb-2"></i>
+                                        <p class="text-xs font-semibold text-slate-500">Live Website Preview Canvas</p>
+                                        <p class="text-[11px] text-slate-600 max-w-xs mt-1">Tap any popular question below or type a query in the preview window to test in real time.</p>
+                                    </div>
+
+                                    <!-- Interactive Widget Window inside Mockup (HazenTech Reference Style) -->
+                                    <div class="w-full max-w-xs bg-white text-slate-800 rounded-[24px] shadow-2xl border border-slate-200 overflow-hidden relative z-10 flex flex-col h-[450px]">
+                                        <!-- Widget Header -->
+                                        <div id="prevHeader" class="bg-[#081726] text-white p-3.5 flex items-center justify-between transition-colors shrink-0">
+                                            <div class="flex items-center gap-2.5">
+                                                <div id="prevAvatar" class="w-8 h-8 rounded-full bg-white text-[#081726] flex items-center justify-center text-sm font-bold shadow-sm">⚡</div>
+                                                <div>
+                                                    <div id="prevTitle" class="font-bold text-xs leading-none">HazenTech Assistant</div>
+                                                    <div class="text-[10.5px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                                        <span id="prevSubtitle">Online</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Action Icons in Header (Mail, Reset, Close) -->
+                                            <div class="flex items-center gap-1.5 text-slate-400">
+                                                <span class="p-1 hover:text-white cursor-pointer text-xs" title="Contact Email">✉</span>
+                                                <span class="p-1 hover:text-white cursor-pointer text-xs" title="New Chat">✎</span>
+                                                <span class="w-[1px] h-3 bg-white/20 mx-0.5"></span>
+                                                <span class="p-1 hover:text-white cursor-pointer text-xs">✕</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Widget Chat Body with Dotted Pattern -->
+                                        <div id="prevChatBody" class="flex-1 p-3.5 space-y-3 overflow-y-auto text-xs" style="background-color: #f8fafc; background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px); background-size: 16px 16px;">
+                                            <!-- Welcome Bubble -->
+                                            <div id="prevWelcome" class="bg-white p-2.5 rounded-2xl rounded-bl-sm border border-slate-200 shadow-sm text-slate-800 text-[11.5px] leading-relaxed">
+                                                Hi! How can I help you today?
+                                            </div>
+
+                                            <!-- Popular questions Section -->
+                                            <div id="prevPopularSection" class="space-y-2 pt-1">
+                                                <div class="flex items-start gap-2">
+                                                    <div id="prevPopularBar" class="w-1 h-5 bg-[#081726] rounded-full shrink-0 mt-0.5"></div>
+                                                    <div>
+                                                        <div class="font-bold text-xs text-slate-900 leading-none">Popular questions</div>
+                                                        <div class="text-[10px] text-slate-500 mt-0.5">Tap one to get started, or type your own.</div>
+                                                    </div>
+                                                </div>
+                                                <!-- Cards Container -->
+                                                <div id="prevPopularCards" class="space-y-1.5">
+                                                    <!-- Dynamic Cards -->
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Widget Interactive Input -->
+                                        <form id="prevChatForm" onsubmit="handleMockSubmit(event)" class="p-2.5 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0">
+                                            <div class="flex-1 bg-slate-100 border border-slate-200 rounded-full flex items-center px-3 py-1">
+                                                <input type="text" id="prevChatInput" placeholder="Ask a question..." class="flex-1 text-xs bg-transparent text-slate-800 outline-none" />
+                                                <span class="text-slate-400 text-xs ml-1 cursor-pointer" title="Voice Input">🎤</span>
+                                            </div>
+                                            <button type="submit" id="prevSendBtn" class="w-7 h-7 rounded-full bg-[#081726] text-white flex items-center justify-center text-xs shrink-0 hover:opacity-90 transition">
+                                                ➤
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <!-- Floating Teaser Bubble and Launcher -->
+                                    <div class="flex items-center gap-2 mt-3 mr-1 relative">
+                                        <div id="prevTeaserBubble" class="bg-white text-slate-800 px-3 py-1.5 rounded-2xl rounded-br-sm shadow-lg border border-slate-200 text-[11px] font-semibold flex items-center gap-1.5">
+                                            <span id="prevTeaserText">👋 Hi! Need quick answers?</span>
+                                        </div>
+                                        <div id="prevBubble" class="w-12 h-12 rounded-full bg-[#081726] text-white flex items-center justify-center text-xl shadow-xl transition-colors shrink-0">
+                                            ⚡
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB 7: PLANS & BILLING ================= -->
+                <section id="tab-billing" class="tab-pane hidden space-y-6">
+                    <div class="glass-panel rounded-2xl p-6 border border-white/5">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                            <div>
+                                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                                    <i data-lucide="credit-card" class="w-4 h-4 text-brand-400"></i>
+                                    Subscription &amp; Flat-Fee Tiers
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-0.5">AnswerWeave-style flat-fee pricing with zero per-conversation surprise bills.</p>
+                            </div>
+                            <div class="inline-flex items-center gap-2 text-xs font-bold text-brand-300 bg-brand-500/10 border border-brand-500/20 px-3.5 py-1.5 rounded-xl">
+                                <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
+                                <span>Active Plan:</span>
+                                <span id="activePlanBadge" class="text-white">Starter ($29/mo)</span>
+                            </div>
+                        </div>
+
+                        <!-- 5 Plans Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 pt-2">
+                            <!-- Free -->
+                            <div class="glass-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
+                                <div>
+                                    <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Free</h4>
+                                    <div class="text-2xl font-black text-white mt-1">$0<span class="text-xs text-slate-500 font-normal">/mo</span></div>
+                                    <ul class="text-[11px] text-slate-400 mt-3 space-y-1.5">
+                                        <li>• 100 messages/mo</li>
+                                        <li>• 1,000 pages</li>
+                                        <li>• 1 assistant</li>
+                                    </ul>
+                                </div>
+                                <button onclick="upgradePlan('free')" class="w-full mt-4 text-xs font-bold py-2 rounded-xl border border-white/10 hover:bg-white/5 transition">Select</button>
+                            </div>
+
+                            <!-- Starter -->
+                            <div class="glass-panel-elevated rounded-2xl p-4 flex flex-col justify-between border-brand-500 relative shadow-xl gradient-border">
+                                <div class="absolute -top-2.5 right-3 bg-brand-600 text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow">Popular</div>
+                                <div>
+                                    <h4 class="font-bold text-xs uppercase tracking-wider text-brand-400">Starter</h4>
+                                    <div class="text-2xl font-black text-white mt-1">$29<span class="text-xs text-slate-500 font-normal">/mo</span></div>
+                                    <ul class="text-[11px] text-slate-300 mt-3 space-y-1.5">
+                                        <li>• 2,000 messages/mo</li>
+                                        <li>• 5,000 pages</li>
+                                        <li>• 1 assistant</li>
+                                        <li>• AI Call-Prep briefs</li>
+                                    </ul>
+                                </div>
+                                <button onclick="upgradePlan('starter')" class="w-full mt-4 text-xs font-bold py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-500 transition shadow-lg shadow-brand-500/25">Active</button>
+                            </div>
+
+                            <!-- Pro -->
+                            <div class="glass-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
+                                <div>
+                                    <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Pro</h4>
+                                    <div class="text-2xl font-black text-white mt-1">$49<span class="text-xs text-slate-500 font-normal">/mo</span></div>
+                                    <ul class="text-[11px] text-slate-400 mt-3 space-y-1.5">
+                                        <li>• 5,000 messages/mo</li>
+                                        <li>• 8,000 pages</li>
+                                        <li>• 2 assistants</li>
+                                        <li>• Webhook stream</li>
+                                    </ul>
+                                </div>
+                                <button onclick="upgradePlan('pro')" class="w-full mt-4 text-xs font-bold py-2 rounded-xl border border-white/10 hover:bg-white/5 transition">Upgrade</button>
+                            </div>
+
+                            <!-- Growth -->
+                            <div class="glass-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
+                                <div>
+                                    <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Growth</h4>
+                                    <div class="text-2xl font-black text-white mt-1">$89<span class="text-xs text-slate-500 font-normal">/mo</span></div>
+                                    <ul class="text-[11px] text-slate-400 mt-3 space-y-1.5">
+                                        <li>• 10,000 messages/mo</li>
+                                        <li>• 10,000 pages</li>
+                                        <li>• 3 assistants</li>
+                                        <li>• Priority SLA</li>
+                                    </ul>
+                                </div>
+                                <button onclick="upgradePlan('growth')" class="w-full mt-4 text-xs font-bold py-2 rounded-xl border border-white/10 hover:bg-white/5 transition">Upgrade</button>
+                            </div>
+
+                            <!-- Agency -->
+                            <div class="glass-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
+                                <div>
+                                    <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Agency</h4>
+                                    <div class="text-2xl font-black text-white mt-1">$249<span class="text-xs text-slate-500 font-normal">/mo</span></div>
+                                    <ul class="text-[11px] text-slate-400 mt-3 space-y-1.5">
+                                        <li>• 100,000 messages/mo</li>
+                                        <li>• 100,000 pages</li>
+                                        <li>• 50 assistants</li>
+                                        <li>• White-labeling</li>
+                                    </ul>
+                                </div>
+                                <button onclick="upgradePlan('agency')" class="w-full mt-4 text-xs font-bold py-2 rounded-xl border border-white/10 hover:bg-white/5 transition">Upgrade</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB 8: AI ENGINES & SETTINGS ================= -->
+                <section id="tab-settings" class="tab-pane hidden max-w-3xl space-y-6">
+                    <div class="glass-panel rounded-2xl p-6 border border-white/5 space-y-4">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center">
+                                <i data-lucide="shield" class="w-4 h-4"></i>
+                            </div>
+                            <h3 class="text-sm font-bold text-white">Security &amp; Lead Webhooks</h3>
+                        </div>
+                        <p class="text-xs text-slate-400">Control domain embedding restrictions and stream leads directly into Zapier, Make, or your CRM.</p>
+
+                        <form id="assistantSecurityForm" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Allowed Domains (Domain Whitelist)</label>
+                                <input type="text" id="asstDomain" placeholder="acme.com, *.acme.com or *" class="glass-input w-full text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                <p class="text-[11px] text-slate-500 mt-1">Prevents unauthorized embedding on third-party sites. Use * to allow anywhere.</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Outbound Lead Webhook URL</label>
+                                <input type="url" id="asstWebhook" placeholder="https://hooks.zapier.com/hooks/catch/..." class="glass-input w-full text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                <p class="text-[11px] text-slate-500 mt-1">Sends immediate JSON payloads with visitor contacts and the AI Call-Prep Brief.</p>
+                            </div>
+                            <button type="submit" class="bg-white/10 hover:bg-white/15 text-white font-bold text-xs px-4 py-2.5 rounded-xl border border-white/10 transition flex items-center gap-1.5">
+                                <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                                <span>Update Security &amp; Webhook</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-6 border border-white/5 space-y-5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                                    <i data-lucide="cpu" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-bold text-white">AI Inference Engines</h3>
+                                    <p class="text-xs text-slate-400">Deploy free Chinese models (SiliconFlow, DeepSeek, Qwen), Groq Llama 3, Gemini, or 100% offline local extractive.</p>
+                                </div>
+                            </div>
+                            <div class="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-[11px] font-bold">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <span>Zero-Cost Chinese Models Ready</span>
+                            </div>
+                        </div>
+
+                        <form id="globalAiForm" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Active Model / Engine</label>
+                                <select id="cfgProvider" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2.5 outline-none cursor-pointer">
+                                    <option value="auto">Auto (Auto-detect highest priority configured engine)</option>
+                                    <option value="siliconflow">🇨🇳 SiliconFlow (Free DeepSeek-V3 &amp; Qwen 2.5 - Free Tier Credits)</option>
+                                    <option value="deepseek">🐳 DeepSeek Official (DeepSeek-V3 / DeepSeek-R1)</option>
+                                    <option value="qwen">☁️ Alibaba Qwen (DashScope / Qwen-Plus)</option>
+                                    <option value="groq">⚡ Groq (Free &amp; Ultra-Fast Llama 3.3)</option>
+                                    <option value="gemini">✨ Google Gemini (Gemini 2.5 / 1.5 Flash - Free Tier)</option>
+                                    <option value="openai">OpenAI (GPT-4o-mini)</option>
+                                    <option value="local">🛡️ Zero-Key Local Grounded Extractor (100% Free &amp; Offline)</option>
+                                </select>
+                            </div>
+
+                            <!-- SiliconFlow Card (Free Chinese Provider) -->
+                            <div class="p-4 bg-gradient-to-r from-cyan-500/10 via-indigo-500/5 to-transparent rounded-2xl border border-cyan-500/20 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-base">🇨🇳</span>
+                                        <label class="block text-xs font-bold text-cyan-300">SiliconFlow (硅基流动) API Key</label>
+                                        <span class="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Free Tokens</span>
+                                    </div>
+                                    <a href="https://cloud.siliconflow.com/account/ak" target="_blank" class="text-[11px] text-cyan-400 font-bold hover:underline flex items-center gap-1">
+                                        <span>Get Free Key</span>
+                                        <span>&rarr;</span>
+                                    </a>
+                                </div>
+                                <p class="text-[11px] text-slate-400">High-speed inference platform for <strong>DeepSeek-V3</strong>, <strong>DeepSeek-R1</strong>, and <strong>Qwen-2.5-7B</strong>. Grants free usage credits upon registration.</p>
+                                <div class="flex gap-2">
+                                    <input type="password" id="cfgSiliconFlowKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <button type="button" onclick="testProviderKey('siliconflow')" class="px-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
+                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                        <span>Test</span>
+                                    </button>
+                                </div>
+                                <div id="testStatus_siliconflow" class="hidden text-[11px] pt-1"></div>
+                            </div>
+
+                            <!-- DeepSeek Official Card -->
+                            <div class="p-4 bg-blue-500/5 rounded-2xl border border-blue-500/20 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-base">🐳</span>
+                                        <label class="block text-xs font-bold text-blue-300">DeepSeek Official (深度求索) API Key</label>
+                                        <span class="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">V3 / R1</span>
+                                    </div>
+                                    <a href="https://platform.deepseek.com/api_keys" target="_blank" class="text-[11px] text-blue-400 font-bold hover:underline flex items-center gap-1">
+                                        <span>Get Key</span>
+                                        <span>&rarr;</span>
+                                    </a>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="password" id="cfgDeepSeekKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <button type="button" onclick="testProviderKey('deepseek')" class="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
+                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                        <span>Test</span>
+                                    </button>
+                                </div>
+                                <div id="testStatus_deepseek" class="hidden text-[11px] pt-1"></div>
+                            </div>
+
+                            <!-- Alibaba Qwen (DashScope) Card -->
+                            <div class="p-4 bg-orange-500/5 rounded-2xl border border-orange-500/20 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-base">☁️</span>
+                                        <label class="block text-xs font-bold text-orange-300">Alibaba Qwen (DashScope / 通义千问) API Key</label>
+                                    </div>
+                                    <a href="https://dashscope.console.aliyun.com/apiKey" target="_blank" class="text-[11px] text-orange-400 font-bold hover:underline flex items-center gap-1">
+                                        <span>Get DashScope Key</span>
+                                        <span>&rarr;</span>
+                                    </a>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="password" id="cfgQwenKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <button type="button" onclick="testProviderKey('qwen')" class="px-3 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
+                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                        <span>Test</span>
+                                    </button>
+                                </div>
+                                <div id="testStatus_qwen" class="hidden text-[11px] pt-1"></div>
+                            </div>
+
+                            <!-- Groq Card -->
+                            <div class="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/20 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <label class="block text-xs font-bold text-emerald-300">⚡ Groq API Key (Free Ultra-Fast Llama 3.3)</label>
+                                    </div>
+                                    <a href="https://console.groq.com/keys" target="_blank" class="text-[11px] text-emerald-400 font-bold hover:underline flex items-center gap-1">
+                                        <span>Get Free Key</span>
+                                        <span>&rarr;</span>
+                                    </a>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="password" id="cfgGroqKey" placeholder="gsk_..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <button type="button" onclick="testProviderKey('groq')" class="px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
+                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                        <span>Test</span>
+                                    </button>
+                                </div>
+                                <div id="testStatus_groq" class="hidden text-[11px] pt-1"></div>
+                            </div>
+
+                            <!-- Gemini Card -->
+                            <div class="p-4 bg-brand-500/5 rounded-2xl border border-brand-500/20 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <label class="block text-xs font-bold text-brand-300">✨ Google Gemini Key (Free Tier)</label>
+                                    </div>
+                                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-[11px] text-brand-400 font-bold hover:underline flex items-center gap-1">
+                                        <span>Get Free Key</span>
+                                        <span>&rarr;</span>
+                                    </a>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="password" id="cfgGeminiKey" placeholder="AIzaSy..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <button type="button" onclick="testProviderKey('gemini')" class="px-3 py-2 bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 border border-brand-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
+                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                        <span>Test</span>
+                                    </button>
+                                </div>
+                                <div id="testStatus_gemini" class="hidden text-[11px] pt-1"></div>
+                            </div>
+
+                            <!-- OpenAI Card -->
+                            <div class="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-xs font-bold text-slate-300">OpenAI API Key (Optional GPT-4o-mini)</label>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="password" id="cfgOpenAIKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <button type="button" onclick="testProviderKey('openai')" class="px-3 py-2 bg-white/10 hover:bg-white/20 text-slate-300 border border-white/10 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
+                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                        <span>Test</span>
+                                    </button>
+                                </div>
+                                <div id="testStatus_openai" class="hidden text-[11px] pt-1"></div>
+                            </div>
+
+                            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-brand-500/20 flex items-center justify-center gap-1.5">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                                <span>Save Global Engine Settings</span>
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ================= MODALS & DRAWERS ================= -->
+
+    <!-- Modal: Resolve Knowledge Gap -->
+    <div id="resolveGapModal" class="fixed inset-0 bg-obsidian-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel-elevated rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/10 gradient-border">
+            <h3 class="text-base font-extrabold text-white mb-1 flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-4 h-4 text-brand-400"></i>
+                Resolve Knowledge Gap
+            </h3>
+            <p class="text-xs text-slate-400 mb-4">Add the official answer to train the AI so it never misses this question again.</p>
+
+            <form id="resolveGapForm" class="space-y-4">
+                <input type="hidden" id="gapModalId" />
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Visitor Question</label>
+                    <div class="text-xs p-3 rounded-xl bg-obsidian-950 border border-white/10 text-slate-200 font-medium" id="gapModalQuestion"></div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Official Grounded Answer</label>
+                    <textarea id="gapModalAnswer" rows="4" required placeholder="Type the verified answer that the AI assistant should provide..." class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
+                    <button type="button" onclick="closeResolveGapModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-white/5 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white rounded-xl shadow-lg shadow-brand-500/20">Add to Knowledge Vault</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Create New Assistant -->
+    <div id="newAsstModal" class="fixed inset-0 bg-obsidian-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel-elevated rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/10 gradient-border">
+            <h3 class="text-base font-extrabold text-white mb-1 flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-brand-400"></i>
+                Create Website Assistant
+            </h3>
+            <p class="text-xs text-slate-400 mb-5">Provision an isolated knowledge base and widget for another website.</p>
+
+            <form id="createAssistantForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Assistant Name</label>
+                    <input type="text" id="newAsstName" required placeholder="e.g. UrbanKicks Concierge" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2.5 outline-none" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Website Domain</label>
+                    <input type="text" id="newAsstDomain" placeholder="urbankicks.shop or *" class="glass-input w-full text-xs font-mono rounded-xl px-3 py-2.5 outline-none" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Theme Accent Color</label>
+                    <div class="flex items-center gap-3">
+                        <input type="color" id="newAsstColor" value="#059669" class="w-10 h-10 rounded-xl border border-white/10 cursor-pointer bg-transparent" />
+                        <span class="text-xs text-slate-400 font-mono">Matches client branding</span>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-white/10">
+                    <button type="button" onclick="closeNewAssistantModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-white/5 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white rounded-xl shadow-lg shadow-brand-500/20">Provision Assistant</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: AI Call-Prep Intelligence Dossier -->
+    <div id="briefModal" class="fixed inset-0 bg-obsidian-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel-elevated rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-white/10 flex flex-col max-h-[85vh] gradient-border">
+            <div class="flex items-center justify-between pb-4 border-b border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-extrabold text-white leading-none">AI Call-Prep Intelligence Dossier</h3>
+                        <div class="text-[11px] text-slate-400 mt-1">Automated sales briefing synthesized by WeaveFlow AI</div>
+                    </div>
+                </div>
+                <button onclick="closeBriefModal()" class="text-slate-400 hover:text-white text-xl font-bold leading-none">&times;</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto py-5 space-y-4">
+                <div class="p-3.5 bg-brand-500/10 border border-brand-500/20 rounded-2xl flex items-center justify-between text-xs text-brand-200">
+                    <div>
+                        <span class="font-bold">Lead Contact:</span>
+                        <span id="briefContactText" class="font-mono font-semibold ml-1 text-white"></span>
+                    </div>
+                    <span class="text-[10px] bg-brand-500/20 text-brand-300 font-bold px-2 py-0.5 rounded-full uppercase border border-brand-500/30">High Intent</span>
+                </div>
+
+                <div>
+                    <h5 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Executive Brief &amp; Sales Playbook:</h5>
+                    <pre id="briefContent" class="text-xs bg-obsidian-950 p-4 rounded-2xl border border-white/10 text-slate-200 whitespace-pre-wrap font-sans leading-relaxed"></pre>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-white/10 flex justify-end">
+                <button onclick="closeBriefModal()" class="px-5 py-2.5 text-xs font-bold bg-white/10 hover:bg-white/15 text-white rounded-xl border border-white/10 shadow">Close Dossier</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Script Logic -->
+    <script>
+        let currentAssistantId = 'asst_default';
+        let assistantsList = [];
+        let sourcesData = [];
+        let conversationsData = [];
+        let selectedFile = null;
+
+        function refreshIcons() {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        }
+
+        function showToast(msg, icon = 'check') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = msg;
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            refreshIcons();
+            setTimeout(() => {
+                toast.classList.add('translate-y-[-100px]', 'opacity-0');
+            }, 3000);
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('bg-brand-600', 'text-white', 'shadow-lg', 'shadow-brand-500/25');
+                el.classList.add('text-slate-400');
+            });
+
+            const pane = document.getElementById(`tab-${tab}`);
+            if (pane) pane.classList.remove('hidden');
+
+            const navBtn = document.getElementById(`nav-${tab}`);
+            if (navBtn) {
+                navBtn.classList.remove('text-slate-400');
+                navBtn.classList.add('bg-brand-600', 'text-white', 'shadow-lg', 'shadow-brand-500/25');
+            }
+
+            if (tab === 'analytics') loadAnalytics();
+            if (tab === 'knowledge') loadSources();
+            if (tab === 'inbox') loadConversations();
+            if (tab === 'gaps') loadGaps();
+            if (tab === 'leads') loadLeads();
+            if (tab === 'widget') renderEmbedCode();
+            if (tab === 'billing') loadSubscription();
+            
+            setTimeout(refreshIcons, 50);
+        }
+
+        async function initDashboard() {
+            await loadAssistants();
+            await loadGlobalSettings();
+            await loadSubscription();
+            switchTab('analytics');
+            refreshIcons();
+        }
+
+        async function loadAssistants() {
+            try {
+                const res = await fetch('/api/assistants');
+                assistantsList = await res.json();
+                const selector = document.getElementById('assistantSelector');
+                selector.innerHTML = assistantsList.map(a => `
+                    <option value="${a.id}" ${a.id === currentAssistantId ? 'selected' : ''}>
+                        ${a.name} (${a.domain || '*'})
+                    </option>
+                `).join('');
+
+                updateCurrentAssistantInfo();
+            } catch (err) {
+                console.error("Error loading assistants:", err);
+            }
+        }
+
+        function onAssistantChange() {
+            currentAssistantId = document.getElementById('assistantSelector').value;
+            updateCurrentAssistantInfo();
+            loadAnalytics();
+            loadSources();
+            loadConversations();
+            loadGaps();
+            loadLeads();
+            renderEmbedCode();
+            showToast(`Switched assistant to ${currentAssistantId}`);
+        }
+
+        function updateCurrentAssistantInfo() {
+            const asst = assistantsList.find(a => a.id === currentAssistantId) || assistantsList[0];
+            if (!asst) return;
+
+            document.getElementById('sidebarDomainPreview').innerText = asst.domain || '*';
+            document.getElementById('topAsstName').innerText = asst.name;
+            document.getElementById('topAsstId').innerText = asst.id;
+            document.getElementById('bannerAsstTitle').innerText = asst.name;
+            document.getElementById('previewDomainText').innerText = asst.domain && asst.domain !== '*' ? asst.domain : 'yourwebsite.com';
+
+            document.getElementById('asstName').value = asst.name;
+            document.getElementById('asstSubtitle').value = asst.widget_subtitle || 'Online';
+            document.getElementById('asstColorPicker').value = asst.primary_color || '#081726';
+            document.getElementById('asstColorText').value = asst.primary_color || '#081726';
+            document.getElementById('asstAvatar').value = asst.bot_avatar || '⚡';
+            document.getElementById('asstPosition').value = asst.position || 'bottom-right';
+            document.getElementById('asstVoice').value = asst.voice_enabled !== 0 ? 'true' : 'false';
+            document.getElementById('asstWelcome').value = asst.welcome_message || 'Hi! How can I help you today?';
+            document.getElementById('asstQuestions').value = asst.suggested_questions || '';
+            document.getElementById('asstTeaser').value = asst.teaser_message || '👋 Hi! Need quick answers?';
+            document.getElementById('asstShowBranding').value = asst.show_branding !== 0 ? 'true' : 'false';
+
+            document.getElementById('asstDomain').value = asst.domain || '*';
+            document.getElementById('asstWebhook').value = asst.webhook_url || '';
+
+            updateLivePreviewDevice(asst);
+            renderEmbedCode();
+            refreshIcons();
+        }
+
+        function updateLivePreviewDevice(asst) {
+            const color = asst.primary_color || '#081726';
+            const avatar = asst.bot_avatar || '⚡';
+            document.getElementById('prevHeader').style.backgroundColor = color;
+            document.getElementById('prevPopularBar').style.backgroundColor = color;
+            document.getElementById('prevBubble').style.backgroundColor = color;
+            document.getElementById('prevSendBtn').style.backgroundColor = color;
+            document.getElementById('prevBubble').innerText = avatar;
+            document.getElementById('prevAvatar').innerText = avatar;
+            document.getElementById('prevTitle').innerText = asst.name || 'HazenTech Assistant';
+            document.getElementById('prevSubtitle').innerText = asst.widget_subtitle || 'Online';
+            document.getElementById('prevWelcome').innerText = asst.welcome_message || 'Hi! How can I help you today?';
+            document.getElementById('prevTeaserText').innerText = asst.teaser_message || '👋 Hi! Need quick answers?';
+            renderMockPopularCards(asst.suggested_questions);
+        }
+
+        function renderMockPopularCards(questionsText) {
+            const container = document.getElementById('prevPopularCards');
+            if (!container) return;
+            container.innerHTML = '';
+            const questions = typeof questionsText === 'string'
+                ? questionsText.split('\n').filter(q => q.trim())
+                : (questionsText || []);
+
+            questions.slice(0, 3).forEach(q => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = "w-full bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl p-2.5 px-3 flex items-center justify-between text-left shadow-sm transition group cursor-pointer";
+                btn.innerHTML = `
+                    <div class="flex items-center gap-2 flex-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
+                        <span class="font-semibold text-slate-800 text-[11px] leading-tight">${escapeHtml(q)}</span>
+                    </div>
+                    <span class="text-slate-400 group-hover:text-slate-900 group-hover:translate-x-0.5 transition text-xs font-bold">→</span>
+                `;
+                btn.onclick = () => {
+                    document.getElementById('prevChatInput').value = q;
+                    handleMockSubmit(new Event('submit'));
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function onLiveNameChange(val) {
+            document.getElementById('prevTitle').innerText = val || 'Assistant';
+        }
+
+        function onLiveSubtitleChange(val) {
+            document.getElementById('prevSubtitle').innerText = val || 'Online';
+        }
+
+        function onLiveColorChange(val) {
+            document.getElementById('asstColorPicker').value = val;
+            document.getElementById('asstColorText').value = val;
+            document.getElementById('prevHeader').style.backgroundColor = val;
+            document.getElementById('prevPopularBar').style.backgroundColor = val;
+            document.getElementById('prevBubble').style.backgroundColor = val;
+            document.getElementById('prevSendBtn').style.backgroundColor = val;
+        }
+
+        function onLiveAvatarChange(val) {
+            document.getElementById('prevAvatar').innerText = val;
+            document.getElementById('prevBubble').innerText = val;
+        }
+
+        function onLiveWelcomeChange(val) {
+            document.getElementById('prevWelcome').innerText = val || 'Hi! How can I help you today?';
+        }
+
+        function onLiveQuestionsChange(val) {
+            renderMockPopularCards(val);
+        }
+
+        function onLiveTeaserChange(val) {
+            document.getElementById('prevTeaserText').innerText = val || '👋 Hi! Need quick answers?';
+        }
+
+        async function handleMockSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('prevChatInput');
+            const q = input.value.trim();
+            if (!q) return;
+
+            input.value = '';
+            const body = document.getElementById('prevChatBody');
+            
+            // Append user bubble
+            const userBubble = document.createElement('div');
+            userBubble.className = "bg-brand-600 text-white p-2.5 rounded-xl rounded-br-sm text-[11.5px] ml-auto max-w-[80%] leading-relaxed";
+            userBubble.innerText = q;
+            body.appendChild(userBubble);
+            body.scrollTop = body.scrollHeight;
+
+            // Append typing indicator
+            const typingBubble = document.createElement('div');
+            typingBubble.className = "bg-white p-2 rounded-xl rounded-bl-sm border border-slate-200 text-slate-500 text-[10px] w-20 flex items-center justify-center gap-1";
+            typingBubble.innerHTML = `<span class="animate-ping w-1 h-1 bg-slate-400 rounded-full"></span> Thinking...`;
+            body.appendChild(typingBubble);
+            body.scrollTop = body.scrollHeight;
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        assistant_id: currentAssistantId,
+                        message: q
+                    })
+                });
+                const data = await res.json();
+                typingBubble.remove();
+
+                const botBubble = document.createElement('div');
+                botBubble.className = "bg-white p-2.5 rounded-xl rounded-bl-sm border border-slate-200 shadow-sm text-slate-800 text-[11.5px] leading-relaxed";
+                
+                let citationHtml = '';
+                if (data.sources && data.sources.length > 0) {
+                    citationHtml = `
+                        <div class="mt-2 pt-2 border-t border-slate-100 flex flex-wrap gap-1">
+                            ${data.sources.map(s => `
+                                <a href="${s.url}" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded border border-brand-200">
+                                    [${s.index}] ${s.title.substring(0, 18)}...
+                                </a>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                botBubble.innerHTML = `<div>${data.answer.replace(/\n/g, '<br>')}</div>${citationHtml}`;
+                body.appendChild(botBubble);
+                body.scrollTop = body.scrollHeight;
+
+            } catch (err) {
+                typingBubble.remove();
+                const errBubble = document.createElement('div');
+                errBubble.className = "bg-rose-50 text-rose-700 p-2 rounded-xl text-[11px]";
+                errBubble.innerText = "Error getting response.";
+                body.appendChild(errBubble);
+            }
+        }
+
+        async function loadAnalytics() {
+            try {
+                const asstRes = await fetch(`/api/assistants/${currentAssistantId}`);
+                const asst = await asstRes.json();
+
+                const leadsRes = await fetch(`/api/assistants/${currentAssistantId}/leads`);
+                const leads = await leadsRes.json();
+
+                const gapsRes = await fetch(`/api/assistants/${currentAssistantId}/gaps`);
+                const gaps = await gapsRes.json();
+
+                const convRes = await fetch(`/api/assistants/${currentAssistantId}/conversations`);
+                const convs = await convRes.json();
+
+                const totalQueries = asst.total_messages || convs.length || 0;
+                const totalLeads = leads.length || 0;
+                const totalGaps = gaps.length || 0;
+
+                document.getElementById('kpiQueries').innerText = totalQueries;
+                document.getElementById('kpiLeads').innerText = totalLeads;
+                document.getElementById('kpiGaps').innerText = totalGaps;
+
+                document.getElementById('navInboxBadge').innerText = convs.length;
+                document.getElementById('navGapsBadge').innerText = totalGaps;
+                document.getElementById('navLeadsBadge').innerText = totalLeads;
+
+                const convRate = totalQueries > 0 ? ((totalLeads / totalQueries) * 100).toFixed(1) : 0;
+                document.getElementById('kpiConversion').innerText = `${convRate}%`;
+
+            } catch (err) {
+                console.error("Analytics load error:", err);
+            }
+        }
+
+        function onFileSelected(input) {
+            if (input.files && input.files[0]) {
+                selectedFile = input.files[0];
+                document.getElementById('uploadLabel').innerText = `${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB)`;
+                document.getElementById('uploadSubmitBtn').disabled = false;
+            }
+        }
+
+        document.getElementById('uploadForm').onsubmit = async (e) => {
+            e.preventDefault();
+            if (!selectedFile) return;
+
+            const btn = document.getElementById('uploadSubmitBtn');
+            const status = document.getElementById('uploadStatus');
+            btn.disabled = true;
+            status.className = "mt-3 text-xs text-brand-400 block font-semibold";
+            status.innerText = "Parsing document & vectorizing chunks...";
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/sources/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                status.className = "mt-3 text-xs text-emerald-400 block font-semibold";
+                status.innerText = `Successfully indexed "${data.title}" into ${data.chunks_count} vector chunks!`;
+                showToast("Document indexed into vector store");
+                loadSources();
+                loadAnalytics();
+            } catch (err) {
+                status.className = "mt-3 text-xs text-rose-400 block font-semibold";
+                status.innerText = "Error uploading document.";
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        document.getElementById('urlForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('urlSubmitBtn');
+            const status = document.getElementById('urlStatus');
+            const url = document.getElementById('urlInput').value.trim();
+            const depth = parseInt(document.getElementById('crawlDepth').value) || 1;
+
+            btn.disabled = true;
+            status.className = "mt-3 text-xs text-brand-400 block font-semibold";
+            status.innerText = `Crawling ${url} (Depth: ${depth})...`;
+
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/sources`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url, crawl_depth: depth })
+                });
+                const data = await res.json();
+                status.className = "mt-3 text-xs text-emerald-400 block font-semibold";
+                status.innerText = `Crawled ${data.length} page(s). Total chunks generated: ${data.reduce((a, b) => a + b.chunks_count, 0)}.`;
+                showToast("Web source crawled successfully");
+                document.getElementById('urlInput').value = '';
+                loadSources();
+                loadAnalytics();
+            } catch (err) {
+                status.className = "mt-3 text-xs text-rose-400 block font-semibold";
+                status.innerText = "Error crawling URL.";
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        document.getElementById('textForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('textTitle').value.trim();
+            const content = document.getElementById('textContent').value.trim();
+            const status = document.getElementById('textStatus');
+
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/sources`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: title,
+                        content: content,
+                        url: `doc://${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
+                    })
+                });
+                status.className = "mt-3 text-xs text-emerald-400 block font-semibold";
+                status.innerText = `Added "${title}" to knowledge base.`;
+                showToast("FAQ/Policy added to knowledge base");
+                document.getElementById('textTitle').value = '';
+                document.getElementById('textContent').value = '';
+                loadSources();
+                loadAnalytics();
+            } catch (err) {
+                status.className = "mt-3 text-xs text-rose-400 block font-semibold";
+                status.innerText = "Error saving text document.";
+            }
+        };
+
+        async function loadSources() {
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/sources`);
+                sourcesData = await res.json();
+                renderSourcesTable(sourcesData);
+            } catch (err) {
+                console.error("Error loading sources:", err);
+            }
+        }
+
+        function renderSourcesTable(data) {
+            const tbody = document.getElementById('sourcesTableBody');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500">No knowledge sources indexed yet. Upload a PDF or crawl a URL above!</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map(s => {
+                const isPdf = s.source_type === 'pdf' || (s.title && s.title.endsWith('.pdf'));
+                const isUrl = s.url && s.url.startsWith('http');
+                const typeIcon = isPdf ? 'file-text' : (isUrl ? 'globe' : 'file-code');
+                const typeBadgeColor = isPdf ? 'text-rose-400 bg-rose-500/10 border-rose-500/20' : (isUrl ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20');
+                const typeLabel = isPdf ? 'PDF File' : (isUrl ? 'Website' : 'Direct Text');
+
+                return `
+                    <tr class="hover:bg-white/5 transition">
+                        <td class="px-6 py-3.5 whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${typeBadgeColor}">
+                                <i data-lucide="${typeIcon}" class="w-3 h-3"></i>
+                                ${typeLabel}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3.5">
+                            <div class="font-bold text-white text-xs">${escapeHtml(s.title || 'Untitled Document')}</div>
+                            <div class="text-[11px] font-mono text-slate-400 truncate max-w-xs mt-0.5">${escapeHtml(s.url || 'Internal Reference')}</div>
+                        </td>
+                        <td class="px-6 py-3.5 whitespace-nowrap">
+                            <span class="font-mono text-xs bg-white/5 border border-white/10 px-2 py-0.5 rounded-md text-slate-300">
+                                ${s.chunks_count || 1} chunks
+                            </span>
+                        </td>
+                        <td class="px-6 py-3.5 whitespace-nowrap text-slate-400 text-[11px] font-mono">
+                            ${s.created_at ? s.created_at.split(' ')[0] : 'Today'}
+                        </td>
+                        <td class="px-6 py-3.5 whitespace-nowrap text-right">
+                            <button onclick="deleteSource('${s.id}')" class="text-rose-400 hover:text-rose-300 transition text-xs font-semibold flex items-center gap-1 ml-auto">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                <span>Delete</span>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            refreshIcons();
+        }
+
+        function filterSourcesTable() {
+            const query = document.getElementById('sourceSearchInput').value.toLowerCase();
+            const filtered = sourcesData.filter(s => 
+                (s.title && s.title.toLowerCase().includes(query)) ||
+                (s.url && s.url.toLowerCase().includes(query))
+            );
+            renderSourcesTable(filtered);
+        }
+
+        async function deleteSource(id) {
+            if (!confirm("Are you sure you want to delete this source and remove its vectorized chunks?")) return;
+            try {
+                await fetch(`/api/sources/${id}`, { method: 'DELETE' });
+                showToast("Source removed from knowledge base");
+                loadSources();
+                loadAnalytics();
+            } catch (err) {
+                alert("Error deleting source.");
+            }
+        }
+
+        async function loadConversations() {
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/conversations`);
+                conversationsData = await res.json();
+                renderConversationsList(conversationsData);
+            } catch (err) {
+                console.error("Error loading conversations:", err);
+            }
+        }
+
+        function renderConversationsList(data) {
+            const container = document.getElementById('inboxSessionsList');
+            if (!data || data.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No visitor chat sessions recorded yet. Test your assistant in the Live Simulator!</div>`;
+                return;
+            }
+
+            container.innerHTML = data.map((c, i) => `
+                <div onclick="selectConversation('${c.id}')" class="p-4 hover:bg-white/5 cursor-pointer transition flex flex-col gap-1 border-l-2 border-transparent hover:border-brand-500 group">
+                    <div class="flex items-center justify-between text-[11px]">
+                        <span class="font-mono text-slate-400 group-hover:text-brand-300 transition">#${c.id.substring(0, 12)}...</span>
+                        <span class="text-slate-500 font-mono text-[10px]">${c.updated_at ? c.updated_at.split(' ')[1] : ''}</span>
+                    </div>
+                    <div class="font-bold text-xs text-white line-clamp-1 mt-0.5">
+                        ${escapeHtml(c.first_query || 'Visitor Question')}
+                    </div>
+                    <div class="flex items-center justify-between mt-1.5 text-[10px]">
+                        <span class="text-slate-400 flex items-center gap-1 font-mono">
+                            <i data-lucide="message-square" class="w-3 h-3"></i> ${c.message_count || 1} msgs
+                        </span>
+                        ${c.lead_email ? `
+                            <span class="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
+                                ${escapeHtml(c.lead_email)}
+                            </span>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            // Automatically select first conversation if available
+            if (data.length > 0) {
+                selectConversation(data[0].id);
+            }
+            refreshIcons();
+        }
+
+        async function selectConversation(convId) {
+            try {
+                const res = await fetch(`/api/conversations/${convId}/transcript`);
+                const messages = await res.json();
+                const conv = conversationsData.find(c => c.id === convId);
+
+                document.getElementById('detailTranscriptTitle').innerHTML = `
+                    <i data-lucide="message-circle" class="w-4 h-4 text-brand-400"></i>
+                    Session: <span class="font-mono">${convId.substring(0, 16)}</span>
+                `;
+                document.getElementById('detailSessionSub').innerText = `${messages.length} messages in conversation thread`;
+                
+                const leadBadge = document.getElementById('detailLeadBadge');
+                if (conv && conv.lead_email) {
+                    leadBadge.classList.remove('hidden');
+                    leadBadge.innerHTML = `<span class="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">Lead: ${escapeHtml(conv.lead_email)}</span>`;
+                } else {
+                    leadBadge.classList.add('hidden');
+                }
+
+                const container = document.getElementById('detailMessagesContainer');
+                container.innerHTML = messages.map(m => {
+                    const isUser = m.role === 'user';
+                    return `
+                        <div class="flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1">
+                            <span class="text-[10px] text-slate-500 font-mono">${isUser ? 'Visitor' : 'Grounded AI'}</span>
+                            <div class="${isUser ? 'bg-brand-600 text-white' : 'glass-panel-elevated text-slate-100 border border-white/10'} p-3.5 rounded-2xl ${isUser ? 'rounded-br-sm' : 'rounded-bl-sm'} max-w-[85%] text-xs leading-relaxed">
+                                ${m.content.replace(/\n/g, '<br>')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                refreshIcons();
+
+            } catch (err) {
+                console.error("Error loading transcript:", err);
+            }
+        }
+
+        async function loadGaps() {
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/gaps`);
+                const gaps = await res.json();
+                const tbody = document.getElementById('gapsTableBody');
+
+                if (!gaps || gaps.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500">Zero knowledge gaps! All visitor questions were fully answered by current documentation.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = gaps.map(g => `
+                    <tr class="hover:bg-white/5 transition">
+                        <td class="px-6 py-3.5">
+                            <div class="font-bold text-white text-xs">${escapeHtml(g.question)}</div>
+                        </td>
+                        <td class="px-6 py-3.5 whitespace-nowrap">
+                            <span class="font-mono text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                                ${g.times_asked || 1}x asked
+                            </span>
+                        </td>
+                        <td class="px-6 py-3.5 whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${g.resolved ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'}">
+                                <span class="w-1.5 h-1.5 rounded-full ${g.resolved ? 'bg-emerald-400' : 'bg-amber-400'}"></span>
+                                ${g.resolved ? 'Resolved' : 'Pending Action'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3.5 whitespace-nowrap text-slate-400 text-[11px] font-mono">
+                            ${g.created_at ? g.created_at.split(' ')[0] : 'Recent'}
+                        </td>
+                        <td class="px-6 py-3.5 whitespace-nowrap text-right">
+                            ${!g.resolved ? `
+                                <button onclick="openResolveGapModal(${g.id}, '${escapeHtml(g.question.replace(/'/g, "\\'"))}')" class="text-xs bg-brand-600 hover:bg-brand-500 text-white font-bold px-3 py-1.5 rounded-xl shadow-md transition">
+                                    Resolve &amp; Teach AI
+                                </button>
+                            ` : `<span class="text-slate-500 text-xs font-semibold">Trained ✓</span>`}
+                        </td>
+                    </tr>
+                `).join('');
+                refreshIcons();
+
+            } catch (err) {
+                console.error("Error loading gaps:", err);
+            }
+        }
+
+        function openResolveGapModal(gapId, question) {
+            document.getElementById('gapModalId').value = gapId;
+            document.getElementById('gapModalQuestion').innerText = question;
+            document.getElementById('gapModalAnswer').value = '';
+            document.getElementById('resolveGapModal').classList.remove('hidden');
+        }
+
+        function closeResolveGapModal() {
+            document.getElementById('resolveGapModal').classList.add('hidden');
+        }
+
+        document.getElementById('resolveGapForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const gapId = document.getElementById('gapModalId').value;
+            const answer = document.getElementById('gapModalAnswer').value.trim();
+
+            try {
+                await fetch(`/api/assistants/${currentAssistantId}/gaps/${gapId}/resolve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ answer: answer })
+                });
+                closeResolveGapModal();
+                showToast("Knowledge gap resolved and added to knowledge vault");
+                loadGaps();
+                loadSources();
+                loadAnalytics();
+            } catch (err) {
+                alert("Error resolving knowledge gap.");
+            }
+        };
+
+        async function loadLeads() {
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/leads`);
+                const leads = await res.json();
+                const tbody = document.getElementById('leadsTableBody');
+
+                if (!leads || leads.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-slate-500">No leads captured yet. The AI automatically prompts visitors when questions signal purchase intent.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = leads.map(l => `
+                    <tr class="hover:bg-white/5 transition">
+                        <td class="px-6 py-3.5">
+                            <div class="font-bold text-white text-xs">${escapeHtml(l.name || 'Anonymous Prospect')}</div>
+                            <div class="text-[11px] font-mono text-brand-400 mt-0.5">${escapeHtml(l.email)}</div>
+                            ${l.phone ? `<div class="text-[10px] font-mono text-slate-400 mt-0.5">${escapeHtml(l.phone)}</div>` : ''}
+                        </td>
+                        <td class="px-6 py-3.5 whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Verified Lead
+                            </span>
+                        </td>
+                        <td class="px-6 py-3.5">
+                            <button onclick="viewBrief('${escapeHtml(l.email)}', ${escapeHtml(JSON.stringify(l.call_prep_brief || 'No briefing available.'))})" class="text-xs bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                <span>View AI Call-Prep Brief</span>
+                            </button>
+                        </td>
+                        <td class="px-6 py-3.5 whitespace-nowrap text-slate-400 text-[11px] font-mono">
+                            ${l.created_at ? l.created_at.split(' ')[0] : 'Recent'}
+                        </td>
+                    </tr>
+                `).join('');
+                refreshIcons();
+
+            } catch (err) {
+                console.error("Error loading leads:", err);
+            }
+        }
+
+        function viewBrief(contact, brief) {
+            document.getElementById('briefContactText').innerText = contact;
+            document.getElementById('briefContent').innerText = brief;
+            document.getElementById('briefModal').classList.remove('hidden');
+            refreshIcons();
+        }
+
+        function closeBriefModal() {
+            document.getElementById('briefModal').classList.add('hidden');
+        }
+
+        async function exportLeadsCsv() {
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/leads`);
+                const leads = await res.json();
+                if (!leads.length) {
+                    alert("No leads to export yet.");
+                    return;
+                }
+
+                let csv = "Name,Email,Phone,Assistant,Created_At,AI_Call_Prep_Brief\n";
+                leads.forEach(l => {
+                    const briefClean = (l.call_prep_brief || '').replace(/"/g, '""');
+                    csv += `"${l.name || ''}","${l.email || ''}","${l.phone || ''}","${l.assistant_id || ''}","${l.created_at || ''}","${briefClean}"\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `leads_${currentAssistantId}_${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+                showToast("Exported leads to CSV");
+            } catch (err) {
+                alert("Error exporting CSV");
+            }
+        }
+
+        document.getElementById('assistantBrandingForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('asstName').value.trim(),
+                widget_subtitle: document.getElementById('asstSubtitle').value.trim(),
+                primary_color: document.getElementById('asstColorText').value.trim(),
+                bot_avatar: document.getElementById('asstAvatar').value,
+                position: document.getElementById('asstPosition').value,
+                voice_enabled: document.getElementById('asstVoice').value === 'true' ? 1 : 0,
+                welcome_message: document.getElementById('asstWelcome').value.trim(),
+                suggested_questions: document.getElementById('asstQuestions').value.trim(),
+                teaser_message: document.getElementById('asstTeaser').value.trim(),
+                show_branding: document.getElementById('asstShowBranding').value === 'true' ? 1 : 0
+            };
+
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const updated = await res.json();
+                showToast("Assistant widget settings saved");
+                loadAssistants();
+            } catch (err) {
+                alert("Error saving branding settings.");
+            }
+        };
+
+        document.getElementById('assistantSecurityForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const payload = {
+                domain: document.getElementById('asstDomain').value.trim(),
+                webhook_url: document.getElementById('asstWebhook').value.trim()
+            };
+
+            try {
+                await fetch(`/api/assistants/${currentAssistantId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                showToast("Security & webhook settings updated");
+                loadAssistants();
+            } catch (err) {
+                alert("Error saving security settings.");
+            }
+        };
+
+        function renderEmbedCode() {
+            const host = window.location.origin;
+            const snippet = `<script src="${host}/static/widget.js"\n  data-assistant-id="${currentAssistantId}"\n  data-api-url="${host}">\n<\/script>`;
+            document.getElementById('embedScriptBlock').innerText = snippet;
+        }
+
+        function copyEmbedScript() {
+            const block = document.getElementById('embedScriptBlock');
+            navigator.clipboard.writeText(block.innerText).then(() => {
+                showToast("Embed tag copied to clipboard");
+            });
+        }
+
+        async function loadSubscription() {
+            try {
+                const res = await fetch('/api/subscription');
+                const sub = await res.json();
+                
+                document.getElementById('sidebarPlanName').innerText = sub.plan_name;
+                document.getElementById('activePlanBadge').innerText = `${sub.plan_name} ($${sub.price_monthly}/mo)`;
+
+                const quotaPct = Math.min(100, Math.round((sub.messages_used / sub.messages_limit) * 100));
+                document.getElementById('sidebarQuotaText').innerText = `${quotaPct}%`;
+                document.getElementById('sidebarQuotaBar').style.width = `${quotaPct}%`;
+
+            } catch (err) {
+                console.error("Subscription load error:", err);
+            }
+        }
+
+        async function upgradePlan(planKey) {
+            try {
+                const res = await fetch('/api/subscription/upgrade', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan: planKey })
+                });
+                const data = await res.json();
+                showToast(`Switched plan to ${data.plan_name}`);
+                loadSubscription();
+            } catch (err) {
+                alert("Error upgrading plan");
+            }
+        }
+
+        async function loadGlobalSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const cfg = await res.json();
+                if (cfg.llm_provider || cfg.active_provider) {
+                    document.getElementById('cfgProvider').value = cfg.llm_provider || cfg.active_provider;
+                }
+                if (cfg.has_siliconflow_key) {
+                    document.getElementById('cfgSiliconFlowKey').placeholder = '•••••••• (SiliconFlow Key Saved)';
+                }
+                if (cfg.has_deepseek_key) {
+                    document.getElementById('cfgDeepSeekKey').placeholder = '•••••••• (DeepSeek Key Saved)';
+                }
+                if (cfg.has_qwen_key) {
+                    document.getElementById('cfgQwenKey').placeholder = '•••••••• (Qwen DashScope Key Saved)';
+                }
+                if (cfg.has_groq_key) {
+                    document.getElementById('cfgGroqKey').placeholder = '•••••••• (Groq Key Saved)';
+                }
+                if (cfg.has_gemini_key) {
+                    document.getElementById('cfgGeminiKey').placeholder = '•••••••• (Gemini Key Saved)';
+                }
+                if (cfg.has_openai_key) {
+                    document.getElementById('cfgOpenAIKey').placeholder = '•••••••• (OpenAI Key Saved)';
+                }
+            } catch (err) {
+                console.error("Error loading settings:", err);
+            }
+        }
+
+        async function testProviderKey(provider) {
+            const statusEl = document.getElementById(`testStatus_${provider}`);
+            if (!statusEl) return;
+
+            const inputIdMap = {
+                siliconflow: 'cfgSiliconFlowKey',
+                deepseek: 'cfgDeepSeekKey',
+                qwen: 'cfgQwenKey',
+                groq: 'cfgGroqKey',
+                gemini: 'cfgGeminiKey',
+                openai: 'cfgOpenAIKey'
+            };
+            const inputEl = document.getElementById(inputIdMap[provider]);
+            const explicitKey = inputEl ? inputEl.value.trim() : '';
+
+            statusEl.classList.remove('hidden');
+            statusEl.innerHTML = `<span class="text-amber-400 flex items-center gap-1.5"><span class="animate-spin inline-block">⏳</span> Testing connection...</span>`;
+
+            try {
+                const res = await fetch('/api/settings/test-llm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: provider, api_key: explicitKey || undefined })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    statusEl.innerHTML = `<span class="text-emerald-400 font-semibold flex items-center gap-1.5">✓ ${data.message} ${data.response ? `("${data.response.substring(0, 45)}...")` : ''}</span>`;
+                } else {
+                    const msg = data.detail || data.message || "Failed to connect.";
+                    statusEl.innerHTML = `<span class="text-rose-400 font-semibold flex items-center gap-1.5">✕ ${msg}</span>`;
+                }
+            } catch (err) {
+                statusEl.innerHTML = `<span class="text-rose-400 font-semibold">✕ Request error: ${err.message}</span>`;
+            }
+        }
+
+        document.getElementById('globalAiForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const provider = document.getElementById('cfgProvider').value;
+            const siliconflowKey = document.getElementById('cfgSiliconFlowKey').value.trim();
+            const deepseekKey = document.getElementById('cfgDeepSeekKey').value.trim();
+            const qwenKey = document.getElementById('cfgQwenKey').value.trim();
+            const groqKey = document.getElementById('cfgGroqKey').value.trim();
+            const geminiKey = document.getElementById('cfgGeminiKey').value.trim();
+            const openaiKey = document.getElementById('cfgOpenAIKey').value.trim();
+
+            const payload = { llm_provider: provider };
+            if (siliconflowKey) payload.siliconflow_api_key = siliconflowKey;
+            if (deepseekKey) payload.deepseek_api_key = deepseekKey;
+            if (qwenKey) payload.qwen_api_key = qwenKey;
+            if (groqKey) payload.groq_api_key = groqKey;
+            if (geminiKey) payload.gemini_api_key = geminiKey;
+            if (openaiKey) payload.openai_api_key = openaiKey;
+
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error("Failed to save settings");
+                showToast("AI inference settings saved");
+                loadGlobalSettings();
+            } catch (err) {
+                alert("Error saving settings: " + err.message);
+            }
+        };
+
+        function openNewAssistantModal() {
+            document.getElementById('newAsstModal').classList.remove('hidden');
+        }
+
+        function closeNewAssistantModal() {
+            document.getElementById('newAsstModal').classList.add('hidden');
+        }
+
+        document.getElementById('createAssistantForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('newAsstName').value.trim();
+            const domain = document.getElementById('newAsstDomain').value.trim() || '*';
+            const color = document.getElementById('newAsstColor').value;
+
+            try {
+                const res = await fetch('/api/assistants', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        domain: domain,
+                        primary_color: color,
+                        welcome_message: `Hi there! 👋 How can I help you regarding ${name}?`
+                    })
+                });
+                const newAsst = await res.json();
+                currentAssistantId = newAsst.id;
+                closeNewAssistantModal();
+                showToast(`Assistant "${name}" created`);
+                await loadAssistants();
+                switchTab('knowledge');
+            } catch (err) {
+                alert("Error creating assistant.");
+            }
+        };
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Initialize on DOM Ready
+        window.addEventListener('DOMContentLoaded', () => {
+            initDashboard();
+        });
+    </script>
+</body>
+</html>

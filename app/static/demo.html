@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeaveFlow AI — Multi-Website Simulator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                        },
+                        obsidian: {
+                            950: '#07090e',
+                            900: '#0b0f17',
+                            850: '#0f141f',
+                            800: '#141b2a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(15, 20, 31, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .gradient-border {
+            position: relative;
+        }
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(168, 85, 247, 0.2), rgba(255, 255, 255, 0.05));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-obsidian-950 font-sans text-slate-100 min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+    <!-- Top Simulator Control Header -->
+    <header class="bg-obsidian-900/90 border-b border-white/5 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 backdrop-blur-md shadow-lg">
+        <div class="flex items-center gap-3">
+            <span class="text-xs font-black uppercase tracking-wider text-brand-400 bg-brand-500/10 border border-brand-500/20 px-3 py-1 rounded-xl flex items-center gap-2 shadow-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                WeaveFlow Client Simulator
+            </span>
+            <span class="text-xs text-slate-400 hidden sm:inline">Active Website:</span>
+            <select id="siteSimulatorSelect" onchange="switchSimulatedSite(this.value)" class="text-xs font-bold bg-obsidian-950 text-white border border-white/10 rounded-xl px-3 py-1.5 outline-none cursor-pointer hover:border-brand-500 transition">
+                <!-- Dynamically populated -->
+            </select>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <a href="/" class="text-xs bg-brand-600 hover:bg-brand-500 text-white font-bold px-4 py-2 rounded-xl transition shadow-lg shadow-brand-500/20 flex items-center gap-2">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                <span>Back to SaaS Dashboard</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Simulated Website Content Container -->
+    <main class="flex-1 flex flex-col relative overflow-hidden">
+        <!-- Ambient Glow -->
+        <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-brand-600/15 rounded-full blur-[140px] pointer-events-none"></div>
+
+        <!-- Simulated Navbar -->
+        <nav class="border-b border-white/5 bg-obsidian-950/60 backdrop-blur px-8 h-16 flex items-center justify-between max-w-6xl mx-auto w-full">
+            <div class="flex items-center gap-3">
+                <div id="simLogoBadge" class="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 to-purple-600 flex items-center justify-center font-black text-white text-sm shadow-md">
+                    ⚡
+                </div>
+                <span class="font-extrabold text-base tracking-tight text-white" id="simNavTitle">AcmeCloud Platform</span>
+            </div>
+            <div class="flex items-center gap-6 text-xs font-medium text-slate-400">
+                <a href="#features" class="hover:text-white transition">Capabilities</a>
+                <a href="#pricing" class="hover:text-white transition">Pricing Tiers</a>
+                <a href="#docs" class="hover:text-white transition">Documentation</a>
+            </div>
+        </nav>
+
+        <!-- Simulated Hero -->
+        <div class="max-w-4xl mx-auto px-6 py-20 text-center flex-1 flex flex-col justify-center items-center relative z-10">
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-panel text-brand-300 text-xs font-semibold mb-6 shadow-sm border border-brand-500/20">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                WeaveFlow AI Grounded Widget Active on this Website
+            </div>
+            
+            <h1 class="text-4xl sm:text-6xl font-black tracking-tight mb-6 text-white leading-tight">
+                Next-Gen Infrastructure for Engineering Teams
+            </h1>
+            <p class="text-base text-slate-400 max-w-xl mx-auto mb-10 leading-relaxed">
+                Deploy containerized microservices and multi-region database replication with 99.99% uptime SLA.
+            </p>
+
+            <!-- Floating Simulator Callout Card -->
+            <div class="glass-panel p-6 rounded-3xl max-w-md text-left shadow-2xl backdrop-blur-md gradient-border">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-8 h-8 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center">
+                        <i data-lucide="message-square" class="w-4 h-4"></i>
+                    </div>
+                    <h4 class="text-sm font-bold text-white">Click the Chat Bubble in the Bottom Corner</h4>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    Test the live widget right now! Ask about products, pricing, or talk with support:
+                </p>
+                <div class="mt-3 space-y-2 text-xs text-slate-400 font-mono">
+                    <div class="bg-obsidian-950 p-2.5 rounded-xl border border-white/5 text-brand-300 flex items-center gap-2">
+                        <i data-lucide="help-circle" class="w-3.5 h-3.5 text-brand-400"></i>
+                        <span>"What is the pricing for Starter tier?"</span>
+                    </div>
+                    <div class="bg-obsidian-950 p-2.5 rounded-xl border border-white/5 text-emerald-300 flex items-center gap-2">
+                        <i data-lucide="mic" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span>Click the mic button to speak a voice question</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulated Features Grid -->
+        <div class="max-w-5xl mx-auto px-6 pb-24 grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+            <div class="glass-panel p-6 rounded-2xl border border-white/5">
+                <div class="flex items-center gap-2 mb-2 text-brand-400">
+                    <i data-lucide="zap" class="w-4 h-4"></i>
+                    <h4 class="font-bold text-sm text-white">15ms Cold Starts</h4>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">Instant serverless scaling up to 100,000 requests per second with zero provisioned capacity lag.</p>
+            </div>
+            <div class="glass-panel p-6 rounded-2xl border border-white/5">
+                <div class="flex items-center gap-2 mb-2 text-emerald-400">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    <h4 class="font-bold text-sm text-white">SOC2 Type II Certified</h4>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">Enterprise compliance with automated encryption at rest and in transit across all active clusters.</p>
+            </div>
+            <div class="glass-panel p-6 rounded-2xl border border-white/5">
+                <div class="flex items-center gap-2 mb-2 text-purple-400">
+                    <i data-lucide="globe" class="w-4 h-4"></i>
+                    <h4 class="font-bold text-sm text-white">120+ Edge Nodes</h4>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">Global low-latency CDN caching with automatic SSL provisioning and intelligent edge routing.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Embedded Drop-in Widget Script for Active Assistant -->
+    <script id="embeddedWidgetScript" src="/static/widget.js" data-assistant-id="asst_default"></script>
+
+    <script>
+        function refreshIcons() {
+            if (window.lucide) lucide.createIcons();
+        }
+
+        fetch('/api/assistants')
+            .then(r => r.json())
+            .then(assistants => {
+                const select = document.getElementById('siteSimulatorSelect');
+                select.innerHTML = assistants.map(a => `
+                    <option value="${a.id}">${a.name} (${a.domain || 'All Domains'})</option>
+                `).join('');
+                refreshIcons();
+            });
+
+        function switchSimulatedSite(asstId) {
+            // Remove previous widget
+            const root = document.getElementById('wf-widget-root');
+            if (root) root.remove();
+            const styles = document.getElementById('wf-widget-styles');
+            if (styles) styles.remove();
+            delete window.WeaveFlowWidgetInitialized;
+
+            const oldScript = document.getElementById('embeddedWidgetScript');
+            if (oldScript) oldScript.remove();
+
+            // Re-inject with selected assistant
+            const newScript = document.createElement('script');
+            newScript.id = 'embeddedWidgetScript';
+            newScript.src = '/static/widget.js';
+            newScript.setAttribute('data-assistant-id', asstId);
+            newScript.setAttribute('data-api-url', window.location.origin);
+            document.body.appendChild(newScript);
+
+            // Update simulator header title
+            fetch(`/api/assistants/${asstId}`)
+                .then(r => r.json())
+                .then(asst => {
+                    document.getElementById('simNavTitle').innerText = asst.name;
+                    document.getElementById('simLogoBadge').innerText = asst.bot_avatar || '⚡';
+                    refreshIcons();
+                });
+        }
+
+        window.addEventListener('DOMContentLoaded', refreshIcons);
+    </script>
+</body>
+</html>
