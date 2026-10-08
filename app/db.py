@@ -13,6 +13,7 @@ import sqlite3
 import json
 import os
 import shutil
+import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 

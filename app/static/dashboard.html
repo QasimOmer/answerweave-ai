@@ -2188,15 +2188,18 @@
                         primary_color: color,
                         welcome_message: `Hi there! 👋 How can I help you regarding ${name}?`
                     })
-                });
-                const newAsst = await res.json();
-                currentAssistantId = newAsst.id;
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.detail || "Server error creating assistant");
+                }
+                const data = await res.json();
+                currentAssistantId = data.assistant_id || (data.assistant && data.assistant.id) || currentAssistantId;
                 closeNewAssistantModal();
                 showToast(`Assistant "${name}" created`);
                 await loadAssistants();
                 switchTab('knowledge');
             } catch (err) {
-                alert("Error creating assistant.");
+                alert("Error creating assistant: " + (err.message || err));
             }
         };
 
