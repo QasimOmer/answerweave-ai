@@ -108,14 +108,45 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
         "lead_prompted": lead_trigger
     }
 
-def call_groq_llm(api_key: str, prompt: str, system_prompt: str) -> str:
+def get_groq_active_model(api_key: str) -> str:
+    """Dynamically queries Groq /models to find the best available active chat model."""
+    try:
+        resp = requests.get(
+            "https://api.groq.com/openai/v1/models",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=5
+        )
+        if resp.ok:
+            models_data = resp.json().get("data", [])
+            model_ids = [m["id"] for m in models_data if "id" in m]
+            preferences = [
+                "llama-3.3-70b-versatile",
+                "llama-3.1-70b-versatile",
+                "llama-3.1-8b-instant",
+                "llama3-70b-8192",
+                "llama3-8b-8192",
+                "mixtral-8x7b-32768",
+                "gemma2-9b-it"
+            ]
+            for pref in preferences:
+                if pref in model_ids:
+                    return pref
+            chat_models = [m for m in model_ids if "whisper" not in m]
+            if chat_models:
+                return chat_models[0]
+    except Exception:
+        pass
+    return "llama-3.3-70b-versatile"
+
+def call_groq_llm(api_key: str, prompt: str, system_prompt: str, model: str = None) -> str:
+    active_model = model or get_groq_active_model(api_key)
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
     payload = {
-        "model": DEFAULT_GROQ_MODEL,
+        "model": active_model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
@@ -123,7 +154,24 @@ def call_groq_llm(api_key: str, prompt: str, system_prompt: str) -> str:
         "temperature": 0.2
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=20)
-    resp.raise_for_status()
+    if not resp.ok:
+        try:
+            err_json = resp.json()
+            err_msg = err_json.get("error", {}).get("message", resp.text)
+        except Exception:
+            err_msg = resp.text
+
+        # If primary model failed with 404/not found, try fallback models
+        if resp.status_code == 404 or "not found" in str(err_msg).lower():
+            for fb in ["llama-3.1-8b-instant", "llama3-8b-8192", "mixtral-8x7b-32768"]:
+                if fb != active_model:
+                    payload["model"] = fb
+                    retry = requests.post(url, headers=headers, json=payload, timeout=20)
+                    if retry.ok:
+                        return retry.json()["choices"][0]["message"]["content"]
+
+        raise Exception(f"Groq API error ({resp.status_code}): {err_msg}")
+
     data = resp.json()
     return data["choices"][0]["message"]["content"]
 
@@ -242,7 +290,13 @@ def call_openrouter_llm(api_key: str, prompt: str, system_prompt: str, model: st
         "max_tokens": 1500
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=25)
-    resp.raise_for_status()
+    if not resp.ok:
+        try:
+            err_json = resp.json()
+            err_msg = err_json.get("error", {}).get("message", resp.text)
+        except Exception:
+            err_msg = resp.text
+        raise Exception(f"OpenRouter error ({resp.status_code}): {err_msg}")
     data = resp.json()
     return data["choices"][0]["message"]["content"]
 
