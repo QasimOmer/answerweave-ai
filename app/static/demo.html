@@ -186,8 +186,8 @@
 
         function switchSimulatedSite(asstId) {
             // Remove previous widget
-            const root = document.getElementById('wf-widget-root');
-            if (root) root.remove();
+            const container = document.getElementById('wf-chat-widget-container') || document.getElementById('wf-widget-root');
+            if (container) container.remove();
             const styles = document.getElementById('wf-widget-styles');
             if (styles) styles.remove();
             delete window.WeaveFlowWidgetInitialized;

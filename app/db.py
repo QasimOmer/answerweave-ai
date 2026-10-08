@@ -231,11 +231,13 @@ def init_db():
         cursor.execute("""
         INSERT INTO assistants (
             id, name, domain, primary_color, welcome_message, bot_avatar,
-            position, suggested_questions, lead_capture_enabled, voice_enabled
+            position, widget_subtitle, suggested_questions, lead_capture_enabled, voice_enabled,
+            teaser_message, lead_title, lead_fields, show_branding
         ) VALUES (
-            'asst_default', 'AcmeCloud AI Assistant', 'acmecloud.io', '#4F46E5',
-            'Hi there! 👋 How can I help you today?', '⚡',
-            'bottom-right', 'What are your products?\nHow much does it cost?\nHow do I contact support?', 1, 1
+            'asst_default', 'EcomAlign Assistant', 'ecomalign.com', '#0f172a',
+            'Hi there! 👋 Welcome to EcomAlign. How can we help grow your e-commerce brand across Amazon, eBay, TikTok Shop, or other marketplaces today?', '⚡',
+            'bottom-right', 'Online • Marketplace Growth AI', 'How does EcomAlign help scale sales across Amazon, eBay & TikTok Shop?\nWhat full-service store management & listing optimization do you provide?\nHow can I book a call or start a project with your growth team?', 1, 1,
+            '👋 Need help growing on marketplaces?', 'Start Your Project with EcomAlign', 'name_email', 1
         );
         """)
 
