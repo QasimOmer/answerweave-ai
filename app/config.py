@@ -13,6 +13,7 @@ DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
 DEFAULT_SILICONFLOW_MODEL = "deepseek-ai/DeepSeek-V3"
 DEFAULT_QWEN_MODEL = "qwen-plus"
+DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-r1:free"
 
 def get_provider() -> str:
     return get_setting("llm_provider", "auto")
@@ -32,7 +33,8 @@ def get_api_key(provider: str = "gemini") -> str:
         "openai": "OPENAI_API_KEY",
         "deepseek": "DEEPSEEK_API_KEY",
         "siliconflow": "SILICONFLOW_API_KEY",
-        "qwen": "DASHSCOPE_API_KEY"
+        "qwen": "DASHSCOPE_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY"
     }
     return os.environ.get(env_var_map.get(provider, ""), "").strip()
 
@@ -46,10 +48,13 @@ def get_bot_settings() -> dict:
     deepseek_key = get_api_key("deepseek")
     siliconflow_key = get_api_key("siliconflow")
     qwen_key = get_api_key("qwen")
+    openrouter_key = get_api_key("openrouter")
     
     current_provider = get_provider()
     if current_provider == "auto":
-        if siliconflow_key:
+        if openrouter_key:
+            current_provider = "openrouter"
+        elif siliconflow_key:
             current_provider = "siliconflow"
         elif deepseek_key:
             current_provider = "deepseek"
@@ -71,13 +76,14 @@ def get_bot_settings() -> dict:
         "suggested_questions": get_setting("suggested_questions", "What services do you provide?\nHow does pricing work?\nHow do I contact support?"),
         "lead_capture_enabled": get_setting("lead_capture_enabled", "true") == "true",
         "llm_provider": current_provider,
-        "has_api_key": bool(gemini_key or groq_key or openai_key or deepseek_key or siliconflow_key or qwen_key),
+        "has_api_key": bool(gemini_key or groq_key or openai_key or deepseek_key or siliconflow_key or qwen_key or openrouter_key),
         "has_gemini_key": bool(gemini_key),
         "has_groq_key": bool(groq_key),
         "has_openai_key": bool(openai_key),
         "has_deepseek_key": bool(deepseek_key),
         "has_siliconflow_key": bool(siliconflow_key),
-        "has_qwen_key": bool(qwen_key)
+        "has_qwen_key": bool(qwen_key),
+        "has_openrouter_key": bool(openrouter_key)
     }
 
 def update_bot_settings(data: dict):
@@ -105,3 +111,5 @@ def update_bot_settings(data: dict):
         set_api_key(data["siliconflow_api_key"].strip(), "siliconflow")
     if "qwen_api_key" in data and data["qwen_api_key"].strip():
         set_api_key(data["qwen_api_key"].strip(), "qwen")
+    if "openrouter_api_key" in data and data["openrouter_api_key"].strip():
+        set_api_key(data["openrouter_api_key"].strip(), "openrouter")

@@ -57,7 +57,8 @@ from app.rag import (
     call_deepseek_llm,
     call_qwen_llm,
     call_groq_llm,
-    call_openai_llm
+    call_openai_llm,
+    call_openrouter_llm
 )
 from google import genai
 from google.genai import types
@@ -154,6 +155,7 @@ class GlobalSettingsRequest(BaseModel):
     deepseek_api_key: Optional[str] = None
     siliconflow_api_key: Optional[str] = None
     qwen_api_key: Optional[str] = None
+    openrouter_api_key: Optional[str] = None
 
 class TestLLMRequest(BaseModel):
     provider: str
@@ -563,6 +565,8 @@ def api_test_llm(req: TestLLMRequest):
             reply = call_qwen_llm(key, test_prompt, test_system)
         elif provider == "groq":
             reply = call_groq_llm(key, test_prompt, test_system)
+        elif provider == "openrouter":
+            reply = call_openrouter_llm(key, test_prompt, test_system)
         elif provider == "openai":
             reply = call_openai_llm(key, test_prompt, test_system)
         elif provider == "gemini":

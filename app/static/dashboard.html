@@ -981,14 +981,39 @@
                                 <label class="block text-xs font-semibold text-slate-300 mb-1">Active Model / Engine</label>
                                 <select id="cfgProvider" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2.5 outline-none cursor-pointer">
                                     <option value="auto">Auto (Auto-detect highest priority configured engine)</option>
-                                    <option value="siliconflow">🇨🇳 SiliconFlow (Free DeepSeek-V3 &amp; Qwen 2.5 - Free Tier Credits)</option>
+                                    <option value="openrouter">🌐 OpenRouter (Free DeepSeek-R1 &amp; Qwen 2.5 - No Phone Required)</option>
+                                    <option value="groq">⚡ Groq (100% Free &amp; Ultra-Fast Llama 3.3)</option>
+                                    <option value="gemini">✨ Google Gemini (100% Free Tier - 1,500 req/day)</option>
+                                    <option value="siliconflow">🇨🇳 SiliconFlow (DeepSeek-V3 &amp; Qwen 2.5 Free Credits)</option>
                                     <option value="deepseek">🐳 DeepSeek Official (DeepSeek-V3 / DeepSeek-R1)</option>
                                     <option value="qwen">☁️ Alibaba Qwen (DashScope / Qwen-Plus)</option>
-                                    <option value="groq">⚡ Groq (Free &amp; Ultra-Fast Llama 3.3)</option>
-                                    <option value="gemini">✨ Google Gemini (Gemini 2.5 / 1.5 Flash - Free Tier)</option>
                                     <option value="openai">OpenAI (GPT-4o-mini)</option>
-                                    <option value="local">🛡️ Zero-Key Local Grounded Extractor (100% Free &amp; Offline)</option>
+                                    <option value="local">🛡️ Zero-Key Local Extractive Engine (100% Free &amp; No API Key Needed!)</option>
                                 </select>
+                            </div>
+
+                            <!-- OpenRouter Card (Free DeepSeek & Qwen - International) -->
+                            <div class="p-4 bg-gradient-to-r from-purple-500/10 via-indigo-500/5 to-transparent rounded-2xl border border-purple-500/20 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-base">🌐</span>
+                                        <label class="block text-xs font-bold text-purple-300">OpenRouter (Free DeepSeek &amp; Qwen) API Key</label>
+                                        <span class="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Free Tier</span>
+                                    </div>
+                                    <a href="https://openrouter.ai/keys" target="_blank" class="text-[11px] text-purple-400 font-bold hover:underline flex items-center gap-1">
+                                        <span>Get Free Key</span>
+                                        <span>&rarr;</span>
+                                    </a>
+                                </div>
+                                <p class="text-[11px] text-slate-400">Global API gateway with completely free access to <strong>DeepSeek-R1:Free</strong> and <strong>Qwen-2.5:Free</strong>. Instant login with Google or GitHub, no phone number required!</p>
+                                <div class="flex gap-2">
+                                    <input type="password" id="cfgOpenRouterKey" placeholder="sk-or-v1-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <button type="button" onclick="testProviderKey('openrouter')" class="px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
+                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                        <span>Test</span>
+                                    </button>
+                                </div>
+                                <div id="testStatus_openrouter" class="hidden text-[11px] pt-1"></div>
                             </div>
 
                             <!-- SiliconFlow Card (Free Chinese Provider) -->
@@ -2057,6 +2082,9 @@
                 if (cfg.has_gemini_key) {
                     document.getElementById('cfgGeminiKey').placeholder = '•••••••• (Gemini Key Saved)';
                 }
+                if (cfg.has_openrouter_key) {
+                    document.getElementById('cfgOpenRouterKey').placeholder = '•••••••• (OpenRouter Key Saved)';
+                }
                 if (cfg.has_openai_key) {
                     document.getElementById('cfgOpenAIKey').placeholder = '•••••••• (OpenAI Key Saved)';
                 }
@@ -2070,6 +2098,7 @@
             if (!statusEl) return;
 
             const inputIdMap = {
+                openrouter: 'cfgOpenRouterKey',
                 siliconflow: 'cfgSiliconFlowKey',
                 deepseek: 'cfgDeepSeekKey',
                 qwen: 'cfgQwenKey',
@@ -2104,6 +2133,7 @@
         document.getElementById('globalAiForm').onsubmit = async (e) => {
             e.preventDefault();
             const provider = document.getElementById('cfgProvider').value;
+            const openrouterKey = document.getElementById('cfgOpenRouterKey').value.trim();
             const siliconflowKey = document.getElementById('cfgSiliconFlowKey').value.trim();
             const deepseekKey = document.getElementById('cfgDeepSeekKey').value.trim();
             const qwenKey = document.getElementById('cfgQwenKey').value.trim();
@@ -2112,6 +2142,7 @@
             const openaiKey = document.getElementById('cfgOpenAIKey').value.trim();
 
             const payload = { llm_provider: provider };
+            if (openrouterKey) payload.openrouter_api_key = openrouterKey;
             if (siliconflowKey) payload.siliconflow_api_key = siliconflowKey;
             if (deepseekKey) payload.deepseek_api_key = deepseekKey;
             if (qwenKey) payload.qwen_api_key = qwenKey;

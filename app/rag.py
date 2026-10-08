@@ -21,7 +21,8 @@ from app.config import (
     DEFAULT_GROQ_MODEL,
     DEFAULT_DEEPSEEK_MODEL,
     DEFAULT_SILICONFLOW_MODEL,
-    DEFAULT_QWEN_MODEL
+    DEFAULT_QWEN_MODEL,
+    DEFAULT_OPENROUTER_MODEL
 )
 from app.embeddings import search_relevant_chunks
 from app.db import log_unanswered_question
@@ -218,6 +219,33 @@ def call_qwen_llm(api_key: str, prompt: str, system_prompt: str, model: str = DE
     data = resp.json()
     return data["choices"][0]["message"]["content"]
 
+def call_openrouter_llm(api_key: str, prompt: str, system_prompt: str, model: str = DEFAULT_OPENROUTER_MODEL) -> str:
+    """
+    OpenRouter unified API endpoint.
+    Offers completely free access to models like deepseek/deepseek-r1:free,
+    deepseek/deepseek-chat:free, and qwen/qwen-2.5-72b-instruct:free.
+    """
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://answerweave-ai.vercel.app",
+        "X-Title": "WeaveFlow AI"
+    }
+    payload = {
+        "model": model or DEFAULT_OPENROUTER_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.2,
+        "max_tokens": 1500
+    }
+    resp = requests.post(url, headers=headers, json=payload, timeout=25)
+    resp.raise_for_status()
+    data = resp.json()
+    return data["choices"][0]["message"]["content"]
+
 def generate_grounded_response(
     query: str,
     assistant_id: str = "asst_default",
@@ -250,9 +278,10 @@ def generate_grounded_response(
     siliconflow_key = get_api_key("siliconflow")
     deepseek_key = get_api_key("deepseek")
     qwen_key = get_api_key("qwen")
+    openrouter_key = get_api_key("openrouter")
     provider = get_provider()
 
-    has_any_key = bool(gemini_key or groq_key or openai_key or siliconflow_key or deepseek_key or qwen_key)
+    has_any_key = bool(gemini_key or groq_key or openai_key or siliconflow_key or deepseek_key or qwen_key or openrouter_key)
     if not has_any_key or provider == "local":
         return generate_local_extractive_answer(query, chunks, assistant_id=assistant_id)
 
@@ -276,7 +305,10 @@ User Question: {query}
     raw_answer = ""
 
     try:
-        if (provider == "siliconflow" or (provider == "auto" and siliconflow_key)) and siliconflow_key:
+        if (provider == "openrouter" or (provider == "auto" and openrouter_key)) and openrouter_key:
+            raw_answer = call_openrouter_llm(openrouter_key, user_prompt, GROUNDED_SYSTEM_PROMPT)
+
+        elif (provider == "siliconflow" or (provider == "auto" and siliconflow_key)) and siliconflow_key:
             raw_answer = call_siliconflow_llm(siliconflow_key, user_prompt, GROUNDED_SYSTEM_PROMPT)
 
         elif (provider == "deepseek" or (provider == "auto" and deepseek_key)) and deepseek_key:
@@ -353,6 +385,7 @@ def generate_call_prep_brief(conversation_history: List[Dict[str, Any]]) -> str:
     siliconflow_key = get_api_key("siliconflow")
     deepseek_key = get_api_key("deepseek")
     qwen_key = get_api_key("qwen")
+    openrouter_key = get_api_key("openrouter")
     provider = get_provider()
 
     system_brief_prompt = """You are an executive sales intelligence assistant.
@@ -366,7 +399,9 @@ Format:
 Keep it concise, actionable, and formatted with clean bullet points."""
 
     try:
-        if (provider == "siliconflow" or (provider == "auto" and siliconflow_key)) and siliconflow_key:
+        if (provider == "openrouter" or (provider == "auto" and openrouter_key)) and openrouter_key:
+            return call_openrouter_llm(openrouter_key, transcript, system_brief_prompt)
+        elif (provider == "siliconflow" or (provider == "auto" and siliconflow_key)) and siliconflow_key:
             return call_siliconflow_llm(siliconflow_key, transcript, system_brief_prompt)
         elif (provider == "deepseek" or (provider == "auto" and deepseek_key)) and deepseek_key:
             return call_deepseek_llm(deepseek_key, transcript, system_brief_prompt)
