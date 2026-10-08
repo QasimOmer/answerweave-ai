@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnswerWeave AI — Turn Website Visitors Into Customers with Grounded AI</title>
+    <meta name="description" content="AnswerWeave AI reads your whole website, answers visitor questions with cited sources, and captures high-intent leads with AI call briefs. Embed with 1 line of code.">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        },
+                        obsidian: {
+                            950: '#06080d',
+                            900: '#0b0f17',
+                            850: '#0f1422',
+                            800: '#151c2e',
+                            700: '#1e293b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-nav {
+            background: rgba(11, 15, 23, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(15, 20, 34, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card:hover {
+            border-color: rgba(99, 102, 241, 0.35);
+            transform: translateY(-2px);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gradient-brand {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        @keyframes pulseSlow {
+            0%, 100% { transform: scale(1); opacity: 0.35; }
+            50% { transform: scale(1.1); opacity: 0.65; }
+        }
+        .pulse-slow {
+            animation: pulseSlow 7s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-obsidian-950 text-slate-100 font-sans antialiased selection:bg-brand-500 selection:text-white min-h-screen relative overflow-x-hidden">
+
+    <!-- Ambient Glowing Nebulas -->
+    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div class="absolute -top-[25%] left-[20%] w-[700px] h-[700px] bg-brand-600/15 rounded-full blur-[150px] pulse-slow"></div>
+        <div class="absolute top-[35%] right-[10%] w-[600px] h-[600px] bg-purple-600/15 rounded-full blur-[150px] pulse-slow" style="animation-delay: 2.5s;"></div>
+        <div class="absolute bottom-[10%] left-[10%] w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[150px] pulse-slow" style="animation-delay: 4.5s;"></div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <header class="fixed top-0 inset-x-0 z-50 glass-nav transition duration-300">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/30 group-hover:scale-105 transition">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                </div>
+                <div>
+                    <span class="font-extrabold text-lg text-white tracking-tight flex items-center">
+                        AnswerWeave<span class="text-brand-400">.ai</span>
+                    </span>
+                    <span class="text-[10px] font-semibold text-slate-400 block -mt-1 tracking-wider uppercase">Grounded AI Platform</span>
+                </div>
+            </a>
+
+            <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
+                <a href="#features" class="hover:text-white transition">Features</a>
+                <a href="#how-it-works" class="hover:text-white transition">How It Works</a>
+                <a href="#pricing" class="hover:text-white transition">Pricing</a>
+                <a href="/demo" target="_blank" class="hover:text-white transition flex items-center gap-1.5 text-brand-400">
+                    <span>Live Simulator</span>
+                    <span class="text-xs bg-brand-500/20 px-2 py-0.5 rounded-full">New</span>
+                </a>
+            </nav>
+
+            <div class="flex items-center gap-3">
+                <button onclick="openAuthModal('login')" class="text-xs sm:text-sm font-bold text-slate-200 hover:text-white px-4 py-2.5 rounded-xl transition hover:bg-white/5">
+                    Admin Sign In
+                </button>
+                <button onclick="openAuthModal('signup')" class="text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 px-5 py-2.5 rounded-xl shadow-lg shadow-brand-500/25 transition flex items-center gap-2">
+                    <span>Get Started Free</span>
+                    <span>&rarr;</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <main class="relative z-10 pt-36 pb-24 px-6 max-w-7xl mx-auto">
+        <div class="text-center max-w-3xl mx-auto">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold mb-6 shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>Next-Gen Grounded Assistant Engine • Zero Hallucinations</span>
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight leading-[1.12] mb-6 gradient-text">
+                Turn Website Visitors Into Customers with <span class="gradient-brand">Grounded AI</span>
+            </h1>
+
+            <p class="text-base sm:text-lg text-slate-300 mb-9 leading-relaxed">
+                AnswerWeave reads your whole website, answers complex buyer questions with verified source citations, and captures qualified sales leads with automatic briefing dossiers.
+            </p>
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
+                <button onclick="openAuthModal('signup')" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-sm shadow-xl shadow-brand-500/30 transition flex items-center justify-center gap-2">
+                    <span>Create Your Assistant Free</span>
+                    <span>&rarr;</span>
+                </button>
+                <a href="#demo-preview" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-obsidian-850 hover:bg-obsidian-800 border border-white/10 text-slate-200 font-extrabold text-sm transition flex items-center justify-center gap-2">
+                    <span>Try Chat Demo Below</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </a>
+            </div>
+
+            <!-- Proof Points -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-white/5 text-left">
+                <div class="p-3">
+                    <div class="text-2xl font-extrabold text-white">100%</div>
+                    <div class="text-xs text-slate-400 mt-0.5">Whole-Site Deep Crawl</div>
+                </div>
+                <div class="p-3">
+                    <div class="text-2xl font-extrabold text-emerald-400">Zero</div>
+                    <div class="text-xs text-slate-400 mt-0.5">Hallucinations / Lies</div>
+                </div>
+                <div class="p-3">
+                    <div class="text-2xl font-extrabold text-brand-400">1 Line</div>
+                    <div class="text-xs text-slate-400 mt-0.5">Embed on Any CMS</div>
+                </div>
+                <div class="p-3">
+                    <div class="text-2xl font-extrabold text-amber-400">Shadow DOM</div>
+                    <div class="text-xs text-slate-400 mt-0.5">Zero CSS Theme Clashes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Preview Box -->
+        <div id="demo-preview" class="mt-20 max-w-5xl mx-auto rounded-3xl glass-card p-4 sm:p-8 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-red-500/80"></span>
+                    <span class="w-3 h-3 rounded-full bg-yellow-500/80"></span>
+                    <span class="w-3 h-3 rounded-full bg-green-500/80"></span>
+                    <span class="text-xs font-mono text-slate-400 ml-2">https://ecomalign.com</span>
+                </div>
+                <div class="text-xs font-bold text-slate-400 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span>Live Widget Active on Bottom-Right</span>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-brand-400">One-Click Setup</span>
+                    <h3 class="text-2xl font-extrabold text-white mt-2 mb-3">Trained on Real Live Content</h3>
+                    <p class="text-sm text-slate-300 leading-relaxed mb-6">
+                        AnswerWeave automatically crawls entire domain hierarchies and sitemaps. When a visitor asks anything, the bot provides direct answers with clickable source pills.
+                    </p>
+                    <div class="space-y-3 font-mono text-xs">
+                        <div class="p-3 rounded-xl bg-obsidian-900 border border-white/5 flex items-center justify-between">
+                            <span class="text-slate-300">&lt;script src="https://answerweave-ai.vercel.app/static/widget.js"&gt;&lt;/script&gt;</span>
+                            <span class="text-emerald-400 font-bold">1 Line Embed</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-obsidian-900 rounded-2xl p-5 border border-white/10 text-xs">
+                    <div class="text-slate-400 font-bold mb-3 flex items-center justify-between">
+                        <span>Sample Grounded Query:</span>
+                        <span class="text-brand-400">Grounded Extractive RAG</span>
+                    </div>
+                    <div class="p-3 bg-brand-600/20 text-white rounded-xl mb-3 font-semibold">
+                        "What marketplaces does EcomAlign support?"
+                    </div>
+                    <div class="p-3 bg-obsidian-850 border border-white/5 rounded-xl text-slate-200 leading-relaxed mb-3">
+                        "EcomAlign provides complete store management, listing optimization, and advertising across Amazon, eBay, TikTok Shop, Etsy, and Walmart."
+                        <div class="mt-2 flex gap-1.5">
+                            <span class="bg-white/10 text-blue-300 px-2 py-0.5 rounded text-[10px] font-semibold">📚 [1] Services - Ecomalign</span>
+                            <span class="bg-white/10 text-blue-300 px-2 py-0.5 rounded text-[10px] font-semibold">📚 [2] Agency Overview</span>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-[11px] font-semibold flex items-center gap-2">
+                        <span>🎯 High-intent visitor detected:</span>
+                        <span class="text-white">Lead capture form presented automatically</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <section id="features" class="mt-32">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <span class="text-xs font-bold uppercase tracking-wider text-brand-400">Platform Superpowers</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-2">Everything You Need to Scale Conversions</h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Feature 1 -->
+                <div class="p-7 rounded-2xl glass-card">
+                    <div class="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center mb-5 text-xl font-bold">
+                        🌐
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Whole-Site Deep Crawler</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        No 5-page artificial limits. Ingests full domains, sitemaps, PDFs, and policy docs in seconds with automated deduplication.
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="p-7 rounded-2xl glass-card">
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-5 text-xl font-bold">
+                        🛡️
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Shadow DOM CSS Isolation</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Engineered with browser Shadow DOM standards. Host WordPress, Elementor, and Shopify CSS rules cannot bleed into or distort your widget.
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="p-7 rounded-2xl glass-card">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-5 text-xl font-bold">
+                        💼
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">AI Sales Call-Prep Dossiers</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        When visitors leave contact info, AnswerWeave synthesizes their conversation into an executive brief ready for your sales reps.
+                    </p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="p-7 rounded-2xl glass-card">
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-5 text-xl font-bold">
+                        📁
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Multi-Project Management</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Create, customize, and remove multiple website assistants for all your brands or agency clients from a single unified workspace.
+                    </p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="p-7 rounded-2xl glass-card">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-5 text-xl font-bold">
+                        🎙️
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Voice Speech-to-Text Input</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Visitors on mobile or desktop can tap the microphone to speak questions naturally for instant audio transcription.
+                    </p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="p-7 rounded-2xl glass-card">
+                    <div class="w-12 h-12 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center mb-5 text-xl font-bold">
+                        ⚡
+                    </div>
+                    <h3 class="text-lg font-bold text-white mb-2">Zero-Key Fallback Engine</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Works right out of the box with zero external API keys required, plus one-click support for Gemini, Groq, DeepSeek, and Qwen.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section id="how-it-works" class="mt-32">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <span class="text-xs font-bold uppercase tracking-wider text-brand-400">Effortless Workflow</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-2">Up and Running in 3 Steps</h2>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="p-8 rounded-2xl glass-card relative">
+                    <div class="text-4xl font-extrabold text-brand-500/40 mb-4">01</div>
+                    <h4 class="text-base font-bold text-white mb-2">Add Website & Deep Crawl</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Paste your website URL. AnswerWeave crawls your entire domain, blog, and docs to build a structured vector knowledge base.
+                    </p>
+                </div>
+
+                <div class="p-8 rounded-2xl glass-card relative">
+                    <div class="text-4xl font-extrabold text-purple-500/40 mb-4">02</div>
+                    <h4 class="text-base font-bold text-white mb-2">Brand & Customize Widget</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Pick your brand colors, custom avatar, welcome greetings, and popular question pills to match your website aesthetic.
+                    </p>
+                </div>
+
+                <div class="p-8 rounded-2xl glass-card relative">
+                    <div class="text-4xl font-extrabold text-emerald-500/40 mb-4">03</div>
+                    <h4 class="text-base font-bold text-white mb-2">Paste 1-Line Embed Code</h4>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Paste the snippet into WordPress (WPCode/Elementor), Shopify, or HTML. The widget goes live instantly with zero coding needed.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Section -->
+        <section id="pricing" class="mt-32">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <span class="text-xs font-bold uppercase tracking-wider text-brand-400">Transparent Pricing</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-2">Flat-Fee SaaS Tiers</h2>
+                <p class="text-xs text-slate-400 mt-2">No per-message surprise bills. Predictable plans for growing businesses.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                <!-- Free Plan -->
+                <div class="p-8 rounded-3xl glass-card flex flex-col justify-between">
+                    <div>
+                        <div class="text-sm font-bold text-slate-300 mb-1">Free Tier</div>
+                        <div class="text-3xl font-extrabold text-white mb-4">$0 <span class="text-xs text-slate-400 font-normal">/ month</span></div>
+                        <ul class="space-y-3 text-xs text-slate-300 mb-8">
+                            <li class="flex items-center gap-2">✓ 100 messages / mo</li>
+                            <li class="flex items-center gap-2">✓ 1,000 pages indexed</li>
+                            <li class="flex items-center gap-2">✓ 1 Assistant project</li>
+                            <li class="flex items-center gap-2">✓ Grounded source citations</li>
+                        </ul>
+                    </div>
+                    <button onclick="openAuthModal('signup')" class="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition">
+                        Get Started
+                    </button>
+                </div>
+
+                <!-- Starter Plan (Featured) -->
+                <div class="p-8 rounded-3xl glass-card border-brand-500/50 relative shadow-2xl shadow-brand-500/10 flex flex-col justify-between">
+                    <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-600 to-indigo-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full shadow-md">
+                        Most Popular
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold text-brand-300 mb-1">Starter Plan</div>
+                        <div class="text-3xl font-extrabold text-white mb-4">$29 <span class="text-xs text-slate-400 font-normal">/ month</span></div>
+                        <ul class="space-y-3 text-xs text-slate-200 mb-8">
+                            <li class="flex items-center gap-2">✓ 2,000 messages / mo</li>
+                            <li class="flex items-center gap-2">✓ 5,000 pages whole-site crawl</li>
+                            <li class="flex items-center gap-2">✓ Voice microphone input</li>
+                            <li class="flex items-center gap-2">✓ AI Call-Prep lead briefs</li>
+                            <li class="flex items-center gap-2">✓ Shadow DOM style isolation</li>
+                        </ul>
+                    </div>
+                    <button onclick="openAuthModal('signup')" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-500/25 transition">
+                        Start Starter Plan
+                    </button>
+                </div>
+
+                <!-- Pro Plan -->
+                <div class="p-8 rounded-3xl glass-card flex flex-col justify-between">
+                    <div>
+                        <div class="text-sm font-bold text-slate-300 mb-1">Pro Plan</div>
+                        <div class="text-3xl font-extrabold text-white mb-4">$49 <span class="text-xs text-slate-400 font-normal">/ month</span></div>
+                        <ul class="space-y-3 text-xs text-slate-300 mb-8">
+                            <li class="flex items-center gap-2">✓ 5,000 messages / mo</li>
+                            <li class="flex items-center gap-2">✓ 8,000 pages indexed</li>
+                            <li class="flex items-center gap-2">✓ Multiple website projects</li>
+                            <li class="flex items-center gap-2">✓ Remove AnswerWeave branding</li>
+                            <li class="flex items-center gap-2">✓ CRM Lead Webhooks</li>
+                        </ul>
+                    </div>
+                    <button onclick="openAuthModal('signup')" class="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition">
+                        Start Pro Plan
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="mt-32 rounded-3xl p-10 sm:p-16 glass-card text-center relative overflow-hidden">
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">
+                Ready to Boost Your Website Conversions?
+            </h2>
+            <p class="text-sm text-slate-300 max-w-xl mx-auto mb-8">
+                Join modern businesses turning every website visitor into a qualified conversation.
+            </p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <button onclick="openAuthModal('signup')" class="px-8 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-sm shadow-xl shadow-brand-500/30 transition">
+                    Create Account & Open Dashboard &rarr;
+                </button>
+                <button onclick="openAuthModal('login')" class="px-8 py-3.5 rounded-xl bg-obsidian-850 hover:bg-obsidian-800 border border-white/10 text-slate-200 font-extrabold text-sm transition">
+                    Admin Sign In
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 py-12 px-6 max-w-7xl mx-auto text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>&copy; 2026 AnswerWeave AI. All rights reserved. Enterprise Grounded AI Platform.</div>
+        <div class="flex gap-6">
+            <a href="/dashboard" class="hover:text-slate-300 transition">Admin Dashboard</a>
+            <a href="/demo" target="_blank" class="hover:text-slate-300 transition">Simulator</a>
+            <a href="https://github.com/QasimOmer/answerweave-ai" target="_blank" class="hover:text-slate-300 transition">GitHub</a>
+        </div>
+    </footer>
+
+    <!-- Admin Authentication Modal (Login & Signup) -->
+    <div id="authModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-obsidian-900 border border-white/10 w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl relative text-left">
+            <button onclick="closeAuthModal()" class="absolute top-5 right-5 text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+            
+            <div class="flex items-center gap-2 mb-6 border-b border-white/10 pb-4">
+                <button id="tabLoginBtn" onclick="switchAuthTab('login')" class="flex-1 py-2 text-xs font-extrabold rounded-xl bg-brand-600 text-white transition">
+                    Admin Sign In
+                </button>
+                <button id="tabSignupBtn" onclick="switchAuthTab('signup')" class="flex-1 py-2 text-xs font-extrabold rounded-xl text-slate-400 hover:text-white transition">
+                    Create Account
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Admin Email</label>
+                    <input type="email" id="loginEmail" value="admin@answerweave.ai" required class="w-full bg-obsidian-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-brand-500 font-mono" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
+                    <input type="password" id="loginPassword" value="admin123" required class="w-full bg-obsidian-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-brand-500 font-mono" />
+                </div>
+                <div class="text-[11px] text-slate-400 bg-brand-500/10 p-2.5 rounded-xl border border-brand-500/20">
+                    💡 Pre-filled with default admin credentials: <span class="text-brand-300 font-mono">admin@answerweave.ai / admin123</span>
+                </div>
+                <button type="submit" id="loginSubmitBtn" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs transition shadow-lg shadow-brand-500/20">
+                    Sign In to Dashboard &rarr;
+                </button>
+                <div id="loginError" class="text-xs text-red-400 hidden text-center font-semibold mt-2"></div>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="signupForm" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Full Name</label>
+                    <input type="text" id="signupName" placeholder="Alex Morgan" required class="w-full bg-obsidian-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-brand-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Email Address</label>
+                    <input type="email" id="signupEmail" placeholder="alex@company.com" required class="w-full bg-obsidian-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-brand-500 font-mono" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Create Password</label>
+                    <input type="password" id="signupPassword" placeholder="••••••••" required class="w-full bg-obsidian-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-brand-500 font-mono" />
+                </div>
+                <button type="submit" id="signupSubmitBtn" class="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-extrabold text-xs transition shadow-lg shadow-brand-500/20">
+                    Create Account & Open Dashboard &rarr;
+                </button>
+                <div id="signupError" class="text-xs text-red-400 hidden text-center font-semibold mt-2"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Auth Logic Script -->
+    <script>
+        function openAuthModal(mode) {
+            document.getElementById('authModal').classList.remove('hidden');
+            switchAuthTab(mode || 'login');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+        }
+
+        function switchAuthTab(mode) {
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const tabLoginBtn = document.getElementById('tabLoginBtn');
+            const tabSignupBtn = document.getElementById('tabSignupBtn');
+
+            if (mode === 'signup') {
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                tabSignupBtn.classList.add('bg-brand-600', 'text-white');
+                tabSignupBtn.classList.remove('text-slate-400');
+                tabLoginBtn.classList.remove('bg-brand-600', 'text-white');
+                tabLoginBtn.classList.add('text-slate-400');
+            } else {
+                signupForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+                tabLoginBtn.classList.add('bg-brand-600', 'text-white');
+                tabLoginBtn.classList.remove('text-slate-400');
+                tabSignupBtn.classList.remove('bg-brand-600', 'text-white');
+                tabSignupBtn.classList.add('text-slate-400');
+            }
+        }
+
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('loginSubmitBtn');
+            const errEl = document.getElementById('loginError');
+            btn.disabled = true;
+            btn.innerText = "Authenticating...";
+            errEl.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('loginEmail').value.trim(),
+                        password: document.getElementById('loginPassword').value
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    localStorage.setItem('aw_user', JSON.stringify(data.user));
+                    window.location.href = '/dashboard';
+                } else {
+                    errEl.innerText = data.detail || "Invalid login credentials.";
+                    errEl.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.innerText = "Sign In to Dashboard →";
+                }
+            } catch (err) {
+                errEl.innerText = "Network error. Please try again.";
+                errEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = "Sign In to Dashboard →";
+            }
+        };
+
+        document.getElementById('signupForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('signupSubmitBtn');
+            const errEl = document.getElementById('signupError');
+            btn.disabled = true;
+            btn.innerText = "Creating Account...";
+            errEl.classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('signupName').value.trim(),
+                        email: document.getElementById('signupEmail').value.trim(),
+                        password: document.getElementById('signupPassword').value
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    localStorage.setItem('aw_user', JSON.stringify(data.user));
+                    window.location.href = '/dashboard';
+                } else {
+                    errEl.innerText = data.detail || "Error creating account.";
+                    errEl.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.innerText = "Create Account & Open Dashboard →";
+                }
+            } catch (err) {
+                errEl.innerText = "Network error. Please try again.";
+                errEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = "Create Account & Open Dashboard →";
+            }
+        };
+
+        // Check if redirected with ?login=1
+        if (new URLSearchParams(window.location.search).get('login')) {
+            openAuthModal('login');
+        }
+    </script>
+
+    <!-- Embedded Live AnswerWeave Widget on Landing Page -->
+    <script src="/static/widget.js" data-assistant-id="asst_default" data-api-url=""></script>
+</body>
+</html>

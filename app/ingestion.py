@@ -54,54 +54,109 @@ def fetch_url(url: str, timeout: int = 15) -> Dict[str, str]:
     resp.raise_for_status()
     return clean_html(resp.text, base_url=url)
 
-def crawl_sitemap(sitemap_url: str, max_urls: int = 20) -> List[str]:
-    """Extracts page URLs from a sitemap.xml."""
+def crawl_sitemap(sitemap_url: str, max_urls: int = 100) -> List[str]:
+    """Extracts page URLs from a sitemap.xml, including nested sitemap indexes."""
     headers = {
         "User-Agent": DEFAULT_USER_AGENT
     }
+    found_urls = []
     try:
         resp = requests.get(sitemap_url, headers=headers, timeout=10, allow_redirects=True)
-        soup = BeautifulSoup(resp.content, "xml")
-        urls = [loc.text.strip() for loc in soup.find_all("loc")]
-        return urls[:max_urls]
+        if resp.status_code != 200:
+            return []
+        
+        # Regex loc extraction (avoids lxml dependency)
+        locs = re.findall(r"<loc>\s*(https?://[^\s<]+)\s*</loc>", resp.text, re.I)
+        
+        # Check for nested sub-sitemaps
+        sub_sitemaps = [u for u in locs if u.endswith(".xml") or "sitemap" in u]
+        if sub_sitemaps:
+            for sm_url in sub_sitemaps[:5]:
+                try:
+                    sub_resp = requests.get(sm_url, headers=headers, timeout=10, allow_redirects=True)
+                    sub_locs = re.findall(r"<loc>\s*(https?://[^\s<]+)\s*</loc>", sub_resp.text, re.I)
+                    for u in sub_locs:
+                        clean_u = u.strip()
+                        if clean_u and not clean_u.endswith(".xml") and clean_u not in found_urls:
+                            found_urls.append(clean_u)
+                            if len(found_urls) >= max_urls:
+                                break
+                except Exception:
+                    pass
+        else:
+            for u in locs:
+                clean_u = u.strip()
+                if clean_u and not clean_u.endswith(".xml") and clean_u not in found_urls:
+                    found_urls.append(clean_u)
+                    if len(found_urls) >= max_urls:
+                        break
+
+        return found_urls[:max_urls]
     except Exception as e:
         print(f"Error parsing sitemap {sitemap_url}: {e}")
         return []
 
-def crawl_website(start_url: str, max_pages: int = 5) -> List[Dict[str, str]]:
-    """Crawls pages under the same domain starting from start_url up to max_pages."""
+def crawl_website(start_url: str, max_pages: int = 50) -> List[Dict[str, str]]:
+    """Crawls an entire website, checking sitemaps and recursive internal links."""
     parsed_start = urllib.parse.urlparse(start_url)
     domain = parsed_start.netloc
-    
+    scheme = parsed_start.scheme or "https"
+    base_domain_url = f"{scheme}://{domain}"
+
     visited: Set[str] = set()
     to_visit: List[str] = [start_url]
     results: List[Dict[str, str]] = []
-    
+
     headers = {
         "User-Agent": DEFAULT_USER_AGENT
     }
+
+    # 1. Probe standard sitemap locations to seed URLs across the whole site
+    sitemap_candidates = [
+        f"{base_domain_url}/sitemap.xml",
+        f"{base_domain_url}/wp-sitemap.xml",
+        f"{base_domain_url}/sitemap_index.xml"
+    ]
+    for sm_candidate in sitemap_candidates:
+        sitemap_urls = crawl_sitemap(sm_candidate, max_urls=max_pages)
+        if sitemap_urls:
+            for u in sitemap_urls:
+                clean_u = u.split("#")[0].rstrip("/")
+                if clean_u not in to_visit and clean_u not in visited:
+                    to_visit.append(clean_u)
+            break
+
+    # Excluded URL patterns (admin, feeds, logins, media)
+    exclude_pattern = re.compile(
+        r"(wp-admin|wp-includes|wp-json|xmlrpc|feed|comments|\?add-to-cart|cart|checkout|my-account|login|logout|register|\.(pdf|png|jpg|jpeg|gif|zip|exe|mp4|svg|webp|css|js|woff|woff2|ttf))$",
+        re.I
+    )
 
     while to_visit and len(visited) < max_pages:
         current_url = to_visit.pop(0)
         current_url = current_url.split("#")[0].rstrip("/")
         if not current_url or current_url in visited:
             continue
-            
+
+        if exclude_pattern.search(current_url):
+            continue
+
         visited.add(current_url)
-        
+
         try:
-            resp = requests.get(current_url, headers=headers, timeout=10)
+            resp = requests.get(current_url, headers=headers, timeout=10, allow_redirects=True)
             if resp.status_code != 200 or "text/html" not in resp.headers.get("Content-Type", ""):
                 continue
-                
+
             parsed_data = clean_html(resp.text, base_url=current_url)
-            if len(parsed_data["content"]) > 50:
+            if len(parsed_data["content"]) > 60:
                 results.append({
                     "url": current_url,
                     "title": parsed_data["title"],
                     "content": parsed_data["content"]
                 })
-            
+
+            # Discover more internal links
             if len(visited) < max_pages:
                 soup = BeautifulSoup(resp.text, "html.parser")
                 for a_tag in soup.find_all("a", href=True):
@@ -109,11 +164,11 @@ def crawl_website(start_url: str, max_pages: int = 5) -> List[Dict[str, str]]:
                     resolved = urllib.parse.urljoin(current_url, href).split("#")[0].rstrip("/")
                     parsed_link = urllib.parse.urlparse(resolved)
                     if parsed_link.netloc == domain and resolved not in visited and resolved not in to_visit:
-                        if not re.search(r"\.(pdf|png|jpg|jpeg|gif|zip|exe|mp4|svg)$", parsed_link.path, re.I):
+                        if not exclude_pattern.search(resolved):
                             to_visit.append(resolved)
         except Exception:
             continue
-            
+
     return results
 
 def parse_uploaded_file(file_bytes: bytes, filename: str) -> Dict[str, str]:

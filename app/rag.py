@@ -308,6 +308,8 @@ def generate_grounded_response(
 ) -> Dict[str, Any]:
     """Executes grounded RAG workflow partitioned by assistant."""
     chunks = search_relevant_chunks(query, assistant_id=assistant_id, top_k=top_k)
+    if not chunks and assistant_id != "asst_default":
+        chunks = search_relevant_chunks(query, assistant_id="asst_default", top_k=top_k)
     has_relevant_docs = len(chunks) > 0
 
     context_text = ""

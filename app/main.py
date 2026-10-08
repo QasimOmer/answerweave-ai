@@ -39,7 +39,10 @@ from app.db import (
     resolve_unanswered_question,
     get_subscription_info,
     update_subscription_plan,
-    get_assistant_analytics
+    get_assistant_analytics,
+    create_user,
+    authenticate_user,
+    get_user_by_email
 )
 from app.config import (
     get_bot_settings,
@@ -68,7 +71,7 @@ init_db()
 app = FastAPI(
     title="WeaveFlow AI SaaS Engine",
     description="Multi-tenant grounded AI website assistant platform with lead capture, file uploads, conversation inbox, and Call-Prep intelligence",
-    version="2.1.0"
+    version="2.2.0"
 )
 
 app.add_middleware(
@@ -83,12 +86,25 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # ----------------- Request Models -----------------
+class AuthSignupRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+
+class AuthLoginRequest(BaseModel):
+    email: str
+    password: str
+
 class CreateAssistantRequest(BaseModel):
     name: str
     domain: Optional[str] = "*"
-    primary_color: Optional[str] = "#4F46E5"
-    welcome_message: Optional[str] = "Hi there! 👋 How can I help you today?"
-    suggested_questions: Optional[str] = "What are your products?\nHow much does it cost?\nHow do I contact support?"
+    website_url: Optional[str] = None
+    crawl_whole_site: Optional[bool] = True
+    primary_color: Optional[str] = "#0f172a"
+    welcome_message: Optional[str] = None
+    suggested_questions: Optional[str] = None
+    bot_avatar: Optional[str] = "⚡"
+    widget_subtitle: Optional[str] = "Online • AI Assistant"
 
 class UpdateAssistantRequest(BaseModel):
     name: Optional[str] = None
@@ -114,11 +130,11 @@ class UpdateAssistantRequest(BaseModel):
 
 class IngestUrlRequest(BaseModel):
     url: str
-    crawl_depth: int = 1
+    crawl_depth: int = 50
 
 class IngestSitemapRequest(BaseModel):
     sitemap_url: str
-    max_pages: int = 10
+    max_pages: int = 100
 
 class IngestTextRequest(BaseModel):
     title: str
@@ -161,14 +177,45 @@ class TestLLMRequest(BaseModel):
     provider: str
     api_key: Optional[str] = None
 
-# ----------------- Dashboard & Demo Routes -----------------
+# ----------------- Dashboard & Landing Page Routes -----------------
 @app.get("/")
 def get_root():
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+@app.get("/dashboard")
+def get_dashboard_page():
     return FileResponse(os.path.join(STATIC_DIR, "dashboard.html"))
 
 @app.get("/demo")
 def get_demo_page():
     return FileResponse(os.path.join(STATIC_DIR, "demo.html"))
+
+# ----------------- Admin Auth Endpoints -----------------
+@app.post("/api/auth/signup")
+def api_signup(req: AuthSignupRequest):
+    if len(req.password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters.")
+    user = create_user(req.email, req.password, req.name)
+    if not user:
+        raise HTTPException(status_code=400, detail="User with this email already exists.")
+    return {"status": "success", "user": user}
+
+@app.post("/api/auth/login")
+def api_login(req: AuthLoginRequest):
+    user = authenticate_user(req.email, req.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+    return {"status": "success", "user": user}
+
+@app.get("/api/auth/me")
+def api_get_me(email: Optional[str] = None):
+    target_email = email.strip().lower() if email else "admin@answerweave.ai"
+    user = get_user_by_email(target_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    u_dict = dict(user)
+    u_dict.pop("password_hash", None)
+    return u_dict
 
 # ----------------- Multi-Assistant SaaS Endpoints -----------------
 @app.get("/api/assistants")
@@ -177,18 +224,59 @@ def api_list_assistants():
 
 @app.post("/api/assistants")
 def api_create_assistant(req: CreateAssistantRequest):
+    target_domain = req.domain or "*"
+    if req.website_url and target_domain == "*":
+        try:
+            parsed = urllib.parse.urlparse(req.website_url if "://" in req.website_url else "https://" + req.website_url)
+            target_domain = parsed.netloc or req.website_url
+        except Exception:
+            target_domain = req.website_url
+
     asst_id = create_assistant(
         name=req.name,
-        domain=req.domain or "*",
-        primary_color=req.primary_color or "#4F46E5",
-        welcome_message=req.welcome_message or "",
-        suggested_questions=req.suggested_questions or ""
+        domain=target_domain,
+        primary_color=req.primary_color or "#0f172a",
+        welcome_message=req.welcome_message or f"Hello! 👋 Welcome to {req.name}. How can I assist you today?",
+        suggested_questions=req.suggested_questions or "What services do you provide?\nHow does pricing work?\nHow can I speak to someone?",
+        bot_avatar=req.bot_avatar or "⚡",
+        widget_subtitle=req.widget_subtitle or "Online • AI Assistant"
     )
-    return {"status": "success", "assistant_id": asst_id, "assistant": get_assistant(asst_id)}
+
+    pages_indexed = 0
+    total_chunks = 0
+    # Auto-crawl whole website if provided
+    if req.website_url and req.crawl_whole_site:
+        url = req.website_url.strip()
+        if not url.startswith("http://") and not url.startswith("https://"):
+            url = "https://" + url
+        try:
+            pages = crawl_website(url, max_pages=50)
+            for p in pages:
+                src_id = add_source(asst_id, "url", p["title"], p["url"], p["content"])
+                chunks = chunk_text(p["content"])
+                if chunks:
+                    embs = generate_embeddings_batch(chunks)
+                    for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
+                        add_chunk(asst_id, src_id, idx, c_text, p["title"], p["url"], emb)
+                    update_source_chunk_count(src_id, len(chunks))
+                    total_chunks += len(chunks)
+                pages_indexed += 1
+        except Exception as e:
+            print(f"Auto-crawl warning during assistant creation: {e}")
+
+    return {
+        "status": "success",
+        "assistant_id": asst_id,
+        "assistant": get_assistant(asst_id),
+        "pages_indexed": pages_indexed,
+        "total_chunks": total_chunks
+    }
 
 @app.get("/api/assistants/{asst_id}")
 def api_get_assistant(asst_id: str):
     asst = get_assistant(asst_id)
+    if not asst:
+        asst = get_assistant("asst_default")
     if not asst:
         raise HTTPException(status_code=404, detail="Assistant not found")
     return asst
@@ -212,10 +300,12 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
 
 @app.delete("/api/assistants/{asst_id}")
 def api_delete_assistant(asst_id: str):
-    if asst_id == "asst_default":
-        raise HTTPException(status_code=400, detail="Default assistant cannot be deleted.")
     delete_assistant(asst_id)
-    return {"status": "success", "deleted_id": asst_id}
+    remaining = list_assistants()
+    active_id = remaining[0]["id"] if remaining else None
+    if not remaining:
+        active_id = create_assistant("New Website Project", "*")
+    return {"status": "success", "deleted_id": asst_id, "active_id": active_id}
 
 @app.get("/api/assistants/{asst_id}/analytics")
 def api_get_assistant_analytics(asst_id: str):
@@ -296,7 +386,7 @@ async def api_ingest_source_generic(asst_id: str, request: Request):
         req = IngestSitemapRequest(sitemap_url=s_url, max_pages=data.get("crawl_depth", 10))
         return api_ingest_sitemap(asst_id, req)
     elif "url" in data:
-        req = IngestUrlRequest(url=data["url"], crawl_depth=data.get("crawl_depth", 1))
+        req = IngestUrlRequest(url=data["url"], crawl_depth=data.get("crawl_depth", 50))
         return api_ingest_url(asst_id, req)
     raise HTTPException(status_code=400, detail="Payload must include 'url' or 'title' & 'content'")
 

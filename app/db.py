@@ -200,6 +200,18 @@ def init_db():
     );
     """)
 
+    # 9. Admin Users Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT DEFAULT 'admin',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     # Migrations
     tables_to_migrate = [
         ("sources", "assistant_id", "TEXT NOT NULL DEFAULT 'asst_default'"),
@@ -241,25 +253,102 @@ def init_db():
         );
         """)
 
+    # Ensure default admin user exists
+    cursor.execute("SELECT id FROM users WHERE email = 'admin@answerweave.ai'")
+    if not cursor.fetchone():
+        admin_id = f"user_{uuid.uuid4().hex[:8]}"
+        pwd_hash = hash_password("admin123")
+        cursor.execute("""
+            INSERT INTO users (id, email, password_hash, name, role)
+            VALUES (?, 'admin@answerweave.ai', ?, 'Admin', 'admin')
+        """, (admin_id, pwd_hash))
+
     conn.commit()
     conn.close()
 
+# ----------------- User Auth Helpers -----------------
+import hashlib
+import secrets
+
+def hash_password(password: str, salt: Optional[str] = None) -> str:
+    if not salt:
+        salt = secrets.token_hex(16)
+    hashed = hashlib.sha256(f"{salt}:{password}".encode("utf-8")).hexdigest()
+    return f"{salt}:{hashed}"
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    try:
+        parts = stored_hash.split(":")
+        if len(parts) != 2:
+            return False
+        salt, _ = parts
+        return hash_password(password, salt) == stored_hash
+    except Exception:
+        return False
+
+def create_user(email: str, password: str, name: str, role: str = "admin") -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    user_id = f"user_{uuid.uuid4().hex[:8]}"
+    pwd_hash = hash_password(password)
+    try:
+        cursor.execute("""
+            INSERT INTO users (id, email, password_hash, name, role)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, email.strip().lower(), pwd_hash, name.strip(), role))
+        conn.commit()
+        conn.close()
+        return get_user_by_id(user_id)
+    except sqlite3.IntegrityError:
+        conn.close()
+        return None
+
+def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
+    user = get_user_by_email(email)
+    if not user:
+        return None
+    if verify_password(password, user["password_hash"]):
+        u_dict = dict(user)
+        u_dict.pop("password_hash", None)
+        return u_dict
+    return None
+
+def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, email, name, role, created_at FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email.strip().lower(),))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
 # ----------------- Assistant CRUD -----------------
-def create_assistant(name: str, domain: str = "*", primary_color: str = "#4F46E5", welcome_message: str = "", suggested_questions: str = "") -> str:
+def create_assistant(name: str, domain: str = "*", primary_color: str = "#0f172a", welcome_message: str = "", suggested_questions: str = "", bot_avatar: str = "⚡", widget_subtitle: str = "Online • AI Assistant", teaser_message: str = "👋 Hi! Need quick answers?") -> str:
     asst_id = f"asst_{uuid.uuid4().hex[:8]}"
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO assistants (
-            id, name, domain, primary_color, welcome_message, suggested_questions
-        ) VALUES (?, ?, ?, ?, ?, ?)
+            id, name, domain, primary_color, welcome_message, suggested_questions,
+            bot_avatar, widget_subtitle, teaser_message, lead_capture_enabled, voice_enabled, show_branding
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1)
     """, (
         asst_id,
-        name,
-        domain or "*",
-        primary_color or "#4F46E5",
-        welcome_message or "Hello! 👋 How can I help you today?",
-        suggested_questions or "What do you offer?\nHow does pricing work?\nCan I talk to sales?"
+        name.strip(),
+        domain.strip() if domain else "*",
+        primary_color or "#0f172a",
+        welcome_message or f"Hello! 👋 Welcome to {name}. How can I assist you today?",
+        suggested_questions or "What services do you offer?\nHow does pricing work?\nHow do I get started?",
+        bot_avatar or "⚡",
+        widget_subtitle or "Online • AI Assistant",
+        teaser_message or "👋 Hi! Need quick answers?"
     ))
     conn.commit()
     conn.close()
