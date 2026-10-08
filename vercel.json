@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "app/**,weaveflow.db"
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",

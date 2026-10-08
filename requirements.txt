@@ -6,3 +6,4 @@ beautifulsoup4>=4.12.0
 numpy>=2.0.0
 google-genai>=2.0.0
 python-multipart>=0.0.12
+pypdf>=4.0.0
