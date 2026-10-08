@@ -1598,21 +1598,29 @@
             status.innerText = `Crawling ${url} (Depth: ${depth})...`;
 
             try {
-                const res = await fetch(`/api/assistants/${currentAssistantId}/sources`, {
+                const endpoint = (url.endsWith('.xml') || url.includes('sitemap')) ? 'sitemap' : 'url';
+                const payload = endpoint === 'sitemap' ? { sitemap_url: url, max_pages: depth * 2 } : { url: url, crawl_depth: depth };
+                const res = await fetch(`/api/assistants/${currentAssistantId}/sources/${endpoint}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: url, crawl_depth: depth })
+                    body: JSON.stringify(payload)
                 });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.detail || "Failed to crawl URL");
+                }
                 const data = await res.json();
+                const pagesCount = data.pages_indexed || (data.sources ? data.sources.length : 1);
+                const chunksCount = data.total_chunks || 0;
                 status.className = "mt-3 text-xs text-emerald-400 block font-semibold";
-                status.innerText = `Crawled ${data.length} page(s). Total chunks generated: ${data.reduce((a, b) => a + b.chunks_count, 0)}.`;
+                status.innerText = `Crawled ${pagesCount} page(s). Total chunks generated: ${chunksCount}.`;
                 showToast("Web source crawled successfully");
                 document.getElementById('urlInput').value = '';
                 loadSources();
                 loadAnalytics();
             } catch (err) {
                 status.className = "mt-3 text-xs text-rose-400 block font-semibold";
-                status.innerText = "Error crawling URL.";
+                status.innerText = `Error: ${err.message || 'Error crawling URL.'}`;
             } finally {
                 btn.disabled = false;
             }
@@ -1625,7 +1633,7 @@
             const status = document.getElementById('textStatus');
 
             try {
-                const res = await fetch(`/api/assistants/${currentAssistantId}/sources`, {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/sources/text`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1634,6 +1642,10 @@
                         url: `doc://${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}`
                     })
                 });
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.detail || "Failed to save text document");
+                }
                 status.className = "mt-3 text-xs text-emerald-400 block font-semibold";
                 status.innerText = `Added "${title}" to knowledge base.`;
                 showToast("FAQ/Policy added to knowledge base");
@@ -1643,7 +1655,7 @@
                 loadAnalytics();
             } catch (err) {
                 status.className = "mt-3 text-xs text-rose-400 block font-semibold";
-                status.innerText = "Error saving text document.";
+                status.innerText = `Error: ${err.message || 'Error saving text document.'}`;
             }
         };
 

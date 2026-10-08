@@ -280,6 +280,26 @@ def api_ingest_sitemap(asst_id: str, req: IngestSitemapRequest):
         "sources": indexed
     }
 
+@app.post("/api/assistants/{asst_id}/sources")
+async def api_ingest_source_generic(asst_id: str, request: Request):
+    """Universal dispatcher for POST /api/assistants/{asst_id}/sources."""
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    if "content" in data and "title" in data:
+        req = IngestTextRequest(title=data["title"], content=data["content"], url=data.get("url"))
+        return api_ingest_text(asst_id, req)
+    elif "sitemap_url" in data or (str(data.get("url", "")).endswith(".xml")):
+        s_url = data.get("sitemap_url") or data.get("url")
+        req = IngestSitemapRequest(sitemap_url=s_url, max_pages=data.get("crawl_depth", 10))
+        return api_ingest_sitemap(asst_id, req)
+    elif "url" in data:
+        req = IngestUrlRequest(url=data["url"], crawl_depth=data.get("crawl_depth", 1))
+        return api_ingest_url(asst_id, req)
+    raise HTTPException(status_code=400, detail="Payload must include 'url' or 'title' & 'content'")
+
 @app.post("/api/assistants/{asst_id}/sources/url")
 def api_ingest_url(asst_id: str, req: IngestUrlRequest):
     url = req.url.strip()

@@ -43,21 +43,24 @@ def clean_html(html_content: str, base_url: str = "") -> Dict[str, str]:
         "content": text.strip()
     }
 
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+
 def fetch_url(url: str, timeout: int = 15) -> Dict[str, str]:
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WeaveFlowBot/2.0"
+        "User-Agent": DEFAULT_USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
     }
-    resp = requests.get(url, headers=headers, timeout=timeout)
+    resp = requests.get(url, headers=headers, timeout=timeout, allow_redirects=True)
     resp.raise_for_status()
     return clean_html(resp.text, base_url=url)
 
 def crawl_sitemap(sitemap_url: str, max_urls: int = 20) -> List[str]:
     """Extracts page URLs from a sitemap.xml."""
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WeaveFlowBot/2.0"
+        "User-Agent": DEFAULT_USER_AGENT
     }
     try:
-        resp = requests.get(sitemap_url, headers=headers, timeout=10)
+        resp = requests.get(sitemap_url, headers=headers, timeout=10, allow_redirects=True)
         soup = BeautifulSoup(resp.content, "xml")
         urls = [loc.text.strip() for loc in soup.find_all("loc")]
         return urls[:max_urls]
@@ -75,7 +78,7 @@ def crawl_website(start_url: str, max_pages: int = 5) -> List[Dict[str, str]]:
     results: List[Dict[str, str]] = []
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WeaveFlowBot/2.0"
+        "User-Agent": DEFAULT_USER_AGENT
     }
 
     while to_visit and len(visited) < max_pages:
