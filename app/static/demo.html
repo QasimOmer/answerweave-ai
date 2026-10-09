@@ -208,7 +208,8 @@
                 .then(r => r.json())
                 .then(asst => {
                     document.getElementById('simNavTitle').innerText = asst.name;
-                    document.getElementById('simLogoBadge').innerText = asst.bot_avatar || '⚡';
+                    const isImg = asst.bot_avatar && (asst.bot_avatar.startsWith('data:image') || asst.bot_avatar.startsWith('http'));
+                    document.getElementById('simLogoBadge').innerHTML = isImg ? `<img src="${asst.bot_avatar}" class="w-full h-full object-cover rounded-xl" alt="Logo" />` : (asst.bot_avatar || '⚡');
                     refreshIcons();
                 });
         }
