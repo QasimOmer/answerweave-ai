@@ -310,6 +310,13 @@ def verify_assistant_domain_access(asst: Dict[str, Any], request: Request):
     allowed = asst.get("domain")
     if not allowed or allowed.strip() == "*":
         return
+
+    # Never block requests originating from dashboard, demo, or internal API calls
+    referer = request.headers.get("referer") or ""
+    if "/dashboard" in referer or "/demo" in referer or "/api/assistants" in referer:
+        return
+
+    server_host = (request.headers.get("host") or "").split(":")[0].strip().lower()
     
     # 1. Check Origin / Referer headers
     origin = request.headers.get("origin") or request.headers.get("referer")
@@ -330,6 +337,9 @@ def verify_assistant_domain_access(asst: Dict[str, Any], request: Request):
     # 3. Check client host for local test clients
     if not host and request.client and request.client.host in ["127.0.0.1", "localhost", "testclient"]:
         host = "localhost"
+
+    if host and server_host and host.lower() == server_host:
+        return
 
     if not is_domain_allowed(allowed, host):
         raise HTTPException(

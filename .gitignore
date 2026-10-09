@@ -22,3 +22,8 @@ Thumbs.db
 
 .vercel
 .env*
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3

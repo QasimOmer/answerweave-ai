@@ -1169,7 +1169,7 @@
         if (!allowedPattern || allowedPattern.trim() === '*' || allowedPattern.trim() === '') {
             return true;
         }
-        if (!host) return false;
+        if (!host) return true;
         host = host.toLowerCase().split(':')[0].trim();
         if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.vercel.app') || host === 'vercel.app') {
             return true;
@@ -1181,10 +1181,10 @@
             if (!pat) continue;
             if (pat.startsWith('*.')) {
                 const base = pat.slice(2);
-                if (host === base || host.endswith ? host.endsWith('.' + base) : host.slice(-base.length - 1) === '.' + base) return true;
+                if (host === base || (typeof host.endsWith === 'function' && host.endsWith('.' + base))) return true;
             } else {
                 if (host === pat || host === 'www.' + pat || pat === 'www.' + host) return true;
-                if (host.slice(-pat.length - 1) === '.' + pat) return true;
+                if (typeof host.endsWith === 'function' && host.endsWith('.' + pat)) return true;
             }
         }
         return false;

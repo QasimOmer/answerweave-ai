@@ -20,6 +20,27 @@ import secrets
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
+# Automatically load environment variables from .env.local or .env if present
+def _load_env_files():
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    for fname in [".env.local", ".env"]:
+        fpath = os.path.join(root_dir, fname)
+        if os.path.exists(fpath):
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            k = k.strip()
+                            v = v.strip().strip('"').strip("'")
+                            if k not in os.environ and v:
+                                os.environ[k] = v
+            except Exception:
+                pass
+
+_load_env_files()
+
 try:
     import psycopg2
     from psycopg2.extras import RealDictCursor
@@ -27,8 +48,14 @@ try:
 except ImportError:
     HAS_PSYCOPG2 = False
 
+try:
+    import pg8000.dbapi
+    HAS_PG8000 = True
+except ImportError:
+    HAS_PG8000 = False
+
 _pg_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
-USE_POSTGRES = bool(_pg_url and HAS_PSYCOPG2)
+USE_POSTGRES = bool(_pg_url and (HAS_PSYCOPG2 or HAS_PG8000))
 
 _is_serverless = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
 _repo_db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "weaveflow.db")
@@ -107,7 +134,9 @@ class PostgresCursorWrapper:
 
     def execute(self, sql, params=None):
         clean_sql = sql
-        clean_sql = clean_sql.replace("?", "%s")
+        if "?" in clean_sql:
+            clean_sql = clean_sql.replace("%", "%%").replace("?", "%s")
+
         if re.search(r"INSERT\s+OR\s+IGNORE\s+INTO", clean_sql, re.I):
             clean_sql = re.sub(r"INSERT\s+OR\s+IGNORE\s+INTO", "INSERT INTO", clean_sql, flags=re.I)
             clean_sql = clean_sql.rstrip().rstrip(";") + " ON CONFLICT DO NOTHING;"
@@ -148,11 +177,25 @@ class PostgresCursorWrapper:
 
     def fetchone(self):
         row = self._cur.fetchone()
-        return RowDict(row) if row is not None else None
+        if row is None:
+            return None
+        if isinstance(row, dict):
+            return RowDict(row)
+        if hasattr(self._cur, "description") and self._cur.description:
+            col_names = [d[0] for d in self._cur.description]
+            return RowDict(zip(col_names, row))
+        return RowDict(row)
 
     def fetchall(self):
         rows = self._cur.fetchall()
-        return [RowDict(r) for r in rows] if rows else []
+        if not rows:
+            return []
+        if isinstance(rows[0], dict):
+            return [RowDict(r) for r in rows]
+        if hasattr(self._cur, "description") and self._cur.description:
+            col_names = [d[0] for d in self._cur.description]
+            return [RowDict(zip(col_names, r)) for r in rows]
+        return [RowDict(r) for r in rows]
 
     def __iter__(self):
         return iter(self.fetchall())
@@ -175,12 +218,24 @@ class PostgresConnWrapper:
 
 def get_db():
     if USE_POSTGRES:
-        raw_conn = psycopg2.connect(_pg_url, cursor_factory=RealDictCursor)
-        return PostgresConnWrapper(raw_conn)
-    else:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        return conn
+        if HAS_PSYCOPG2:
+            raw_conn = psycopg2.connect(_pg_url, cursor_factory=RealDictCursor)
+            return PostgresConnWrapper(raw_conn)
+        elif HAS_PG8000:
+            import urllib.parse
+            p = urllib.parse.urlparse(_pg_url)
+            raw_conn = pg8000.dbapi.connect(
+                user=p.username,
+                password=p.password,
+                host=p.hostname,
+                port=p.port or 5432,
+                database=p.path.lstrip("/"),
+                ssl_context=True
+            )
+            return PostgresConnWrapper(raw_conn)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def init_db():
     if USE_POSTGRES:
@@ -814,7 +869,13 @@ def list_leads(assistant_id: Optional[str] = None) -> List[Dict[str, Any]]:
         cursor.execute("SELECT * FROM leads ORDER BY created_at DESC")
     rows = cursor.fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    result = []
+    for r in rows:
+        d = dict(r)
+        if hasattr(d.get("created_at"), "isoformat"):
+            d["created_at"] = d["created_at"].isoformat()
+        result.append(d)
+    return result
 
 def update_lead_status(lead_id: int, status: str):
     conn = get_db()
@@ -866,11 +927,14 @@ def get_conversation_history(conversation_id: str, limit: int = 10) -> List[Dict
     
     msgs = []
     for r in rows:
+        created_at = r["created_at"]
+        if hasattr(created_at, "isoformat"):
+            created_at = created_at.isoformat()
         item = {
             "role": r["role"],
             "content": r["content"],
             "lead_prompted": bool(r["lead_prompted"]),
-            "created_at": r["created_at"],
+            "created_at": created_at,
             "sources": json.loads(r["sources_json"]) if r["sources_json"] else []
         }
         msgs.append(item)
@@ -885,7 +949,7 @@ def list_conversations_with_metadata(assistant_id: str) -> List[Dict[str, Any]]:
             (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) as message_count,
             (SELECT content FROM messages m WHERE m.conversation_id = c.id AND m.role = 'user' ORDER BY id ASC LIMIT 1) as first_query,
             (SELECT content FROM messages m WHERE m.conversation_id = c.id ORDER BY id DESC LIMIT 1) as last_message,
-            (SELECT email FROM leads l WHERE l.assistant_id = c.assistant_id AND l.note LIKE '%' || c.id || '%' OR l.created_at >= c.created_at LIMIT 1) as lead_email
+            (SELECT email FROM leads l WHERE l.assistant_id = c.assistant_id AND (l.note LIKE '%' || c.id || '%' OR l.note = c.id) ORDER BY l.id DESC LIMIT 1) as lead_email
         FROM conversations c
         WHERE c.assistant_id = ?
         ORDER BY c.updated_at DESC
@@ -893,7 +957,15 @@ def list_conversations_with_metadata(assistant_id: str) -> List[Dict[str, Any]]:
     """, (assistant_id,))
     rows = cursor.fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    result = []
+    for r in rows:
+        d = dict(r)
+        if hasattr(d.get("created_at"), "isoformat"):
+            d["created_at"] = d["created_at"].isoformat()
+        if hasattr(d.get("updated_at"), "isoformat"):
+            d["updated_at"] = d["updated_at"].isoformat()
+        result.append(d)
+    return result
 
 # ----------------- Knowledge Gaps / Unanswered Questions -----------------
 def log_unanswered_question(assistant_id: str, question: str):

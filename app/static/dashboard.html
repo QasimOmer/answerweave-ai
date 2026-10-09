@@ -1392,6 +1392,7 @@
             await loadGlobalSettings();
             await loadSubscription();
             switchTab('analytics');
+            startRealtimePolling();
             refreshIcons();
         }
 
@@ -1401,16 +1402,22 @@
                 assistantsList = await res.json();
                 const selector = document.getElementById('assistantSelector');
                 
+                const savedId = localStorage.getItem('wf_selected_asst_id');
+                if (savedId && assistantsList.some(a => a.id === savedId)) {
+                    currentAssistantId = savedId;
+                } else if (!assistantsList.some(a => a.id === currentAssistantId) && assistantsList.length > 0) {
+                    // Pick assistant with actual data/sources/leads first so client data is never hidden
+                    const withData = assistantsList.find(a => (a.total_leads > 0 || a.total_sources > 0 || a.total_messages > 0));
+                    currentAssistantId = withData ? withData.id : assistantsList[0].id;
+                }
+
                 selector.innerHTML = assistantsList.map(a => `
                     <option value="${a.id}" style="background-color: #0b0f17; color: #f1f5f9; padding: 6px 10px;" ${a.id === currentAssistantId ? 'selected' : ''}>
                         ${escapeHtml(a.name)} (${escapeHtml(a.domain || '*')})
                     </option>
                 `).join('');
-
-                if (!assistantsList.some(a => a.id === currentAssistantId) && assistantsList.length > 0) {
-                    currentAssistantId = assistantsList[0].id;
-                    selector.value = currentAssistantId;
-                }
+                selector.value = currentAssistantId;
+                localStorage.setItem('wf_selected_asst_id', currentAssistantId);
 
                 updateCurrentAssistantInfo();
             } catch (err) {
@@ -1420,6 +1427,7 @@
 
         function onAssistantChange() {
             currentAssistantId = document.getElementById('assistantSelector').value;
+            localStorage.setItem('wf_selected_asst_id', currentAssistantId);
             updateCurrentAssistantInfo();
             loadAnalytics();
             loadSources();
@@ -1900,28 +1908,78 @@
             }
         }
 
-        async function loadConversations() {
+        let selectedConversationId = null;
+        let inboxPollingInterval = null;
+
+        function formatConvTime(dtStr) {
+            if (!dtStr) return '';
+            try {
+                const clean = dtStr.replace(' ', 'T');
+                const d = new Date(clean);
+                if (isNaN(d.getTime())) return dtStr;
+                return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return dtStr;
+            }
+        }
+
+        function startRealtimePolling() {
+            if (inboxPollingInterval) clearInterval(inboxPollingInterval);
+            inboxPollingInterval = setInterval(() => {
+                const inboxPane = document.getElementById('tab-inbox');
+                const isInboxActive = inboxPane && !inboxPane.classList.contains('hidden');
+                if (isInboxActive) {
+                    loadConversations(true);
+                } else {
+                    // Refresh conversation badge
+                    fetch(`/api/assistants/${currentAssistantId}/conversations`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (Array.isArray(data)) {
+                                const badge = document.getElementById('navInboxBadge');
+                                if (badge) badge.innerText = data.length;
+                            }
+                        })
+                        .catch(() => {});
+                }
+            }, 8000);
+        }
+
+        async function loadConversations(isSilent = false) {
             try {
                 const res = await fetch(`/api/assistants/${currentAssistantId}/conversations`);
+                if (!res.ok) throw new Error("Status " + res.status);
                 conversationsData = await res.json();
-                renderConversationsList(conversationsData);
+                
+                const badge = document.getElementById('navInboxBadge');
+                if (badge && Array.isArray(conversationsData)) {
+                    badge.innerText = conversationsData.length;
+                }
+
+                renderConversationsList(conversationsData, isSilent);
             } catch (err) {
                 console.error("Error loading conversations:", err);
             }
         }
 
-        function renderConversationsList(data) {
+        function renderConversationsList(data, isSilent = false) {
             const container = document.getElementById('inboxSessionsList');
             if (!data || data.length === 0) {
                 container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No visitor chat sessions recorded yet. Test your assistant in the Live Simulator!</div>`;
+                document.getElementById('detailTranscriptTitle').innerHTML = `<i data-lucide="message-circle" class="w-4 h-4 text-brand-400"></i> No Session Selected`;
+                document.getElementById('detailSessionSub').innerText = 'Select a visitor conversation from the left to view transcript';
+                document.getElementById('detailMessagesContainer').innerHTML = `<div class="p-12 text-center text-slate-500 text-xs">No active conversation thread selected.</div>`;
+                refreshIcons();
                 return;
             }
 
-            container.innerHTML = data.map((c, i) => `
-                <div onclick="selectConversation('${c.id}')" class="p-4 hover:bg-white/5 cursor-pointer transition flex flex-col gap-1 border-l-2 border-transparent hover:border-brand-500 group">
+            container.innerHTML = data.map((c, i) => {
+                const isSelected = (c.id === selectedConversationId) || (!selectedConversationId && i === 0);
+                return `
+                <div onclick="selectConversation('${c.id}')" class="p-4 hover:bg-white/5 cursor-pointer transition flex flex-col gap-1 border-l-2 ${isSelected ? 'border-brand-500 bg-white/[0.04]' : 'border-transparent'} group">
                     <div class="flex items-center justify-between text-[11px]">
-                        <span class="font-mono text-slate-400 group-hover:text-brand-300 transition">#${c.id.substring(0, 12)}...</span>
-                        <span class="text-slate-500 font-mono text-[10px]">${c.updated_at ? c.updated_at.split(' ')[1] : ''}</span>
+                        <span class="font-mono ${isSelected ? 'text-brand-300 font-bold' : 'text-slate-400'} group-hover:text-brand-300 transition">#${c.id.substring(0, 14)}...</span>
+                        <span class="text-slate-500 font-mono text-[10px]">${formatConvTime(c.updated_at)}</span>
                     </div>
                     <div class="font-bold text-xs text-white line-clamp-1 mt-0.5">
                         ${escapeHtml(c.first_query || 'Visitor Question')}
@@ -1937,24 +1995,30 @@
                         ` : ''}
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
 
-            // Automatically select first conversation if available
-            if (data.length > 0) {
+            // Automatically select first or keep selected
+            if (!selectedConversationId && data.length > 0) {
                 selectConversation(data[0].id);
+            } else if (selectedConversationId && isSilent) {
+                selectConversation(selectedConversationId, true);
             }
             refreshIcons();
         }
 
-        async function selectConversation(convId) {
+        async function selectConversation(convId, isSilent = false) {
             try {
+                selectedConversationId = convId;
                 const res = await fetch(`/api/conversations/${convId}/transcript`);
-                const messages = await res.json();
-                const conv = conversationsData.find(c => c.id === convId);
+                if (!res.ok) throw new Error("Transcript fetch status " + res.status);
+                const data = await res.json();
+                const messages = Array.isArray(data) ? data : (data.messages || []);
+                const conv = (conversationsData || []).find(c => c.id === convId);
 
                 document.getElementById('detailTranscriptTitle').innerHTML = `
                     <i data-lucide="message-circle" class="w-4 h-4 text-brand-400"></i>
-                    Session: <span class="font-mono">${convId.substring(0, 16)}</span>
+                    Session: <span class="font-mono">${convId.substring(0, 18)}</span>
                 `;
                 document.getElementById('detailSessionSub').innerText = `${messages.length} messages in conversation thread`;
                 
@@ -1967,17 +2031,21 @@
                 }
 
                 const container = document.getElementById('detailMessagesContainer');
-                container.innerHTML = messages.map(m => {
-                    const isUser = m.role === 'user';
-                    return `
-                        <div class="flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1">
-                            <span class="text-[10px] text-slate-500 font-mono">${isUser ? 'Visitor' : 'Grounded AI'}</span>
-                            <div class="${isUser ? 'bg-brand-600 text-white' : 'glass-panel-elevated text-slate-100 border border-white/10'} p-3.5 rounded-2xl ${isUser ? 'rounded-br-sm' : 'rounded-bl-sm'} max-w-[85%] text-xs leading-relaxed">
-                                ${m.content.replace(/\n/g, '<br>')}
+                if (!messages || messages.length === 0) {
+                    container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No messages recorded in this session.</div>`;
+                } else {
+                    container.innerHTML = messages.map(m => {
+                        const isUser = m.role === 'user';
+                        return `
+                            <div class="flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1">
+                                <span class="text-[10px] text-slate-500 font-mono">${isUser ? 'Visitor' : 'Grounded AI'}</span>
+                                <div class="${isUser ? 'bg-brand-600 text-white' : 'glass-panel-elevated text-slate-100 border border-white/10'} p-3.5 rounded-2xl ${isUser ? 'rounded-br-sm' : 'rounded-bl-sm'} max-w-[85%] text-xs leading-relaxed">
+                                    ${escapeHtml(m.content || '').replace(/\n/g, '<br>')}
+                                </div>
                             </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('');
+                }
                 refreshIcons();
 
             } catch (err) {
