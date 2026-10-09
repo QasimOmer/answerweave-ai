@@ -33,20 +33,25 @@
     }
 
     const API_BASE = (currentScript && currentScript.getAttribute('data-api-url')) || detectedApiBase;
-    const ASSISTANT_ID = (currentScript && currentScript.getAttribute('data-assistant-id')) || "asst_default";
+    const ASSISTANT_ID = currentScript && currentScript.getAttribute('data-assistant-id');
+
+    if (!ASSISTANT_ID) {
+        console.warn("[WeaveFlow AI] Chatbot widget initialization skipped: Missing 'data-assistant-id' attribute on widget script tag.");
+        return;
+    }
 
     let botConfig = {
-        name: "EcomAlign Assistant",
+        name: "AI Assistant",
         primary_color: "#0f172a",
-        welcome_message: "Hi there! 👋 Welcome to EcomAlign. How can we help grow your e-commerce brand across Amazon, eBay, TikTok Shop, or other marketplaces today?",
+        welcome_message: "Hi there! 👋 How can I assist you today?",
         bot_avatar: "⚡",
         position: "bottom-right",
-        widget_subtitle: "Online • Marketplace Growth AI",
-        suggested_questions: "How does EcomAlign help scale sales across Amazon, eBay & TikTok Shop?\nWhat full-service store management & listing optimization do you provide?\nHow can I book a call or start a project with your growth team?",
+        widget_subtitle: "Online • AI Assistant",
+        suggested_questions: "",
         lead_capture_enabled: 1,
         voice_enabled: 1,
         launcher_style: "circle",
-        teaser_message: "👋 Need help growing on marketplaces?",
+        teaser_message: "",
         show_branding: 1
     };
 
@@ -64,13 +69,13 @@
             recognition.continuous = false;
             recognition.interimResults = false;
             recognition.lang = 'en-US';
-        } catch (e) {}
+            } catch (e) {}
     }
 
     // Host Container with Shadow DOM for total CSS isolation against WordPress / Elementor
     const hostContainer = document.createElement('div');
     hostContainer.id = 'wf-chat-widget-container';
-    hostContainer.style.cssText = 'all: initial !important; position: fixed !important; bottom: 0 !important; right: 0 !important; z-index: 2147483647 !important; pointer-events: none !important; width: 0 !important; height: 0 !important; overflow: visible !important;';
+    hostContainer.style.cssText = 'display: none !important; all: initial !important; position: fixed !important; bottom: 0 !important; right: 0 !important; z-index: 2147483647 !important; pointer-events: none !important; width: 0 !important; height: 0 !important; overflow: visible !important;';
 
     const shadow = hostContainer.attachShadow ? hostContainer.attachShadow({ mode: 'open' }) : hostContainer;
 
@@ -1123,11 +1128,11 @@
             }
             return;
         }
+        hostContainer.style.display = 'block';
         if (!document.body.contains(hostContainer)) {
             document.body.appendChild(hostContainer);
         }
     }
-    mountWidget();
 
     // Helpers to query elements inside Shadow DOM
     const $ = (id) => shadow.getElementById(id);
@@ -1160,19 +1165,71 @@
         }
     });
 
-    // Fetch dynamic assistant configuration from API
-    fetch(`${API_BASE}/api/assistants/${ASSISTANT_ID}`)
-        .then(r => {
-            if (!r.ok) throw new Error("Assistant fetch status " + r.status);
-            return r.json();
-        })
-        .then(asst => {
-            botConfig = { ...botConfig, ...asst };
-            applyConfig();
-        })
-        .catch(() => {
-            applyConfig();
-        });
+    function isHostAllowed(allowedPattern, host) {
+        if (!allowedPattern || allowedPattern.trim() === '*' || allowedPattern.trim() === '') {
+            return true;
+        }
+        if (!host) return false;
+        host = host.toLowerCase().split(':')[0].trim();
+        if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.vercel.app') || host === 'vercel.app') {
+            return true;
+        }
+        const patterns = allowedPattern.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+        for (let pat of patterns) {
+            if (pat === '*') return true;
+            pat = pat.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0].trim();
+            if (!pat) continue;
+            if (pat.startsWith('*.')) {
+                const base = pat.slice(2);
+                if (host === base || host.endswith ? host.endsWith('.' + base) : host.slice(-base.length - 1) === '.' + base) return true;
+            } else {
+                if (host === pat || host === 'www.' + pat || pat === 'www.' + host) return true;
+                if (host.slice(-pat.length - 1) === '.' + pat) return true;
+            }
+        }
+        return false;
+    }
+
+    const currentHost = (window.location && window.location.hostname) ? window.location.hostname : '';
+    const configUrl = `${API_BASE}/api/assistants/${encodeURIComponent(ASSISTANT_ID)}?host=${encodeURIComponent(currentHost)}`;
+
+    // Fetch dynamic assistant configuration with strict domain whitelist gating
+    fetch(configUrl, {
+        headers: {
+            'Accept': 'application/json',
+            'X-Host-Domain': currentHost
+        }
+    })
+    .then(async r => {
+        if (r.status === 403) {
+            throw new Error(`Domain authorization failed: Host '${currentHost}' is not allowed to use assistant '${ASSISTANT_ID}'.`);
+        }
+        if (r.status === 404) {
+            throw new Error(`Assistant '${ASSISTANT_ID}' not found on server.`);
+        }
+        if (!r.ok) {
+            throw new Error(`API returned HTTP ${r.status}`);
+        }
+        return r.json();
+    })
+    .then(asst => {
+        // Enforce strict client-side domain authorization check
+        if (!isHostAllowed(asst.domain, currentHost)) {
+            throw new Error(`Domain restriction: Assistant '${asst.name}' is restricted to domain '${asst.domain}', but current website is '${currentHost}'. Chatbot blocked.`);
+        }
+
+        // Domain verification passed! Configure and display widget
+        botConfig = { ...botConfig, ...asst };
+        applyConfig();
+        mountWidget();
+    })
+    .catch(err => {
+        console.warn(`[WeaveFlow AI] Widget blocked: ${err.message}`);
+        // Ensure widget is completely hidden and detached from DOM
+        if (hostContainer && hostContainer.parentNode) {
+            hostContainer.parentNode.removeChild(hostContainer);
+        }
+    });
 
     function applyConfig() {
         const nameEl = $('wf-header-name');
@@ -1351,7 +1408,10 @@
         try {
             const res = await fetch(`${API_BASE}/api/leads`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Host-Domain': currentHost
+                },
                 body: JSON.stringify(payload)
             });
             if (!res.ok) throw new Error("Status " + res.status);
@@ -1437,7 +1497,10 @@
         try {
             const res = await fetch(`${API_BASE}/api/chat`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Host-Domain': currentHost
+                },
                 body: JSON.stringify({
                     assistant_id: ASSISTANT_ID,
                     conversation_id: conversationId,
@@ -1559,7 +1622,10 @@
             try {
                 const res = await fetch(`${API_BASE}/api/leads`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Host-Domain': currentHost
+                    },
                     body: JSON.stringify({
                         assistant_id: ASSISTANT_ID,
                         conversation_id: conversationId,

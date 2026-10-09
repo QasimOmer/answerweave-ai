@@ -9,6 +9,8 @@ import os
 import io
 import csv
 import uuid
+import re
+import urllib.parse
 import requests
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile, File
@@ -148,12 +150,12 @@ class UpgradePlanRequest(BaseModel):
     plan_key: str
 
 class ChatRequest(BaseModel):
-    assistant_id: Optional[str] = "asst_default"
+    assistant_id: Optional[str] = None
     conversation_id: Optional[str] = None
     message: str
 
 class LeadRequest(BaseModel):
-    assistant_id: Optional[str] = "asst_default"
+    assistant_id: Optional[str] = None
     conversation_id: Optional[str] = None
     email: str
     name: Optional[str] = ""
@@ -189,6 +191,10 @@ def get_dashboard_page():
 @app.get("/demo")
 def get_demo_page():
     return FileResponse(os.path.join(STATIC_DIR, "demo.html"))
+
+@app.get("/widget.js")
+def get_widget_js():
+    return FileResponse(os.path.join(STATIC_DIR, "widget.js"), media_type="application/javascript")
 
 # ----------------- Admin Auth Endpoints -----------------
 @app.post("/api/auth/signup")
@@ -272,13 +278,71 @@ def api_create_assistant(req: CreateAssistantRequest):
         "total_chunks": total_chunks
     }
 
+def is_domain_allowed(allowed_domain_pattern: Optional[str], host: Optional[str]) -> bool:
+    if not allowed_domain_pattern or allowed_domain_pattern.strip() == "*":
+        return True
+    if not host:
+        return False
+    
+    host = host.lower().split(":")[0].strip()
+    if host in ["localhost", "127.0.0.1", "testserver"] or host.endswith(".vercel.app") or host == "vercel.app":
+        return True
+
+    patterns = [p.strip().lower() for p in allowed_domain_pattern.split(",") if p.strip()]
+    for pat in patterns:
+        if pat == "*":
+            return True
+        pat = re.sub(r"^https?://", "", pat).split("/")[0].split(":")[0].strip()
+        if not pat:
+            continue
+        if pat.startswith("*."):
+            base = pat[2:]
+            if host == base or host.endswith("." + base):
+                return True
+        else:
+            if host == pat or host == f"www.{pat}" or pat == f"www.{host}":
+                return True
+            if host.endswith("." + pat):
+                return True
+    return False
+
+def verify_assistant_domain_access(asst: Dict[str, Any], request: Request):
+    allowed = asst.get("domain")
+    if not allowed or allowed.strip() == "*":
+        return
+    
+    # 1. Check Origin / Referer headers
+    origin = request.headers.get("origin") or request.headers.get("referer")
+    host = None
+    if origin:
+        try:
+            parsed = urllib.parse.urlparse(origin if "://" in origin else f"https://{origin}")
+            host = parsed.netloc.split(":")[0].strip()
+        except Exception:
+            pass
+            
+    # 2. Check X-Host-Domain header or host query param
+    if not host:
+        header_host = request.headers.get("x-host-domain") or request.headers.get("x-weaveflow-host") or request.query_params.get("host")
+        if header_host:
+            host = header_host.split(":")[0].strip()
+
+    # 3. Check client host for local test clients
+    if not host and request.client and request.client.host in ["127.0.0.1", "localhost", "testclient"]:
+        host = "localhost"
+
+    if not is_domain_allowed(allowed, host):
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Access denied: Website domain '{host or 'unknown'}' is not authorized to use assistant '{asst.get('name')}'. Allowed domain whitelist: '{allowed}'."
+        )
+
 @app.get("/api/assistants/{asst_id}")
-def api_get_assistant(asst_id: str):
+def api_get_assistant(asst_id: str, request: Request):
     asst = get_assistant(asst_id)
     if not asst:
-        asst = get_assistant("asst_default")
-    if not asst:
         raise HTTPException(status_code=404, detail="Assistant not found")
+    verify_assistant_domain_access(asst, request)
     return asst
 
 @app.put("/api/assistants/{asst_id}")
@@ -507,8 +571,15 @@ def api_resolve_gap(asst_id: str, gap_id: int, req: ResolveGapRequest):
 
 # ----------------- Chat Endpoint -----------------
 @app.post("/api/chat")
-def api_chat(req: ChatRequest):
-    asst_id = req.assistant_id or "asst_default"
+def api_chat(req: ChatRequest, request: Request):
+    asst_id = req.assistant_id
+    if not asst_id:
+        raise HTTPException(status_code=400, detail="Field 'assistant_id' is required.")
+    asst = get_assistant(asst_id)
+    if not asst:
+        raise HTTPException(status_code=404, detail=f"Assistant '{asst_id}' not found")
+    verify_assistant_domain_access(asst, request)
+
     conv_id = req.conversation_id or str(uuid.uuid4())
 
     history = get_conversation_history(conv_id, limit=6)
@@ -540,11 +611,18 @@ def api_chat(req: ChatRequest):
 # ----------------- Leads & Call-Prep -----------------
 @app.post("/api/leads")
 @app.post("/api/lead")
-def api_capture_lead(req: LeadRequest):
+def api_capture_lead(req: LeadRequest, request: Request):
     if not req.email:
         raise HTTPException(status_code=400, detail="Email is required.")
 
-    asst_id = req.assistant_id or "asst_default"
+    asst_id = req.assistant_id
+    if not asst_id:
+        raise HTTPException(status_code=400, detail="Field 'assistant_id' is required.")
+    asst = get_assistant(asst_id)
+    if not asst:
+        raise HTTPException(status_code=404, detail=f"Assistant '{asst_id}' not found")
+    verify_assistant_domain_access(asst, request)
+
     history = get_conversation_history(req.conversation_id, limit=10) if req.conversation_id else []
 
     call_prep_brief = generate_call_prep_brief(history)
