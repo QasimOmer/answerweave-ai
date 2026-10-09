@@ -1058,7 +1058,7 @@
             <!-- Slide-over Drawer for Contact / Lead Capture -->
             <div class="wf-drawer" id="wf-drawer">
                 <div class="wf-drawer-header">
-                    <div class="wf-drawer-title">Start Your Project with EcomAlign</div>
+                    <div class="wf-drawer-title" id="wf-drawer-title">Start Your Project with ${escapeHtml(botConfig.name)}</div>
                     <button type="button" class="wf-icon-btn" id="wf-drawer-close">&times;</button>
                 </div>
                 <div class="wf-drawer-body">
@@ -1068,7 +1068,7 @@
                     <form id="wf-drawer-form">
                         <input type="text" class="wf-lead-input" id="wf-drawer-name" placeholder="Your full name" required />
                         <input type="email" class="wf-lead-input" id="wf-drawer-email" placeholder="Work email address" required />
-                        <input type="tel" class="wf-lead-input" id="wf-drawer-phone" placeholder="Phone number (optional)" />
+                        <input type="tel" class="wf-lead-input" id="wf-drawer-phone" placeholder="Phone number (required for follow-up)" required />
                         <button type="submit" class="wf-lead-btn" id="wf-drawer-submit">Send Information &rarr;</button>
                     </form>
                     <div id="wf-drawer-status" style="display:none; font-size: 12px; margin-top: 12px; font-weight: 600; color: #16a34a; text-align: center;">
@@ -1164,14 +1164,17 @@
         const nameEl = $('wf-header-name');
         if (nameEl) nameEl.innerText = botConfig.name || "AI Assistant";
 
+        const drawerTitle = $('wf-drawer-title');
+        if (drawerTitle) drawerTitle.innerText = `Start Your Project with ${botConfig.name || 'Us'}`;
+
         const statusEl = $('wf-header-status');
         if (statusEl) statusEl.innerText = botConfig.widget_subtitle || "Online";
 
         // Avatar
         const avatarBox = $('wf-avatar-box');
         if (avatarBox) {
-            if (botConfig.bot_avatar && botConfig.bot_avatar.startsWith('http')) {
-                avatarBox.innerHTML = `<img src="${botConfig.bot_avatar}" alt="Avatar" />`;
+            if (botConfig.bot_avatar && (botConfig.bot_avatar.startsWith('http') || botConfig.bot_avatar.startsWith('data:image'))) {
+                avatarBox.innerHTML = `<img src="${botConfig.bot_avatar}" alt="Avatar" style="width:100% !important; height:100% !important; object-fit:cover !important; border-radius:50% !important; display:block !important;" />`;
             } else {
                 avatarBox.innerText = botConfig.bot_avatar || "⚡";
             }
@@ -1332,11 +1335,12 @@
         };
 
         try {
-            await fetch(`${API_BASE}/api/lead`, {
+            const res = await fetch(`${API_BASE}/api/leads`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+            if (!res.ok) throw new Error("Status " + res.status);
             $('wf-drawer-status').style.display = 'block';
             setTimeout(() => {
                 drawerEl.classList.remove('wf-drawer-open');
@@ -1345,7 +1349,7 @@
                 submitBtn.innerText = "Send Information →";
             }, 2000);
         } catch (err) {
-            alert("Error submitting details.");
+            alert("Error submitting details. Please try again.");
             submitBtn.disabled = false;
             submitBtn.innerText = "Send Information →";
         }
@@ -1508,21 +1512,29 @@
         const card = document.createElement('div');
         card.className = 'wf-lead-card';
         card.innerHTML = `
-            <h4>Connect with EcomAlign</h4>
-            <p>Leave your contact details and our marketplace specialists will reach out to schedule a discovery call!</p>
-            <input type="email" placeholder="Your work email..." class="wf-lead-input" id="wf-inline-email" required />
-            <input type="text" placeholder="Your name (optional)..." class="wf-lead-input" id="wf-inline-name" />
-            <button type="button" class="wf-lead-btn" id="wf-inline-submit">Request Follow-up &rarr;</button>
+            <h4>Connect with ${escapeHtml(botConfig.name || 'Our Team')}</h4>
+            <p>Leave your phone number and email below so our specialist can call or text you directly!</p>
+            <input type="text" placeholder="Your full name..." class="wf-lead-input" id="wf-inline-name" />
+            <input type="email" placeholder="Work email address..." class="wf-lead-input" id="wf-inline-email" required />
+            <input type="tel" placeholder="Phone number (required)..." class="wf-lead-input" id="wf-inline-phone" required />
+            <button type="button" class="wf-lead-btn" id="wf-inline-submit">Request Call / Follow-up &rarr;</button>
         `;
 
         card.querySelector('#wf-inline-submit').onclick = async (e) => {
             e.preventDefault();
             const emailInput = card.querySelector('#wf-inline-email');
+            const phoneInput = card.querySelector('#wf-inline-phone');
             const nameInput = card.querySelector('#wf-inline-name');
             const email = emailInput ? emailInput.value.trim() : '';
+            const phone = phoneInput ? phoneInput.value.trim() : '';
             const name = nameInput ? nameInput.value.trim() : '';
+
             if (!email) {
                 alert("Please enter a valid email address.");
+                return;
+            }
+            if (!phone) {
+                alert("Please enter your phone number so our team can follow up with you.");
                 return;
             }
 
@@ -1531,20 +1543,23 @@
             btn.innerText = "Submitting...";
 
             try {
-                await fetch(`${API_BASE}/api/lead`, {
+                const res = await fetch(`${API_BASE}/api/leads`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         assistant_id: ASSISTANT_ID,
                         conversation_id: conversationId,
                         email: email,
+                        phone: phone,
                         name: name
                     })
                 });
-                card.innerHTML = `<div style="color: #16a34a; font-weight: 700; text-align: center; padding: 6px;">🎉 Thank you! We have received your information.</div>`;
+                if (!res.ok) throw new Error("Status " + res.status);
+                card.innerHTML = `<div style="color: #16a34a; font-weight: 700; text-align: center; padding: 10px; font-size: 13px;">🎉 Thank you${name ? ', ' + escapeHtml(name) : ''}! We have received your phone number and email. Our team will contact you shortly.</div>`;
             } catch (err) {
                 btn.disabled = false;
-                btn.innerText = "Request Follow-up →";
+                btn.innerText = "Request Call / Follow-up →";
+                alert("Error submitting details. Please try again.");
             }
         };
 

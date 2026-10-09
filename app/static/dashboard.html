@@ -673,15 +673,25 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Avatar Symbol / Logo</label>
-                                        <select id="asstAvatar" onchange="onLiveAvatarChange(this.value)" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2 outline-none cursor-pointer">
-                                            <option value="⚡">⚡ Lightning</option>
-                                            <option value="♾️">♾️ Infinity Logo</option>
-                                            <option value="✨">✨ Sparkle</option>
-                                            <option value="🤖">🤖 Robot</option>
-                                            <option value="💼">💼 Business</option>
-                                            <option value="💬">💬 Chat</option>
-                                        </select>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Brand Icon / Logo</label>
+                                        <div class="flex items-center gap-2.5">
+                                            <div id="asstAvatarPreviewBox" class="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-lg font-bold overflow-hidden shrink-0 shadow">
+                                                <span id="asstAvatarPreviewChar">⚡</span>
+                                            </div>
+                                            <div class="flex-1 space-y-1.5">
+                                                <div class="flex items-center gap-2">
+                                                    <label for="asstAvatarFileInput" class="cursor-pointer text-[11px] bg-brand-600 hover:bg-brand-500 text-white font-bold px-3 py-1.5 rounded-xl shadow transition inline-flex items-center gap-1.5">
+                                                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                                        <span>Upload Brand Icon</span>
+                                                    </label>
+                                                    <input type="file" id="asstAvatarFileInput" accept="image/*" class="hidden" onchange="handleBrandIconUpload(this, 'asstAvatar')" />
+                                                    <button type="button" onclick="resetBrandAvatar('asstAvatar')" class="text-[11px] text-slate-400 hover:text-white px-2 py-1 rounded-lg hover:bg-white/5 transition">
+                                                        Reset
+                                                    </button>
+                                                </div>
+                                                <input type="text" id="asstAvatar" oninput="onLiveAvatarChange(this.value)" placeholder="Image URL, data URL or emoji" class="glass-input w-full text-[11px] font-mono rounded-lg px-2.5 py-1 outline-none text-slate-300" />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1235,8 +1245,20 @@
                         <input type="color" id="newAsstColor" value="#0f172a" class="w-full h-9 rounded-xl border border-white/10 cursor-pointer bg-transparent" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Bot Avatar</label>
-                        <input type="text" id="newAsstAvatar" value="⚡" maxlength="4" class="glass-input w-full text-xs text-center font-bold rounded-xl px-3 py-2 outline-none" />
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Brand Logo / Icon</label>
+                        <div class="flex items-center gap-2">
+                            <div id="newAsstAvatarPreviewBox" class="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-base font-bold overflow-hidden shrink-0 shadow">
+                                <span id="newAsstAvatarPreviewChar">⚡</span>
+                            </div>
+                            <div class="flex-1 space-y-1">
+                                <label for="newAsstAvatarFileInput" class="cursor-pointer text-[10.5px] bg-white/10 hover:bg-white/15 text-white font-bold px-2 py-1 rounded-lg border border-white/10 transition inline-flex items-center gap-1">
+                                    <i data-lucide="upload" class="w-3 h-3"></i>
+                                    <span>Upload Logo</span>
+                                </label>
+                                <input type="file" id="newAsstAvatarFileInput" accept="image/*" class="hidden" onchange="handleBrandIconUpload(this, 'newAsstAvatar')" />
+                                <input type="text" id="newAsstAvatar" placeholder="URL or emoji" class="glass-input w-full text-[10px] font-mono rounded-lg px-2 py-0.5 outline-none text-slate-300" value="⚡" />
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 pt-3 border-t border-white/10">
@@ -1427,13 +1449,10 @@
 
         function updateLivePreviewDevice(asst) {
             const color = asst.primary_color || '#081726';
-            const avatar = asst.bot_avatar || '⚡';
             document.getElementById('prevHeader').style.backgroundColor = color;
             document.getElementById('prevPopularBar').style.backgroundColor = color;
-            document.getElementById('prevBubble').style.backgroundColor = color;
             document.getElementById('prevSendBtn').style.backgroundColor = color;
-            document.getElementById('prevBubble').innerText = avatar;
-            document.getElementById('prevAvatar').innerText = avatar;
+            onLiveAvatarChange(asst.bot_avatar || '⚡');
             document.getElementById('prevTitle').innerText = asst.name || 'EcomAlign Assistant';
             document.getElementById('prevSubtitle').innerText = asst.widget_subtitle || 'Online';
             document.getElementById('prevWelcome').innerText = asst.welcome_message || 'Hi! How can I help you today?';
@@ -1485,9 +1504,87 @@
             document.getElementById('prevSendBtn').style.backgroundColor = val;
         }
 
+        function handleBrandIconUpload(input, targetInputId) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const rawData = e.target.result;
+                if (file.type === 'image/svg+xml') {
+                    applyUploadedAvatar(rawData, targetInputId);
+                    return;
+                }
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 256;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > h) {
+                        if (w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    } else {
+                        if (h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; }
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const optimized = canvas.toDataURL(file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9);
+                    applyUploadedAvatar(optimized, targetInputId);
+                };
+                img.src = rawData;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function applyUploadedAvatar(dataUrl, targetInputId) {
+            const targetInput = document.getElementById(targetInputId);
+            if (targetInput) targetInput.value = dataUrl;
+            if (targetInputId === 'asstAvatar') {
+                onLiveAvatarChange(dataUrl);
+            } else if (targetInputId === 'newAsstAvatar') {
+                const box = document.getElementById('newAsstAvatarPreviewBox');
+                if (box) box.innerHTML = `<img src="${dataUrl}" class="w-full h-full object-cover rounded-xl" alt="Logo" />`;
+            }
+            showToast("Brand icon loaded successfully");
+            refreshIcons();
+        }
+
+        function resetBrandAvatar(targetInputId) {
+            const targetInput = document.getElementById(targetInputId);
+            if (targetInput) targetInput.value = '⚡';
+            if (targetInputId === 'asstAvatar') {
+                onLiveAvatarChange('⚡');
+            } else if (targetInputId === 'newAsstAvatar') {
+                const box = document.getElementById('newAsstAvatarPreviewBox');
+                if (box) box.innerHTML = `<span id="newAsstAvatarPreviewChar">⚡</span>`;
+            }
+        }
+
         function onLiveAvatarChange(val) {
-            document.getElementById('prevAvatar').innerText = val;
-            document.getElementById('prevBubble').innerText = val;
+            val = val || '⚡';
+            const isImg = val.startsWith('data:image') || val.startsWith('http');
+            
+            const prevBox = document.getElementById('asstAvatarPreviewBox');
+            if (prevBox) {
+                prevBox.innerHTML = isImg ? `<img src="${val}" class="w-full h-full object-cover rounded-xl" alt="Icon" />` : `<span id="asstAvatarPreviewChar">${val}</span>`;
+            }
+
+            const topBadge = document.getElementById('topAvatarBadge');
+            if (topBadge) {
+                topBadge.innerHTML = isImg ? `<img src="${val}" class="w-full h-full object-cover rounded-xl" alt="Icon" />` : val;
+            }
+
+            const prevAvatar = document.getElementById('prevAvatar');
+            if (prevAvatar) {
+                prevAvatar.innerHTML = isImg ? `<img src="${val}" class="w-full h-full object-cover rounded-full" alt="Icon" />` : val;
+            }
+
+            const prevBubble = document.getElementById('prevBubble');
+            if (prevBubble) {
+                prevBubble.innerHTML = isImg ? `<img src="${val}" class="w-full h-full object-cover rounded-full p-0.5" alt="Icon" />` : val;
+            }
         }
 
         function onLiveWelcomeChange(val) {
@@ -1964,12 +2061,22 @@
                     return;
                 }
 
-                tbody.innerHTML = leads.map(l => `
+                window.currentLoadedLeads = leads;
+
+                tbody.innerHTML = leads.map((l, idx) => `
                     <tr class="hover:bg-white/5 transition">
                         <td class="px-6 py-3.5">
                             <div class="font-bold text-white text-xs">${escapeHtml(l.name || 'Anonymous Prospect')}</div>
-                            <div class="text-[11px] font-mono text-brand-400 mt-0.5">${escapeHtml(l.email)}</div>
-                            ${l.phone ? `<div class="text-[10px] font-mono text-slate-400 mt-0.5">${escapeHtml(l.phone)}</div>` : ''}
+                            <div class="text-[11px] font-mono text-brand-400 mt-0.5 flex items-center gap-1.5">
+                                <i data-lucide="mail" class="w-3 h-3 text-slate-400"></i>
+                                <span>${escapeHtml(l.email)}</span>
+                            </div>
+                            ${l.phone ? `
+                            <div class="text-[11px] font-mono text-emerald-400 mt-1 flex items-center gap-1.5 font-semibold">
+                                <i data-lucide="phone" class="w-3 h-3 text-emerald-400"></i>
+                                <span>${escapeHtml(l.phone)}</span>
+                            </div>` : `
+                            <div class="text-[10px] text-slate-500 mt-0.5 italic">No phone provided</div>`}
                         </td>
                         <td class="px-6 py-3.5 whitespace-nowrap">
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
@@ -1977,7 +2084,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-3.5">
-                            <button onclick="viewBrief('${escapeHtml(l.email)}', ${escapeHtml(JSON.stringify(l.call_prep_brief || 'No briefing available.'))})" class="text-xs bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition">
+                            <button onclick="viewBriefByIndex(${idx})" class="text-xs bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition cursor-pointer">
                                 <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
                                 <span>View AI Call-Prep Brief</span>
                             </button>
@@ -1992,6 +2099,14 @@
             } catch (err) {
                 console.error("Error loading leads:", err);
             }
+        }
+
+        function viewBriefByIndex(idx) {
+            if (!window.currentLoadedLeads || !window.currentLoadedLeads[idx]) return;
+            const l = window.currentLoadedLeads[idx];
+            const contact = `${l.name ? l.name + ' • ' : ''}${l.email}${l.phone ? ' • ' + l.phone : ''}`;
+            const brief = l.ai_call_prep_brief || l.call_prep_brief || 'No briefing available.';
+            viewBrief(contact, brief);
         }
 
         function viewBrief(contact, brief) {
@@ -2016,7 +2131,7 @@
 
                 let csv = "Name,Email,Phone,Assistant,Created_At,AI_Call_Prep_Brief\n";
                 leads.forEach(l => {
-                    const briefClean = (l.call_prep_brief || '').replace(/"/g, '""');
+                    const briefClean = (l.ai_call_prep_brief || l.call_prep_brief || '').replace(/"/g, '""');
                     csv += `"${l.name || ''}","${l.email || ''}","${l.phone || ''}","${l.assistant_id || ''}","${l.created_at || ''}","${briefClean}"\n`;
                 });
 

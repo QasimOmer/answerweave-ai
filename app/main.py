@@ -539,6 +539,7 @@ def api_chat(req: ChatRequest):
 
 # ----------------- Leads & Call-Prep -----------------
 @app.post("/api/leads")
+@app.post("/api/lead")
 def api_capture_lead(req: LeadRequest):
     if not req.email:
         raise HTTPException(status_code=400, detail="Email is required.")
