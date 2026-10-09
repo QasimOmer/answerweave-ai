@@ -1113,7 +1113,21 @@
         </div>
     `;
     shadow.appendChild(root);
-    document.body.appendChild(hostContainer);
+
+    function mountWidget() {
+        if (!document.body) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', mountWidget);
+            } else {
+                window.addEventListener('load', mountWidget);
+            }
+            return;
+        }
+        if (!document.body.contains(hostContainer)) {
+            document.body.appendChild(hostContainer);
+        }
+    }
+    mountWidget();
 
     // Helpers to query elements inside Shadow DOM
     const $ = (id) => shadow.getElementById(id);

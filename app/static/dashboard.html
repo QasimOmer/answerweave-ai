@@ -2198,7 +2198,7 @@
 
         function renderEmbedCode() {
             const host = window.location.origin;
-            const snippet = `<script src="${host}/static/widget.js"\n  data-assistant-id="${currentAssistantId}"\n  data-api-url="${host}">\n<\/script>`;
+            const snippet = `<script defer src="${host}/static/widget.js"\n  data-assistant-id="${currentAssistantId}"\n  data-api-url="${host}">\n<\/script>`;
             document.getElementById('embedScriptBlock').innerText = snippet;
         }
 
