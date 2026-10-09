@@ -7,3 +7,5 @@ numpy>=2.0.0
 google-genai>=2.0.0
 python-multipart>=0.0.12
 pypdf>=4.0.0
+psycopg2-binary>=2.9.9
+pg8000>=1.31.0

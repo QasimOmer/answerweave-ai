@@ -12,23 +12,39 @@ Supports:
 import sqlite3
 import json
 import os
+import re
 import shutil
 import uuid
+import hashlib
+import secrets
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+    HAS_PSYCOPG2 = True
+except ImportError:
+    HAS_PSYCOPG2 = False
+
+_pg_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+USE_POSTGRES = bool(_pg_url and HAS_PSYCOPG2)
 
 _is_serverless = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
 _repo_db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "weaveflow.db")
 
-if _is_serverless:
-    DB_PATH = os.environ.get("DB_PATH", "/tmp/weaveflow.db")
-    if not os.path.exists(DB_PATH) and os.path.exists(_repo_db_path):
-        try:
-            shutil.copy2(_repo_db_path, DB_PATH)
-        except Exception:
-            pass
+if not USE_POSTGRES:
+    if _is_serverless:
+        DB_PATH = os.environ.get("DB_PATH", "/tmp/weaveflow.db")
+        if not os.path.exists(DB_PATH) and os.path.exists(_repo_db_path):
+            try:
+                shutil.copy2(_repo_db_path, DB_PATH)
+            except Exception:
+                pass
+    else:
+        DB_PATH = os.environ.get("DB_PATH", _repo_db_path)
 else:
-    DB_PATH = os.environ.get("DB_PATH", _repo_db_path)
+    DB_PATH = _repo_db_path
 
 SUBSCRIPTION_PLANS = {
     "free": {
@@ -73,12 +89,271 @@ SUBSCRIPTION_PLANS = {
     }
 }
 
+class RowDict(dict):
+    """Dictionary subclass supporting both key access ('col') and index access (row[0]) like sqlite3.Row."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._values = list(self.values())
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._values[key]
+        return super().__getitem__(key)
+
+class PostgresCursorWrapper:
+    def __init__(self, raw_cursor):
+        self._cur = raw_cursor
+        self._lastrowid = None
+
+    def execute(self, sql, params=None):
+        clean_sql = sql
+        clean_sql = clean_sql.replace("?", "%s")
+        if re.search(r"INSERT\s+OR\s+IGNORE\s+INTO", clean_sql, re.I):
+            clean_sql = re.sub(r"INSERT\s+OR\s+IGNORE\s+INTO", "INSERT INTO", clean_sql, flags=re.I)
+            clean_sql = clean_sql.rstrip().rstrip(";") + " ON CONFLICT DO NOTHING;"
+        
+        if re.search(r"INSERT\s+OR\s+REPLACE\s+INTO\s+settings", clean_sql, re.I):
+            clean_sql = re.sub(
+                r"INSERT\s+OR\s+REPLACE\s+INTO\s+settings\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)", 
+                r"INSERT INTO settings (\1) VALUES (\2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", 
+                clean_sql, 
+                flags=re.I
+            )
+
+        is_insert = clean_sql.strip().upper().startswith("INSERT INTO")
+        has_returning = "RETURNING" in clean_sql.upper()
+        if is_insert and not has_returning and "ON CONFLICT DO NOTHING" not in clean_sql.upper():
+            lower = clean_sql.lower()
+            if any(t in lower for t in ["into leads", "into sources", "into chunks", "into unanswered_questions", "into messages"]):
+                clean_sql = clean_sql.rstrip().rstrip(";") + " RETURNING id;"
+                has_returning = True
+
+        if params is not None:
+            self._cur.execute(clean_sql, params)
+        else:
+            self._cur.execute(clean_sql)
+
+        if is_insert and has_returning:
+            try:
+                row = self._cur.fetchone()
+                if row:
+                    self._lastrowid = row["id"] if isinstance(row, dict) else row[0]
+            except Exception:
+                pass
+        return self
+
+    @property
+    def lastrowid(self):
+        return self._lastrowid
+
+    def fetchone(self):
+        row = self._cur.fetchone()
+        return RowDict(row) if row is not None else None
+
+    def fetchall(self):
+        rows = self._cur.fetchall()
+        return [RowDict(r) for r in rows] if rows else []
+
+    def __iter__(self):
+        return iter(self.fetchall())
+
+class PostgresConnWrapper:
+    def __init__(self, raw_conn):
+        self._conn = raw_conn
+
+    def cursor(self):
+        return PostgresCursorWrapper(self._conn.cursor())
+
+    def commit(self):
+        self._conn.commit()
+
+    def rollback(self):
+        self._conn.rollback()
+
+    def close(self):
+        self._conn.close()
+
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    if USE_POSTGRES:
+        raw_conn = psycopg2.connect(_pg_url, cursor_factory=RealDictCursor)
+        return PostgresConnWrapper(raw_conn)
+    else:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 def init_db():
+    if USE_POSTGRES:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS assistants (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            domain TEXT DEFAULT '*',
+            primary_color TEXT DEFAULT '#4F46E5',
+            welcome_message TEXT DEFAULT 'Hi there! 👋 How can I help you today?',
+            bot_avatar TEXT DEFAULT '⚡',
+            position TEXT DEFAULT 'bottom-right',
+            suggested_questions TEXT DEFAULT 'What are your products?\nHow much does it cost?\nHow do I contact support?',
+            lead_capture_enabled INTEGER DEFAULT 1,
+            voice_enabled INTEGER DEFAULT 1,
+            notification_email TEXT DEFAULT '',
+            webhook_url TEXT DEFAULT '',
+            monthly_message_limit INTEGER DEFAULT 2000,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            theme_mode TEXT DEFAULT 'light',
+            widget_subtitle TEXT DEFAULT 'Online • AI Assistant',
+            launcher_text TEXT DEFAULT '',
+            launcher_style TEXT DEFAULT 'circle',
+            teaser_message TEXT DEFAULT '👋 Hi! Need quick answers?',
+            lead_title TEXT DEFAULT 'Get in touch with our team',
+            lead_fields TEXT DEFAULT 'name_email',
+            sound_enabled INTEGER DEFAULT 1,
+            show_branding INTEGER DEFAULT 1
+        );
+
+        CREATE TABLE IF NOT EXISTS sources (
+            id SERIAL PRIMARY KEY,
+            assistant_id TEXT NOT NULL DEFAULT 'asst_default',
+            source_type TEXT NOT NULL,
+            title TEXT,
+            url TEXT,
+            content TEXT,
+            chunk_count INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS chunks (
+            id SERIAL PRIMARY KEY,
+            assistant_id TEXT NOT NULL DEFAULT 'asst_default',
+            source_id INTEGER,
+            chunk_index INTEGER,
+            content TEXT NOT NULL,
+            title TEXT,
+            url TEXT,
+            embedding TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS leads (
+            id SERIAL PRIMARY KEY,
+            assistant_id TEXT NOT NULL DEFAULT 'asst_default',
+            email TEXT NOT NULL,
+            name TEXT,
+            phone TEXT,
+            note TEXT,
+            status TEXT DEFAULT 'new',
+            conversation_summary TEXT,
+            ai_call_prep_brief TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS conversations (
+            id TEXT PRIMARY KEY,
+            assistant_id TEXT NOT NULL DEFAULT 'asst_default',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS messages (
+            id SERIAL PRIMARY KEY,
+            conversation_id TEXT NOT NULL,
+            assistant_id TEXT NOT NULL DEFAULT 'asst_default',
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            sources_json TEXT,
+            lead_prompted INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS unanswered_questions (
+            id SERIAL PRIMARY KEY,
+            assistant_id TEXT NOT NULL DEFAULT 'asst_default',
+            question TEXT NOT NULL,
+            frequency INTEGER DEFAULT 1,
+            resolution_notes TEXT DEFAULT '',
+            status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            name TEXT NOT NULL,
+            role TEXT DEFAULT 'admin',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
+        conn.commit()
+
+        # Check if assistants table in Postgres has data
+        cursor.execute("SELECT count(*) as cnt FROM assistants;")
+        cnt_row = cursor.fetchone()
+        asst_count = cnt_row["cnt"] if cnt_row else 0
+        if asst_count == 0 and os.path.exists(_repo_db_path):
+            try:
+                sq_conn = sqlite3.connect(_repo_db_path)
+                sq_conn.row_factory = sqlite3.Row
+                sq_cur = sq_conn.cursor()
+
+                sq_cur.execute("SELECT * FROM assistants;")
+                for r in sq_cur.fetchall():
+                    d = dict(r)
+                    cols = list(d.keys())
+                    placeholders = ", ".join(["%s"] * len(cols))
+                    col_names = ", ".join(cols)
+                    cursor.execute(f"INSERT INTO assistants ({col_names}) VALUES ({placeholders}) ON CONFLICT (id) DO NOTHING;", list(d.values()))
+
+                sq_cur.execute("SELECT * FROM sources;")
+                for r in sq_cur.fetchall():
+                    d = dict(r)
+                    cols = list(d.keys())
+                    placeholders = ", ".join(["%s"] * len(cols))
+                    col_names = ", ".join(cols)
+                    cursor.execute(f"INSERT INTO sources ({col_names}) VALUES ({placeholders}) ON CONFLICT DO NOTHING;", list(d.values()))
+
+                sq_cur.execute("SELECT * FROM chunks;")
+                for r in sq_cur.fetchall():
+                    d = dict(r)
+                    cols = list(d.keys())
+                    placeholders = ", ".join(["%s"] * len(cols))
+                    col_names = ", ".join(cols)
+                    cursor.execute(f"INSERT INTO chunks ({col_names}) VALUES ({placeholders}) ON CONFLICT DO NOTHING;", list(d.values()))
+
+                sq_cur.execute("SELECT * FROM settings;")
+                for r in sq_cur.fetchall():
+                    d = dict(r)
+                    cursor.execute("INSERT INTO settings (key, value) VALUES (%s, %s) ON CONFLICT (key) DO NOTHING;", (d["key"], d["value"]))
+
+                sq_cur.execute("SELECT * FROM users;")
+                for r in sq_cur.fetchall():
+                    d = dict(r)
+                    cursor.execute("INSERT INTO users (id, email, password_hash, name, role) VALUES (%s, %s, %s, %s, %s) ON CONFLICT (id) DO NOTHING;", (d["id"], d["email"], d["password_hash"], d["name"], d.get("role", "admin")))
+
+                conn.commit()
+                sq_conn.close()
+            except Exception as e:
+                print(f"Error migrating SQLite to Postgres: {e}")
+
+        cursor.execute("SELECT id FROM users WHERE email = 'admin@answerweave.ai'")
+        if not cursor.fetchone():
+            admin_id = f"user_{uuid.uuid4().hex[:8]}"
+            pwd_hash = hash_password("admin123")
+            cursor.execute("INSERT INTO users (id, email, password_hash, name, role) VALUES (?, 'admin@answerweave.ai', ?, 'Admin', 'admin')", (admin_id, pwd_hash))
+            conn.commit()
+
+        conn.close()
+        return
+
     conn = get_db()
     cursor = conn.cursor()
     
@@ -299,7 +574,7 @@ def create_user(email: str, password: str, name: str, role: str = "admin") -> Op
         conn.commit()
         conn.close()
         return get_user_by_id(user_id)
-    except sqlite3.IntegrityError:
+    except Exception:
         conn.close()
         return None
 
