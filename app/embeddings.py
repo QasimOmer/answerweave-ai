@@ -4,6 +4,7 @@ Embedding generation and vector similarity search supporting multi-assistant par
 
 import math
 import re
+import hashlib
 import numpy as np
 from typing import List, Dict, Any, Optional
 from google import genai
@@ -57,17 +58,57 @@ STOPWORDS = {
     "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasn't", "we",
     "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's", "when", "when's", "where",
     "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "won't", "would",
-    "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"
+    "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves",
+    # Conversational verbs and noise words
+    "can", "u", "ur", "share", "tell", "give", "show", "send", "list", "provide",
+    "please", "pls", "want", "need", "looking", "find", "get", "help", "know", "see",
+    "some", "seome", "got", "hi", "hey", "hello"
 }
 
+def normalize_query_terms(text: str) -> str:
+    """Corrects common typos in visitor queries for e-commerce and real estate."""
+    clean = text.lower()
+    typos = {
+        r'\brenatl\b': 'rental',
+        r'\brentl\b': 'rental',
+        r'\brentals\b': 'rental properties',
+        r'\bseome\b': 'some',
+        r'\bpropertis\b': 'properties',
+        r'\bpropertie\b': 'property',
+        r'\bproprty\b': 'property',
+        r'\bproprties\b': 'properties',
+        r'\bprperty\b': 'property',
+        r'\bprperties\b': 'properties',
+        r'\bappartment\b': 'apartment',
+        r'\bappartments\b': 'apartments',
+        r'\baprtment\b': 'apartment',
+        r'\baprtments\b': 'apartments',
+        r'\baprtmnt\b': 'apartment',
+        r'\baprtmnts\b': 'apartments',
+        r'\bapts?\b': 'apartments',
+        r'\bbdrms?\b': 'bedroom',
+        r'\bfor\s+sell\b': 'for sale',
+        r'\bto\s+sell\b': 'to sell',
+        r'\bproperties\s+for\s+sell\b': 'properties for sale',
+        r'\bproperty\s+for\s+sell\b': 'property for sale',
+        r'\bvila\b': 'villa',
+        r'\bvilas\b': 'villas',
+        r'\bstudioes\b': 'studios',
+        r'\bpenhouse\b': 'penthouse',
+        r'\btonwhouse\b': 'townhouse',
+    }
+    for pat, repl in typos.items():
+        clean = re.sub(pat, repl, clean)
+    return clean
+
 def _pseudo_embedding(text: str, dim: int = 256) -> List[float]:
-    """Deterministic hash-based fallback vector when no API key is provided."""
+    """Deterministic MD5-based fallback vector when no API key is provided."""
     vec = [0.0] * dim
     words = [w for w in re.findall(r"[a-z0-9]+", text.lower()) if w not in STOPWORDS and len(w) > 2]
     if not words:
         return vec
     for w in words:
-        idx = (hash(w) % dim + dim) % dim
+        idx = int(hashlib.md5(w.encode("utf-8")).hexdigest()[:8], 16) % dim
         vec[idx] += 1.0
     norm = math.sqrt(sum(x * x for x in vec))
     if norm > 0:
@@ -94,7 +135,8 @@ def search_relevant_chunks(
     """Retrieves top_k most relevant chunks for a user query isolated to specific assistant with budget awareness."""
     from app.catalog_intelligence import parse_user_query_intent, extract_catalog_items_from_chunk, match_items_against_query
 
-    query_emb = generate_embedding(query)
+    norm_query = normalize_query_terms(query)
+    query_emb = generate_embedding(norm_query)
     if not query_emb:
         return []
         
@@ -103,12 +145,12 @@ def search_relevant_chunks(
         return []
         
     # Analyze query intent (catalog, budget, deal type, entity type)
-    intent = parse_user_query_intent(query)
+    intent = parse_user_query_intent(norm_query)
     is_catalog_query = intent.get("is_catalog_query", False)
     effective_top_k = max(top_k, 8) if is_catalog_query else top_k
 
     # Extract query words including numbers, price symbols, and specs (e.g. 2, 50, 500k, 2bhk)
-    query_lower = query.lower()
+    query_lower = norm_query.lower()
     meaningful_query_words = set(
         w for w in re.findall(r"[a-z0-9]+", query_lower)
         if w not in STOPWORDS and (len(w) >= 3 or w.isdigit() or any(c.isdigit() for c in w))
@@ -116,6 +158,15 @@ def search_relevant_chunks(
 
     scored_chunks = []
     for c in chunks:
+        # Filter out privacy policy, terms of service, and cookie policy pages unless explicitly queried
+        is_legal_chunk = any(t in (c.get("title", "") + " " + c.get("url", "")).lower() for t in [
+            "privacy policy", "terms of service", "terms & conditions", "privacy-policy",
+            "terms-of", "cookie policy", "disclaimer"
+        ])
+        user_wants_legal = any(w in query_lower for w in ["privacy", "policy", "terms", "cookie", "gdpr", "legal", "data protection"])
+        if is_legal_chunk and not user_wants_legal:
+            continue
+
         sim = cosine_similarity(query_emb, c["embedding"])
         content_lower = c["content"].lower()
         

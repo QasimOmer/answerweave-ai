@@ -570,3 +570,144 @@ def format_catalog_recommendation_answer(
         "answer": "\n\n".join(lines),
         "lead_prompted": lead_prompted
     }
+
+def build_real_estate_overview_answer(
+    query_intent: Dict[str, Any],
+    chunks: List[Dict[str, Any]],
+    assistant_name: str = "Our Team",
+    allowed_urls: Optional[Set[str]] = None
+) -> Dict[str, Any]:
+    """
+    Synthesizes a domain-aware, professional real-estate overview answer when
+    individual item catalog cards are not present or when answering high-level property inquiries.
+    Covers Rentals, Sales, Off-Plan, Selling, and Budget Guidance.
+    """
+    deal_type = query_intent.get("deal_type", "any")
+    max_p = query_intent.get("max_price")
+    curr = query_intent.get("currency")
+    curr_label = "AED" if curr in ["AED", "ANY"] else ("$" if curr == "USD" else (curr if curr not in ["ANY", "AED_OR_USD"] else "AED or $"))
+    
+    # Locate verified action URLs if present
+    norm_allowed = {u.strip().rstrip("/").lower(): u for u in allowed_urls} if allowed_urls else {}
+    
+    def find_best_link(keyword: str, fallback: str) -> Optional[str]:
+        for k, original_url in norm_allowed.items():
+            if k.endswith("/" + keyword) or k == fallback.rstrip("/").lower():
+                return original_url
+        for k, original_url in norm_allowed.items():
+            if keyword in k:
+                return original_url
+        if any("idealhomes" in u for u in norm_allowed.values()) or "ideal homes" in assistant_name.lower():
+            return fallback
+        return None
+
+    off_plan_link = find_best_link("off-plan", "https://idealhomes.ae/off-plan")
+    sell_link = find_best_link("sell", "https://idealhomes.ae/sell")
+    contact_link = find_best_link("contact", "https://idealhomes.ae/contact")
+    list_link = find_best_link("list-your-property", "https://idealhomes.ae/list-your-property")
+
+    lines = []
+    
+    # 1. Budget Rental Query (e.g., "rental properties under 500000" or "under 1000 aed or $")
+    if max_p is not None and deal_type == "rent":
+        is_below_market = (
+            (curr in ["AED", "ANY", "AED_OR_USD"] and max_p < 2500)
+            or (curr == "USD" and max_p < 700)
+            or (curr in ["EUR", "GBP"] and max_p < 600)
+        )
+        budget_disp = f"**{max_p:,.0f} AED or $**" if curr == "AED_OR_USD" else f"**{curr_label + ' ' if curr_label else ''}{max_p:,.0f}**"
+        
+        if is_below_market:
+            lines.append(
+                f"In Dubai, typical residential rental rates generally start higher than {budget_disp} "
+                f"(studios in residential communities typically start from approximately 3,000–4,500 AED / month depending on location, furnishings, and payment terms)."
+            )
+            lines.append(
+                f"{assistant_name} offers a wide selection of competitive rental options across Dubai. "
+                f"Our RERA-certified leasing consultants can help identify the best value options matching your preferred criteria."
+            )
+        else:
+            lines.append(
+                f"{assistant_name} offers a comprehensive portfolio of residential rental properties across Dubai within your budget of {budget_disp}:"
+            )
+            lines.append(
+                "• **Available Options**: From modern studios and 1–3 bedroom apartments in prime city hubs to luxury waterfront penthouses and private family villas.\n"
+                "• **Top Communities**: Dubai Marina, Downtown Dubai, Palm Jumeirah, JVC (Jumeirah Village Circle), Business Bay, and Dubai Hills Estate.\n"
+                "• **Full Tenancy Support**: Our RERA-certified leasing consultants handle private viewings, RERA-compliant tenancy contracts, Ejari registration, and move-in inspection reports."
+            )
+        lines.append(
+            "Would you like to explore apartments, villas, or townhouses? Feel free to share your preferred community and bedroom count, or leave your contact details below to speak directly with our leasing team!"
+        )
+
+    # 2. General Rental Query (e.g., "can u share seome renatl properties")
+    elif deal_type == "rent":
+        lines.append(
+            f"{assistant_name} provides an extensive selection of residential and commercial rental properties across Dubai's most desirable communities:"
+        )
+        lines.append(
+            "• **Property Options**: Fully furnished and unfurnished studios, 1–4 bedroom apartments, waterfront residences, and private family villas.\n"
+            "• **Prime Locations**: Dubai Marina, Downtown Dubai, Palm Jumeirah, JVC (Jumeirah Village Circle), Business Bay, and Arabian Ranches.\n"
+            "• **End-to-End Tenancy Support**: RERA-compliant tenancy contracts, Ejari registration, DEWA connection assistance, and move-in coordination."
+        )
+        if contact_link:
+            lines.append(f"🔗 [Contact Our Leasing Specialists]({contact_link})")
+        lines.append(
+            "Please feel free to share your preferred location, bedroom count, or budget below, and our leasing team will be glad to share tailored options!"
+        )
+
+    # 3. Sales / Buying / Selling (e.g., "properties for sell", "properties for sale", "buy property")
+    elif deal_type == "sale":
+        lines.append(
+            f"{assistant_name} provides full-service real estate brokerage across Dubai for buyers, investors, and property sellers:"
+        )
+        sales_points = [
+            "• **Properties for Sale & Off-Plan Investments**:\n"
+            "  - Ready apartments, luxury penthouses, and villas across Dubai Marina, Downtown Dubai, Palm Jumeirah, and Dubai Hills Estate.\n"
+            "  - Exclusive off-plan project launches directly from top developers (Emaar, Nakheel, Sobha, Damac) with flexible developer payment plans.",
+            "• **Selling Your Property**:\n"
+            "  - Complete seller brokerage including free market valuations, professional photography, RERA Form A marketing, and qualified buyer matching.",
+            "• **Advisory & Conveyancing**:\n"
+            "  - Complete guidance through Dubai Land Department (DLD) transfer procedures, NOC issuance, and mortgage financing."
+        ]
+        lines.append("\n\n".join(sales_points))
+        action_links = []
+        if off_plan_link:
+            action_links.append(f"🔗 [Explore Off-Plan Projects]({off_plan_link})")
+        if sell_link:
+            action_links.append(f"🔗 [Sell Your Property & Free Valuation]({sell_link})")
+        if contact_link:
+            action_links.append(f"🔗 [Contact Our Sales Team]({contact_link})")
+        if action_links:
+            lines.append(" • ".join(action_links))
+        lines.append(
+            "Are you looking to buy a property, explore off-plan investments, or list your property for sale? Let us know or leave your contact details below to speak with a specialist!"
+        )
+
+    # 4. General Property Overview (e.g., "tell me about properties")
+    else:
+        lines.append(
+            f"{assistant_name} is a RERA-certified Dubai real estate brokerage offering end-to-end property solutions across Dubai's top communities:"
+        )
+        lines.append(
+            "• **Buying & Off-Plan Investments**: Ready residential homes, waterfront penthouses, and new off-plan launches with developer payment plans.\n"
+            "• **Renting & Leasing**: Apartments, studios, and villas across prime communities with complete Ejari registration and tenancy contract support.\n"
+            "• **Property Management & Selling**: 25 specialized landlord management services, tenant screening, maintenance, and free property valuations."
+        )
+        action_links = []
+        if off_plan_link:
+            action_links.append(f"🔗 [Off-Plan Projects]({off_plan_link})")
+        if sell_link:
+            action_links.append(f"🔗 [Sell Your Property]({sell_link})")
+        if contact_link:
+            action_links.append(f"🔗 [Contact Team]({contact_link})")
+        if action_links:
+            lines.append(" • ".join(action_links))
+        lines.append(
+            "How can we assist your property search today? Feel free to share your preferred community or budget, or leave your contact details below!"
+        )
+
+    return {
+        "answer": "\n\n".join(lines),
+        "lead_prompted": True
+    }
+

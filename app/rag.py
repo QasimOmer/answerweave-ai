@@ -60,6 +60,14 @@ PRIMARY DIRECTIVES:
    - CRITICAL: NEVER invent, fabricate, or guess web URLs or paths (e.g., never create links like '/properties/123', '/rent/...', or '/product/xyz').
    - You may ONLY link to a URL if that EXACT full URL is explicitly stated in the provided Context Sources.
    - If an item does not have an exact URL in the sources, present all available details (name, price, specs, location) WITHOUT generating a markdown link. Any broken link or 404 is strictly unacceptable.
+9. REAL ESTATE OVERVIEWS & COMPREHENSIVE PROPERTY INQUIRIES:
+   - When a visitor asks broad questions about properties (e.g., "tell me about properties", "can you share some rental properties", "do you have properties for sale"):
+   - Clearly outline the organization's property solutions:
+     • Residential rentals (studios, 1–4 bed apartments, villas across Dubai Marina, Downtown, Palm Jumeirah, JVC).
+     • Off-plan investments & ready homes with developer payment plans.
+     • Full tenancy support (RERA contracts, Ejari registration, property valuations).
+   - Never output internal staff bios or privacy policy clauses as an answer to a property inquiry.
+   - Invite the visitor to share their preferred community, bedroom count, or budget to connect directly with the team.
 """
 
 def detect_conversational_intent(query: str, asst_name: str = "Our Team", welcome_msg: str = "") -> Optional[str]:
@@ -239,11 +247,14 @@ def clean_extracted_noise(text: str) -> str:
 
 def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], assistant_id: str = "asst_default") -> Dict[str, Any]:
     """Zero-key local extractive grounding optimized for concise, to-the-point answers and catalog discovery."""
+    from app.embeddings import normalize_query_terms
+    norm_query = normalize_query_terms(query)
+
     # 1. Check conversational intent first
     asst = get_assistant(assistant_id) if assistant_id else None
     asst_name = asst.get("name") if asst else "Our Team"
     welcome_msg = asst.get("welcome_message") if asst else ""
-    conv_reply = detect_conversational_intent(query, asst_name=asst_name, welcome_msg=welcome_msg)
+    conv_reply = detect_conversational_intent(norm_query, asst_name=asst_name, welcome_msg=welcome_msg)
     if conv_reply:
         return {
             "answer": conv_reply,
@@ -269,10 +280,26 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
         parse_user_query_intent,
         extract_catalog_items_from_chunk,
         match_items_against_query,
-        format_catalog_recommendation_answer
+        format_catalog_recommendation_answer,
+        build_real_estate_overview_answer
     )
-    intent = parse_user_query_intent(query)
-    if intent.get("is_catalog_query"):
+    intent = parse_user_query_intent(norm_query)
+
+    # Determine if query or assistant context relates to Real Estate
+    is_real_estate = (
+        intent.get("entity_type") == "property"
+        or intent.get("deal_type") in ["rent", "sale"]
+        or any(w in norm_query.lower() for w in [
+            "property", "properties", "apartment", "apartments", "flat", "flats",
+            "villa", "villas", "studio", "studios", "penthouse", "penthouses",
+            "townhouse", "townhouses", "rent", "rental", "rentals", "leasing", "lease",
+            "to rent", "for rent", "for sale", "to buy", "off-plan", "ejari", "landlord", "tenant"
+        ])
+        or any("real estate" in (c.get("title", "") + " " + c.get("content", "")[:300]).lower() for c in chunks[:5])
+        or any(w in asst_name.lower() for w in ["homes", "real estate", "property", "realty"])
+    )
+
+    if intent.get("is_catalog_query") or is_real_estate:
         all_chunk_items = []
         for idx, c in enumerate(chunks, 1):
             items = extract_catalog_items_from_chunk(
@@ -296,12 +323,24 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
                         "lead_prompted": cat_res.get("lead_prompted", False)
                     }
 
-        # If user asked for items under a specific budget, but no matching catalog items were found in chunks
+        # If real estate domain or property inquiry, synthesize the comprehensive real estate overview
+        if is_real_estate:
+            verified_urls = get_verified_assistant_urls(assistant_id, chunks)
+            overview_res = build_real_estate_overview_answer(intent, chunks, assistant_name=asst_name, allowed_urls=verified_urls)
+            if overview_res.get("answer"):
+                clean_overview = sanitize_hallucinated_urls(overview_res["answer"], verified_urls)
+                return {
+                    "answer": clean_overview,
+                    "sources": sources_list,
+                    "lead_prompted": overview_res.get("lead_prompted", True)
+                }
+
+        # If e-commerce product query under a specific budget, but no matching catalog items were found
         if intent.get("max_price") is not None:
             max_p = intent["max_price"]
             curr = intent.get("currency")
             curr_str = f"**{max_p:,.0f} AED or $**" if curr == "AED_OR_USD" else f"**{curr + ' ' if curr not in ['ANY', ''] else ''}{max_p:,.0f}**"
-            item_type = "rental properties" if intent.get("deal_type") == "rent" else ("properties" if intent.get("entity_type") == "property" else "products")
+            item_type = "products"
             
             return {
                 "answer": f"I apologize, but we do not currently have {item_type} listed under {curr_str} in our current documentation.\n\nPlease feel free to leave your contact email below and our team will be glad to follow up with custom options matching your exact budget!",
@@ -310,9 +349,9 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
             }
 
     if not chunks:
-        if len(query.strip()) >= 4 and not is_trivial_or_conversational(query):
+        if len(norm_query.strip()) >= 4 and not is_trivial_or_conversational(norm_query):
             try:
-                log_unanswered_question(assistant_id, query)
+                log_unanswered_question(assistant_id, norm_query)
             except Exception:
                 pass
         return {
@@ -322,8 +361,8 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
         }
 
     from app.embeddings import STOPWORDS
-    stop_words = STOPWORDS | {'what', 'when', 'where', 'which', 'who', 'how', 'why', 'are', 'the', 'you', 'for', 'and', 'with', 'does', 'can', 'about', 'your', 'our', 'tell', 'help'}
-    meaningful_query_words = set(w for w in re.findall(r"[a-z0-9]{3,}", query.lower()) if w not in stop_words)
+    stop_words = STOPWORDS | {'what', 'when', 'where', 'which', 'who', 'how', 'why', 'are', 'the', 'you', 'for', 'and', 'with', 'does', 'can', 'about', 'your', 'our', 'tell', 'help', 'share', 'give', 'show', 'send', 'list', 'provide', 'some'}
+    meaningful_query_words = set(w for w in re.findall(r"[a-z0-9]{3,}", norm_query.lower()) if w not in stop_words)
     candidates = []
 
     for idx, c in enumerate(chunks, 1):
@@ -335,7 +374,7 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
             faq_a = faq_match.group(2).strip()
             faq_q_words = set(w for w in re.findall(r"[a-z0-9]{3,}", faq_q.lower()) if w not in stop_words)
             overlap = len(meaningful_query_words & faq_q_words) if meaningful_query_words else 0
-            if overlap >= 1 or (not meaningful_query_words and query.lower() in faq_q.lower()):
+            if overlap >= 1 or (not meaningful_query_words and norm_query.lower() in faq_q.lower()):
                 clean_ans = clean_extracted_noise(faq_a)
                 if len(clean_ans) >= 10:
                     candidates.append((overlap * 12 + 40, clean_ans, idx))
@@ -344,7 +383,17 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
         for i, s in enumerate(sentences):
             s_clean = clean_extracted_noise(s)
             s_low = s_clean.lower()
-            if any(junk in s_low for junk in ['last name', 'first name', 'contact message', 'send it to', 'tell us about your goals']):
+            if any(junk in s_low for junk in ['last name', 'first name', 'contact message', 'send it to', 'tell us about your goals', 'captcha', 'submit form']):
+                continue
+
+            # Skip legal/privacy policy sentences unless explicitly queried
+            legal_phrases = ['share your information', 'personal data', 'privacy policy', 'cookie policy', 'third-party service', 'log data', 'ip address', 'terms of use', 'terms & conditions']
+            if any(lp in s_low for lp in legal_phrases) and not any(w in norm_query.lower() for w in ['privacy', 'policy', 'terms', 'cookie', 'legal', 'data']):
+                continue
+
+            # Skip staff bios unless explicitly queried
+            bio_phrases = ['manages residential', 'supports investors', 'property administrator', 'under his leadership', 'meet our leadership', 'read profile →']
+            if any(bp in s_low for bp in bio_phrases) and not any(w in norm_query.lower() for w in ['team', 'staff', 'who is', 'founder', 'leadership', 'sana', 'himanshi', 'lootah', 'ceo']):
                 continue
 
             # 1. Check if sentence is an FAQ heading / question that matches the query
@@ -615,12 +664,15 @@ def generate_grounded_response(
     top_k: int = 4
 ) -> Dict[str, Any]:
     """Executes grounded RAG workflow partitioned by assistant."""
+    from app.embeddings import normalize_query_terms
+    norm_query = normalize_query_terms(query)
+
     # 1. First, check if this is a conversational greeting, pleasantry, identity query, or farewell
     asst = get_assistant(assistant_id) if assistant_id else None
     asst_name = asst.get("name") if asst else "Our Team"
     welcome_msg = asst.get("welcome_message") if asst else ""
     
-    conversational_reply = detect_conversational_intent(query, asst_name=asst_name, welcome_msg=welcome_msg)
+    conversational_reply = detect_conversational_intent(norm_query, asst_name=asst_name, welcome_msg=welcome_msg)
     if conversational_reply:
         return {
             "answer": conversational_reply,
@@ -628,9 +680,9 @@ def generate_grounded_response(
             "lead_prompted": False
         }
 
-    chunks = search_relevant_chunks(query, assistant_id=assistant_id, top_k=top_k)
+    chunks = search_relevant_chunks(norm_query, assistant_id=assistant_id, top_k=top_k)
     if not chunks and assistant_id != "asst_default":
-        chunks = search_relevant_chunks(query, assistant_id="asst_default", top_k=top_k)
+        chunks = search_relevant_chunks(norm_query, assistant_id="asst_default", top_k=top_k)
     has_relevant_docs = len(chunks) > 0
 
     context_text = ""
@@ -660,7 +712,7 @@ def generate_grounded_response(
 
     has_any_key = bool(gemini_key or groq_key or openai_key or siliconflow_key or deepseek_key or qwen_key or openrouter_key)
     if not has_any_key or provider == "local":
-        return generate_local_extractive_answer(query, chunks, assistant_id=assistant_id)
+        return generate_local_extractive_answer(norm_query, chunks, assistant_id=assistant_id)
 
     history_str = ""
     if conversation_history:
@@ -670,12 +722,19 @@ def generate_grounded_response(
             history_str += f"{role}: {msg.get('content', '')}\n"
 
     from app.catalog_intelligence import parse_user_query_intent
-    catalog_intent = parse_user_query_intent(query)
+    catalog_intent = parse_user_query_intent(norm_query)
     catalog_hint = ""
-    if catalog_intent.get("is_catalog_query") and catalog_intent.get("max_price") is not None:
-        curr_hint = catalog_intent.get("currency")
-        curr_text = "AED or $" if curr_hint == "AED_OR_USD" else (curr_hint if curr_hint not in ["ANY", ""] else "")
-        catalog_hint = f"\n[Special Directives for this Query: The user is asking about {catalog_intent.get('entity_type')}s with a maximum budget of {catalog_intent.get('max_price')} {curr_text}. Carefully check item prices against this budget. List matching items clearly with bold title, exact price, and key details. Do NOT fabricate or guess URLs - only use URLs explicitly present in Context Sources. If no items in the Context Sources fall under this budget, state what the lowest available starting price is and offer to follow up.]\n"
+    if catalog_intent.get("is_catalog_query"):
+        if catalog_intent.get("max_price") is not None:
+            curr_hint = catalog_intent.get("currency")
+            curr_text = "AED or $" if curr_hint == "AED_OR_USD" else (curr_hint if curr_hint not in ["ANY", ""] else "")
+            catalog_hint = f"\n[Special Directives for this Query: The visitor is inquiring about {catalog_intent.get('entity_type')}s with a maximum budget of {catalog_intent.get('max_price')} {curr_text}. In Dubai real estate, typical residential rental rates generally start from 3,000–4,500 AED / month (so budgets like 500,000 AED cover a wide selection of prime properties). Carefully present matching options or describe the comprehensive portfolio and invite them to leave contact info. Do NOT fabricate URLs.]\n"
+        elif catalog_intent.get("deal_type") == "rent":
+            catalog_hint = f"\n[Special Directives: The visitor is inquiring about rental properties. Present available residential rental options (studios, apartments, waterfront homes, villas across Dubai Marina, Downtown, Palm Jumeirah, JVC), full tenancy support (Ejari, tenancy contracts), and invite them to share their preferred community or contact info.]\n"
+        elif catalog_intent.get("deal_type") == "sale":
+            catalog_hint = f"\n[Special Directives: The visitor is inquiring about properties for sale/purchase. Present ready homes, off-plan projects with developer payment plans, seller brokerage, and invite them to connect with sales.]\n"
+        elif catalog_intent.get("entity_type") == "property":
+            catalog_hint = f"\n[Special Directives: The visitor is inquiring about real estate properties. Outline buying, renting, off-plan investments, and property management solutions, and invite them to share their preferred criteria.]\n"
 
     user_prompt = f"""Conversation History:
 {history_str}
