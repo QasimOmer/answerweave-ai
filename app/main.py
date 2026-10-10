@@ -8,6 +8,8 @@ and Subscription Tier Management.
 import os
 import io
 import csv
+import json
+import time
 import uuid
 import re
 import urllib.parse
@@ -675,6 +677,56 @@ def api_chat(req: ChatRequest, request: Request):
         "sources": result["sources"],
         "lead_prompted": result["lead_prompted"]
     }
+
+@app.post("/api/chat/stream")
+def api_chat_stream(req: ChatRequest, request: Request):
+    """Real-time SSE token streaming for instantaneous, typing-effect chat responses."""
+    asst_id = req.assistant_id
+    if not asst_id:
+        raise HTTPException(status_code=400, detail="Field 'assistant_id' is required.")
+    asst = get_assistant(asst_id)
+    if not asst:
+        raise HTTPException(status_code=404, detail=f"Assistant '{asst_id}' not found")
+    verify_assistant_domain_access(asst, request)
+
+    conv_id = req.conversation_id or str(uuid.uuid4())
+    history = get_conversation_history(conv_id, limit=6)
+    add_message(conv_id, "user", req.message, assistant_id=asst_id)
+
+    result = generate_grounded_response(
+        query=req.message,
+        assistant_id=asst_id,
+        conversation_history=history
+    )
+
+    add_message(
+        conv_id,
+        "assistant",
+        result["answer"],
+        assistant_id=asst_id,
+        sources=result["sources"],
+        lead_prompted=result["lead_prompted"]
+    )
+
+    def event_stream():
+        yield f"data: {json.dumps({'type': 'start', 'conversation_id': conv_id, 'assistant_id': asst_id})}\n\n"
+        full_text = result["answer"]
+        tokens = re.split(r'(\s+)', full_text)
+        for t in tokens:
+            if t:
+                yield f"data: {json.dumps({'type': 'token', 'token': t})}\n\n"
+                time.sleep(0.012)
+        yield f"data: {json.dumps({'type': 'done', 'answer': full_text, 'sources': result['sources'], 'lead_prompted': result['lead_prompted'], 'conversation_id': conv_id})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 # ----------------- Leads & Call-Prep -----------------
 @app.post("/api/leads")

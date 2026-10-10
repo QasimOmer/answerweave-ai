@@ -97,7 +97,12 @@ def detect_conversational_intent(query: str, asst_name: str = "Our Team", welcom
 
     # 1. Greetings: "hello", "hi", "hey", "good morning", "howdy", "sup", etc.
     greeting_words = {"hi", "hello", "hey", "heyy", "heyyy", "howdy", "hola", "yo", "sup", "hiya", "greetings"}
-    if len(words) <= 4:
+    arabic_greetings = {"مرحبا", "مرحباً", "اهلا", "أهلا", "أهلاً", "السلام عليكم", "سلام", "هلا", "صباح الخير", "مساء الخير", "حياك"}
+    
+    if len(words) <= 5:
+        if any(w in arabic_greetings for w in words) or any(w in cleaned for w in arabic_greetings):
+            return f"أهلاً وسهلاً بك! 👋 مرحباً بك في {asst_name}. كيف يمكننا مساعدتك اليوم؟"
+
         if any(w in greeting_words for w in words):
             if welcome_msg and len(welcome_msg.strip()) > 5:
                 clean_welcome = welcome_msg.strip()
@@ -122,6 +127,10 @@ def detect_conversational_intent(query: str, asst_name: str = "Our Team", welcom
         "how do you do", "hope you are well", "hope all is well", "whats up", "what is up"
     }:
         return f"I'm doing great, thank you for asking! 😊 How can I help you with {asst_name} today?"
+
+    arabic_thanks = {"شكرا", "شكراً", "يعطيك العافية", "مشكور", "تسلم"}
+    if any(w in words for w in arabic_thanks):
+        return f"على الرحب والسعة! 😊 يسعدنا دائماً تقديم المساعدة في {asst_name}. هل لديك أي استفسار آخر؟"
 
     # 3. Identity & Capabilities: "Who are you?", "What can you do?", "What is your name?"
     identity_patterns = [

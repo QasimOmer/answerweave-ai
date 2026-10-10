@@ -543,6 +543,57 @@
             color: #1d4ed8 !important;
         }
 
+        /* Action Buttons & Rich Product / Property Cards */
+        .wf-action-btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            background: #f8fafc !important;
+            color: #0f172a !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            padding: 5px 12px !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            text-decoration: none !important;
+            margin: 4px 2px !important;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+            cursor: pointer !important;
+        }
+        .wf-action-btn:hover {
+            background: #0f172a !important;
+            color: #ffffff !important;
+            border-color: #0f172a !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 3px 8px rgba(15, 23, 42, 0.15) !important;
+        }
+        .wf-action-arrow {
+            font-size: 11px !important;
+            opacity: 0.7 !important;
+        }
+        .wf-price-badge {
+            display: inline-block !important;
+            background: rgba(16, 185, 129, 0.1) !important;
+            color: #059669 !important;
+            border: 1px solid rgba(16, 185, 129, 0.25) !important;
+            border-radius: 6px !important;
+            padding: 1px 6px !important;
+            font-weight: 700 !important;
+            font-size: 12px !important;
+        }
+        .wf-citation-inline {
+            display: inline-block !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            color: #64748b !important;
+            background: #f1f5f9 !important;
+            border-radius: 4px !important;
+            padding: 0 4px !important;
+            margin: 0 2px !important;
+            vertical-align: baseline !important;
+        }
+
         /* Citations list inside message */
         .wf-citations {
             margin-top: 10px !important;
@@ -1504,8 +1555,14 @@
         bodyEl.appendChild(typingEl);
         bodyEl.scrollTop = bodyEl.scrollHeight;
 
+        let botBubble = null;
+        let contentDiv = null;
+        let accumulatedText = "";
+        let finalData = null;
+
         try {
-            const res = await fetch(`${API_BASE}/api/chat`, {
+            // Attempt SSE Streaming for real-time typewriter experience
+            const res = await fetch(`${API_BASE}/api/chat/stream`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -1518,30 +1575,107 @@
                 })
             });
 
-            const data = await res.json();
+            if (!res.ok) throw new Error("Stream status " + res.status);
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+
             typingEl.remove();
 
-            appendMsg('bot', data.answer, data.sources);
+            // Create streaming bot bubble
+            botBubble = document.createElement('div');
+            botBubble.className = 'wf-bubble wf-bubble-bot';
+            contentDiv = document.createElement('div');
+            botBubble.appendChild(contentDiv);
+            bodyEl.appendChild(botBubble);
 
-            if (data.lead_prompted && botConfig.lead_capture_enabled) {
-                renderInChatLeadCard();
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data:')) continue;
+                    try {
+                        const jsonPayload = JSON.parse(trimmed.substring(5).trim());
+                        if (jsonPayload.type === 'token') {
+                            accumulatedText += jsonPayload.token;
+                            contentDiv.innerHTML = formatMessageText(accumulatedText);
+                            bodyEl.scrollTop = bodyEl.scrollHeight;
+                        } else if (jsonPayload.type === 'done') {
+                            finalData = jsonPayload;
+                        }
+                    } catch (e) {}
+                }
             }
 
-        } catch (err) {
-            typingEl.remove();
-            appendMsg('bot', "I apologize, but I am having trouble connecting to the service right now. Please try again in a moment.");
+            // Finalize with formatted citations & lead card
+            if (finalData) {
+                if (finalData.sources && finalData.sources.length > 0) {
+                    let citeHtml = `<div class="wf-citations">`;
+                    finalData.sources.forEach(s => {
+                        citeHtml += `
+                            <a href="${s.url}" target="_blank" class="wf-citation-pill" title="${escapeHtml(s.snippet || '')}">
+                                <span>📚</span>
+                                <span>[${s.index}] ${escapeHtml(s.title || 'Source')} ↗</span>
+                            </a>
+                        `;
+                    });
+                    citeHtml += `</div>`;
+                    botBubble.insertAdjacentHTML('beforeend', citeHtml);
+                }
+
+                if (finalData.lead_prompted && botConfig.lead_capture_enabled) {
+                    renderInChatLeadCard();
+                }
+            }
+
+        } catch (streamErr) {
+            // Graceful fallback to standard /api/chat
+            if (typingEl.parentNode) typingEl.remove();
+            if (botBubble && botBubble.parentNode) botBubble.remove();
+
+            try {
+                const res = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Host-Domain': currentHost
+                    },
+                    body: JSON.stringify({
+                        assistant_id: ASSISTANT_ID,
+                        conversation_id: conversationId,
+                        message: query
+                    })
+                });
+                const data = await res.json();
+                appendMsg('bot', data.answer, data.sources);
+                if (data.lead_prompted && botConfig.lead_capture_enabled) {
+                    renderInChatLeadCard();
+                }
+            } catch (fallbackErr) {
+                appendMsg('bot', "I apologize, but I am having trouble connecting to the service right now. Please try again in a moment.");
+            }
         }
     }
 
     function formatMessageText(text) {
         if (!text) return '';
         let escaped = escapeHtml(text);
+
+        // Convert links with 🔗 to styled action buttons
+        escaped = escaped.replace(/🔗\s*\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="wf-action-btn"><span>🔗</span><span>$1</span><span class="wf-action-arrow">↗</span></a>');
+        // Standard markdown links
+        escaped = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="wf-link-inline">$1 ↗</a>');
+
         // Bold: **text**
         escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         // Italic: *text*
         escaped = escaped.replace(/\*(.+?)\*/g, '<em>$1</em>');
-        // Markdown Links: [text](url)
-        escaped = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="wf-link-inline">$1</a>');
         // Inline Citations: [1], [2]
         escaped = escaped.replace(/\[(\d+)\]/g, '<span class="wf-citation-inline">[$1]</span>');
         

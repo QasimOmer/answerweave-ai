@@ -166,26 +166,34 @@
         </div>
     </main>
 
-    <!-- Embedded Drop-in Widget Script for Active Assistant -->
-    <script id="embeddedWidgetScript" src="/static/widget.js" data-assistant-id="asst_default"></script>
-
     <script>
         function refreshIcons() {
             if (window.lucide) lucide.createIcons();
         }
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const requestedAsstId = urlParams.get('assistant_id') || urlParams.get('asst');
+
         fetch('/api/assistants')
             .then(r => r.json())
             .then(assistants => {
+                if (!assistants || assistants.length === 0) return;
                 const select = document.getElementById('siteSimulatorSelect');
                 select.innerHTML = assistants.map(a => `
-                    <option value="${a.id}">${a.name} (${a.domain || 'All Domains'})</option>
+                    <option value="${a.id}" ${requestedAsstId === a.id ? 'selected' : ''}>${a.name} (${a.domain || 'All Domains'})</option>
                 `).join('');
+
+                const targetAsst = assistants.find(a => a.id === requestedAsstId) || assistants[0];
+                if (targetAsst) {
+                    select.value = targetAsst.id;
+                    switchSimulatedSite(targetAsst.id);
+                }
                 refreshIcons();
-            });
+            })
+            .catch(err => console.error("Error loading assistants:", err));
 
         function switchSimulatedSite(asstId) {
-            // Remove previous widget
+            // Remove previous widget if already present
             const container = document.getElementById('wf-chat-widget-container') || document.getElementById('wf-widget-root');
             if (container) container.remove();
             const styles = document.getElementById('wf-widget-styles');
@@ -203,15 +211,17 @@
             newScript.setAttribute('data-api-url', window.location.origin);
             document.body.appendChild(newScript);
 
-            // Update simulator header title
+            // Update simulator header title & logo
             fetch(`/api/assistants/${asstId}`)
                 .then(r => r.json())
                 .then(asst => {
+                    if (!asst) return;
                     document.getElementById('simNavTitle').innerText = asst.name;
                     const isImg = asst.bot_avatar && (asst.bot_avatar.startsWith('data:image') || asst.bot_avatar.startsWith('http'));
                     document.getElementById('simLogoBadge').innerHTML = isImg ? `<img src="${asst.bot_avatar}" class="w-full h-full object-cover rounded-xl" alt="Logo" />` : (asst.bot_avatar || '⚡');
                     refreshIcons();
-                });
+                })
+                .catch(err => console.warn(err));
         }
 
         window.addEventListener('DOMContentLoaded', refreshIcons);

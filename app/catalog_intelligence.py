@@ -58,7 +58,10 @@ def parse_user_query_intent(query: str) -> Dict[str, Any]:
         "condo", "condos", "penthouse", "penthouses", "townhouse", "townhouses",
         "rent", "rental", "rentals", "leasing", "lease", "to rent", "for rent",
         "under", "below", "less than", "within", "max", "maximum", "budget",
-        "price", "cost", "cheap", "cheapest", "affordable", "available", "suggest", "recommend"
+        "price", "cost", "cheap", "cheapest", "affordable", "available", "suggest", "recommend",
+        # Arabic catalog / real estate indicators
+        "عقار", "عقارات", "شقة", "شقق", "فيلا", "فلل", "استوديو", "ايجار", "إيجار", "للايجار", "للإيجار",
+        "بيع", "للبيع", "شراء", "اسعار", "أسعار", "سعر", "ميزانية", "دبي"
     ]
     
     is_catalog_query = any(k in q for k in catalog_keywords)
@@ -69,12 +72,14 @@ def parse_user_query_intent(query: str) -> Dict[str, Any]:
         "villa", "villas", "house", "houses", "home", "homes", "studio", "studios",
         "condo", "condos", "penthouse", "penthouses", "townhouse", "townhouses",
         "real estate", "realtor", "rent property", "rental property", "rent apartment",
-        "bhk", "bedroom", "bedrooms", "bed", "beds"
+        "bhk", "bedroom", "bedrooms", "bed", "beds",
+        "عقار", "عقارات", "شقة", "شقق", "فيلا", "فلل", "استوديو", "بنتهاوس", "دبي"
     ]
     product_indicators = [
         "product", "products", "item", "items", "merchandise", "goods",
         "shoe", "shoes", "sneaker", "sneakers", "cloth", "clothes", "clothing",
-        "shirt", "laptop", "phone", "electronics", "bag", "watch", "perfume"
+        "shirt", "laptop", "phone", "electronics", "bag", "watch", "perfume",
+        "منتج", "منتجات", "سلعة", "بضاعة"
     ]
     
     has_property = any(w in q for w in property_indicators)
@@ -88,14 +93,14 @@ def parse_user_query_intent(query: str) -> Dict[str, Any]:
         entity_type = "any"
     else:
         # If deal_type is rent, default to property
-        if any(w in q for w in ["rent", "rental", "rentals", "lease", "leasing"]):
+        if any(w in q for w in ["rent", "rental", "rentals", "lease", "leasing", "ايجار", "إيجار", "للايجار", "للإيجار"]):
             entity_type = "property"
         else:
             entity_type = "any"
 
     # Deal Type: rent vs sale vs any
-    rent_indicators = ["rent", "rental", "rentals", "lease", "leasing", "to rent", "for rent", "per month", "monthly", "per year", "annual"]
-    sale_indicators = ["sale", "for sale", "buy", "purchase", "invest", "investment", "to buy"]
+    rent_indicators = ["rent", "rental", "rentals", "lease", "leasing", "to rent", "for rent", "per month", "monthly", "per year", "annual", "ايجار", "إيجار", "للايجار", "للإيجار", "استئجار", "شهري", "سنوي"]
+    sale_indicators = ["sale", "for sale", "buy", "purchase", "invest", "investment", "to buy", "بيع", "للبيع", "شراء", "استثمار"]
     
     has_rent = any(w in q for w in rent_indicators)
     has_sale = any(w in q for w in sale_indicators)
@@ -607,6 +612,8 @@ def build_real_estate_overview_answer(
     list_link = find_best_link("list-your-property", "https://idealhomes.ae/list-your-property")
 
     lines = []
+    raw_q = query_intent.get("raw_query", "")
+    is_arabic = any('\u0600' <= char <= '\u06FF' for char in raw_q)
     
     # 1. Budget Rental Query (e.g., "rental properties under 500000" or "under 1000 aed or $")
     if max_p is not None and deal_type == "rent":
@@ -618,93 +625,175 @@ def build_real_estate_overview_answer(
         budget_disp = f"**{max_p:,.0f} AED or $**" if curr == "AED_OR_USD" else f"**{curr_label + ' ' if curr_label else ''}{max_p:,.0f}**"
         
         if is_below_market:
-            lines.append(
-                f"In Dubai, typical residential rental rates generally start higher than {budget_disp} "
-                f"(studios in residential communities typically start from approximately 3,000–4,500 AED / month depending on location, furnishings, and payment terms)."
-            )
-            lines.append(
-                f"{assistant_name} offers a wide selection of competitive rental options across Dubai. "
-                f"Our RERA-certified leasing consultants can help identify the best value options matching your preferred criteria."
-            )
+            if is_arabic:
+                lines.append(
+                    f"في دبي، تبدأ القيمة الإيجارية السكنية المعتادة من مبالغ أعلى من {budget_disp} "
+                    f"(تبدأ الاستوديوهات في المجمعات السكنية تقريباً من 3,000 إلى 4,500 درهم إماراتي شهرياً حسب الموقع والفرش)."
+                )
+                lines.append(
+                    f"توفر {assistant_name} مجموعة واسعة من خيارات الإيجار المميزة في دبي. "
+                    f"يمكن لمستشاري التأجير المعتمدين لدينا مساعدتك في إيجاد أفضل خيار يناسب ميزانيتك."
+                )
+            else:
+                lines.append(
+                    f"In Dubai, typical residential rental rates generally start higher than {budget_disp} "
+                    f"(studios in residential communities typically start from approximately 3,000–4,500 AED / month depending on location, furnishings, and payment terms)."
+                )
+                lines.append(
+                    f"{assistant_name} offers a wide selection of competitive rental options across Dubai. "
+                    f"Our RERA-certified leasing consultants can help identify the best value options matching your preferred criteria."
+                )
+        else:
+            if is_arabic:
+                lines.append(
+                    f"توفر {assistant_name} محفظة شاملة من العقارات السكنية للإيجار في دبي ضمن ميزانيتك البالغة {budget_disp}:"
+                )
+                lines.append(
+                    "• **الخيارات المتاحة**: من استوديوهات عصرية وشقق من 1 إلى 3 غرف نوم إلى بنتهاوس وفلل فاخرة.\n"
+                    "• **أبرز المجمعات**: دبي مارينا، وسط مدينة دبي (داون تاون)، نخلة جميرا، قرية جميرا الدائرية (JVC)، والخليج التجاري.\n"
+                    "• **دعم عقاري متكامل**: تنظيم وتوثيق عقود الإيجار، تسجيل إيجاري (Ejari)، وفحص استلام العقار."
+                )
+            else:
+                lines.append(
+                    f"{assistant_name} offers a comprehensive portfolio of residential rental properties across Dubai within your budget of {budget_disp}:"
+                )
+                lines.append(
+                    "• **Available Options**: From modern studios and 1–3 bedroom apartments in prime city hubs to luxury waterfront penthouses and private family villas.\n"
+                    "• **Top Communities**: Dubai Marina, Downtown Dubai, Palm Jumeirah, JVC (Jumeirah Village Circle), Business Bay, and Dubai Hills Estate.\n"
+                    "• **Full Tenancy Support**: Our RERA-certified leasing consultants handle private viewings, RERA-compliant tenancy contracts, Ejari registration, and move-in inspection reports."
+                )
+        
+        if is_arabic:
+            lines.append("هل ترغب في استكشاف شقق أو فلل؟ يسعدنا تزويدك بالخيارات المناسبة أو ترك بياناتك للتواصل المباشر مع فريق التأجير!")
         else:
             lines.append(
-                f"{assistant_name} offers a comprehensive portfolio of residential rental properties across Dubai within your budget of {budget_disp}:"
+                "Would you like to explore apartments, villas, or townhouses? Feel free to share your preferred community and bedroom count, or leave your contact details below to speak directly with our leasing team!"
+            )
+
+    # 2. General Rental Query (e.g., "can u share seome renatl properties" or "عقارات للايجار")
+    elif deal_type == "rent":
+        if is_arabic:
+            lines.append(
+                f"توفر {assistant_name} مجموعة واسعة من العقارات السكنية والتجارية للإيجار في أرقى مناطق دبي:"
             )
             lines.append(
-                "• **Available Options**: From modern studios and 1–3 bedroom apartments in prime city hubs to luxury waterfront penthouses and private family villas.\n"
-                "• **Top Communities**: Dubai Marina, Downtown Dubai, Palm Jumeirah, JVC (Jumeirah Village Circle), Business Bay, and Dubai Hills Estate.\n"
-                "• **Full Tenancy Support**: Our RERA-certified leasing consultants handle private viewings, RERA-compliant tenancy contracts, Ejari registration, and move-in inspection reports."
+                "• **أنواع العقارات**: استوديوهات مفروشة وغير مفروشة، شقق من غرفة إلى 4 غرف نوم، ومنازل وفلل عائلية فخمة.\n"
+                "• **أبرز المواقع**: دبي مارينا، داون تاون دبي، نخلة جميرا، قرية جميرا الدائرية (JVC)، والمرابع العربية.\n"
+                "• **إجراءات تعاقد موثقة**: عقود معتمدة من ريرا (RERA)، تسجيل إيجاري (Ejari)، وتوصيل الخدمات (DEWA)."
             )
-        lines.append(
-            "Would you like to explore apartments, villas, or townhouses? Feel free to share your preferred community and bedroom count, or leave your contact details below to speak directly with our leasing team!"
-        )
+            if contact_link:
+                lines.append(f"🔗 [تواصل مع مستشاري التأجير]({contact_link})")
+            lines.append("تفضل بمشاركة مواصفات العقار المطلوب أو ميزانيتك، وسيسعد فريقنا بتقديم أفضل العروض المتاحة!")
+        else:
+            lines.append(
+                f"{assistant_name} provides an extensive selection of residential and commercial rental properties across Dubai's most desirable communities:"
+            )
+            lines.append(
+                "• **Property Options**: Fully furnished and unfurnished studios, 1–4 bedroom apartments, waterfront residences, and private family villas.\n"
+                "• **Prime Locations**: Dubai Marina, Downtown Dubai, Palm Jumeirah, JVC (Jumeirah Village Circle), Business Bay, and Arabian Ranches.\n"
+                "• **End-to-End Tenancy Support**: RERA-compliant tenancy contracts, Ejari registration, DEWA connection assistance, and move-in coordination."
+            )
+            if contact_link:
+                lines.append(f"🔗 [Contact Our Leasing Specialists]({contact_link})")
+            lines.append(
+                "Please feel free to share your preferred location, bedroom count, or budget below, and our leasing team will be glad to share tailored options!"
+            )
 
-    # 2. General Rental Query (e.g., "can u share seome renatl properties")
-    elif deal_type == "rent":
-        lines.append(
-            f"{assistant_name} provides an extensive selection of residential and commercial rental properties across Dubai's most desirable communities:"
-        )
-        lines.append(
-            "• **Property Options**: Fully furnished and unfurnished studios, 1–4 bedroom apartments, waterfront residences, and private family villas.\n"
-            "• **Prime Locations**: Dubai Marina, Downtown Dubai, Palm Jumeirah, JVC (Jumeirah Village Circle), Business Bay, and Arabian Ranches.\n"
-            "• **End-to-End Tenancy Support**: RERA-compliant tenancy contracts, Ejari registration, DEWA connection assistance, and move-in coordination."
-        )
-        if contact_link:
-            lines.append(f"🔗 [Contact Our Leasing Specialists]({contact_link})")
-        lines.append(
-            "Please feel free to share your preferred location, bedroom count, or budget below, and our leasing team will be glad to share tailored options!"
-        )
-
-    # 3. Sales / Buying / Selling (e.g., "properties for sell", "properties for sale", "buy property")
+    # 3. Sales / Buying / Selling (e.g., "properties for sale", "buy property", "عقارات للبيع")
     elif deal_type == "sale":
-        lines.append(
-            f"{assistant_name} provides full-service real estate brokerage across Dubai for buyers, investors, and property sellers:"
-        )
-        sales_points = [
-            "• **Properties for Sale & Off-Plan Investments**:\n"
-            "  - Ready apartments, luxury penthouses, and villas across Dubai Marina, Downtown Dubai, Palm Jumeirah, and Dubai Hills Estate.\n"
-            "  - Exclusive off-plan project launches directly from top developers (Emaar, Nakheel, Sobha, Damac) with flexible developer payment plans.",
-            "• **Selling Your Property**:\n"
-            "  - Complete seller brokerage including free market valuations, professional photography, RERA Form A marketing, and qualified buyer matching.",
-            "• **Advisory & Conveyancing**:\n"
-            "  - Complete guidance through Dubai Land Department (DLD) transfer procedures, NOC issuance, and mortgage financing."
-        ]
-        lines.append("\n\n".join(sales_points))
-        action_links = []
-        if off_plan_link:
-            action_links.append(f"🔗 [Explore Off-Plan Projects]({off_plan_link})")
-        if sell_link:
-            action_links.append(f"🔗 [Sell Your Property & Free Valuation]({sell_link})")
-        if contact_link:
-            action_links.append(f"🔗 [Contact Our Sales Team]({contact_link})")
-        if action_links:
-            lines.append(" • ".join(action_links))
-        lines.append(
-            "Are you looking to buy a property, explore off-plan investments, or list your property for sale? Let us know or leave your contact details below to speak with a specialist!"
-        )
+        if is_arabic:
+            lines.append(
+                f"تقدم {assistant_name} خدمات وساطة عقارية معتمدة لبيع وشراء العقارات في دبي للمشترين والمستثمرين والملاك:"
+            )
+            sales_points = [
+                "• **عقارات للبيع ومشاريع قيد الإنشاء (Off-Plan)**:\n"
+                "  - شقق وبنتهاوس وفلل جاهزة في دبي مارينا، داون تاون، ونخلة جميرا ودبي هيلز.\n"
+                "  - مشاريع جديدة مباشرة من كبار المطورين (إعمار، نخيل، شوبا، داماك) مع خطط سداد ميسرة.",
+                "• **عرض عقارك للبيع**:\n"
+                "  - تقييم عقاري مجاني، تصوير احترافي، وتسويق مرخص بنموذج ريرا (Form A) للوصول إلى مشترين جادين.",
+                "• **تسجيل ونقل الملكية**:\n"
+                "  - متابعة إجراءات دائرة الأراضي والأملاك (DLD)، شهادات عدم الممانعة، والتمويل العقاري."
+            ]
+            lines.append("\n\n".join(sales_points))
+            action_links = []
+            if off_plan_link:
+                action_links.append(f"🔗 [مشاريع قيد الإنشاء]({off_plan_link})")
+            if sell_link:
+                action_links.append(f"🔗 [اعرض عقارك للبيع وتقييم مجاني]({sell_link})")
+            if contact_link:
+                action_links.append(f"🔗 [تواصل مع فريق المبيعات]({contact_link})")
+            if action_links:
+                lines.append(" • ".join(action_links))
+            lines.append("هل ترغب في شراء عقار أو استكشاف مشاريع قيد الإنشاء أو بيع عقارك؟ دعنا نساعدك في تحقيق أهدافك العقارية!")
+        else:
+            lines.append(
+                f"{assistant_name} provides full-service real estate brokerage across Dubai for buyers, investors, and property sellers:"
+            )
+            sales_points = [
+                "• **Properties for Sale & Off-Plan Investments**:\n"
+                "  - Ready apartments, luxury penthouses, and villas across Dubai Marina, Downtown Dubai, Palm Jumeirah, and Dubai Hills Estate.\n"
+                "  - Exclusive off-plan project launches directly from top developers (Emaar, Nakheel, Sobha, Damac) with flexible developer payment plans.",
+                "• **Selling Your Property**:\n"
+                "  - Complete seller brokerage including free market valuations, professional photography, RERA Form A marketing, and qualified buyer matching.",
+                "• **Advisory & Conveyancing**:\n"
+                "  - Complete guidance through Dubai Land Department (DLD) transfer procedures, NOC issuance, and mortgage financing."
+            ]
+            lines.append("\n\n".join(sales_points))
+            action_links = []
+            if off_plan_link:
+                action_links.append(f"🔗 [Explore Off-Plan Projects]({off_plan_link})")
+            if sell_link:
+                action_links.append(f"🔗 [Sell Your Property & Free Valuation]({sell_link})")
+            if contact_link:
+                action_links.append(f"🔗 [Contact Our Sales Team]({contact_link})")
+            if action_links:
+                lines.append(" • ".join(action_links))
+            lines.append(
+                "Are you looking to buy a property, explore off-plan investments, or list your property for sale? Let us know or leave your contact details below to speak with a specialist!"
+            )
 
-    # 4. General Property Overview (e.g., "tell me about properties")
+    # 4. General Property Overview (e.g., "tell me about properties", "عقارات دبي")
     else:
-        lines.append(
-            f"{assistant_name} is a RERA-certified Dubai real estate brokerage offering end-to-end property solutions across Dubai's top communities:"
-        )
-        lines.append(
-            "• **Buying & Off-Plan Investments**: Ready residential homes, waterfront penthouses, and new off-plan launches with developer payment plans.\n"
-            "• **Renting & Leasing**: Apartments, studios, and villas across prime communities with complete Ejari registration and tenancy contract support.\n"
-            "• **Property Management & Selling**: 25 specialized landlord management services, tenant screening, maintenance, and free property valuations."
-        )
-        action_links = []
-        if off_plan_link:
-            action_links.append(f"🔗 [Off-Plan Projects]({off_plan_link})")
-        if sell_link:
-            action_links.append(f"🔗 [Sell Your Property]({sell_link})")
-        if contact_link:
-            action_links.append(f"🔗 [Contact Team]({contact_link})")
-        if action_links:
-            lines.append(" • ".join(action_links))
-        lines.append(
-            "How can we assist your property search today? Feel free to share your preferred community or budget, or leave your contact details below!"
-        )
+        if is_arabic:
+            lines.append(
+                f"{assistant_name} هي شركة وساطة عقارية معتمدة من مؤسسة التنظيم العقاري (RERA) في دبي تقدم حلولاً عقارية متكاملة:"
+            )
+            lines.append(
+                "• **الشراء والاستثمار قيد الإنشاء**: عقارات سكنية جاهزة ومشاريع جديدة مع خطط دفع ميسرة.\n"
+                "• **التأجير والاستئجار**: شقق وفلل في أفضل مجمعات دبي مع تسجيل عقود إيجاري ومتابعة التعاقد.\n"
+                "• **إدارة العقارات والبيع**: 25 خدمة مخصصة للملاك، فحص العقارات، وتقييم عقاري مجاني."
+            )
+            action_links = []
+            if off_plan_link:
+                action_links.append(f"🔗 [مشاريع قيد الإنشاء]({off_plan_link})")
+            if sell_link:
+                action_links.append(f"🔗 [اعرض عقارك]({sell_link})")
+            if contact_link:
+                action_links.append(f"🔗 [تواصل معنا]({contact_link})")
+            if action_links:
+                lines.append(" • ".join(action_links))
+            lines.append("كيف يمكننا مساعدتك في بحثك العقاري اليوم؟ تفضل بمشاركة منطقتك المفضلة أو ميزانيتك!")
+        else:
+            lines.append(
+                f"{assistant_name} is a RERA-certified Dubai real estate brokerage offering end-to-end property solutions across Dubai's top communities:"
+            )
+            lines.append(
+                "• **Buying & Off-Plan Investments**: Ready residential homes, waterfront penthouses, and new off-plan launches with developer payment plans.\n"
+                "• **Renting & Leasing**: Apartments, studios, and villas across prime communities with complete Ejari registration and tenancy contract support.\n"
+                "• **Property Management & Selling**: 25 specialized landlord management services, tenant screening, maintenance, and free property valuations."
+            )
+            action_links = []
+            if off_plan_link:
+                action_links.append(f"🔗 [Off-Plan Projects]({off_plan_link})")
+            if sell_link:
+                action_links.append(f"🔗 [Sell Your Property]({sell_link})")
+            if contact_link:
+                action_links.append(f"🔗 [Contact Team]({contact_link})")
+            if action_links:
+                lines.append(" • ".join(action_links))
+            lines.append(
+                "How can we assist your property search today? Feel free to share your preferred community or budget, or leave your contact details below!"
+            )
 
     return {
         "answer": "\n\n".join(lines),
