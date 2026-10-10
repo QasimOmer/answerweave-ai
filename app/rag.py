@@ -25,24 +25,105 @@ from app.config import (
     DEFAULT_OPENROUTER_MODEL
 )
 from app.embeddings import search_relevant_chunks
-from app.db import log_unanswered_question
+from app.db import log_unanswered_question, get_assistant, is_trivial_or_conversational
 
-GROUNDED_SYSTEM_PROMPT = """You are a grounded AI assistant representing the organization on a customer chat widget.
-Your primary directive is absolute factual accuracy based ONLY on the provided Context Sources.
+GROUNDED_SYSTEM_PROMPT = """You are an intelligent, grounded AI assistant representing the organization on a customer chat widget.
 
-STRICT CONCISENESS & BREVITY RULES (CRITICAL):
-1. BE SHORT, CRISP, AND TO THE POINT: Visitors are chatting on a small website widget. Never write lengthy essays or walls of text.
-2. MAXIMUM LENGTH: Keep answers strictly within 2 to 3 sentences (or 2 to 3 punchy bullet points).
-3. ZERO FILLER OR PREAMBLE: Do NOT start with fluff like "Hello! I would be delighted to assist you...", "Certainly!", or "According to the context sources provided above...". Jump immediately straight into the answer.
-4. ACCURACY: ONLY state facts explicitly written in the Context Sources. Do NOT extrapolate, speculate, or guess.
-5. UNKNOWN INFORMATION: If the provided sources do NOT contain enough information, do NOT invent an answer. Say directly:
-   "I apologize, but I do not have enough details on that in our current documentation. Please leave your contact email below and our team will be glad to follow up!"
+PRIMARY DIRECTIVES:
+1. GREETINGS & CASUAL INTERACTION: When a visitor greets you ("hello", "hi", "good morning"), introduces themselves, asks who you are, or engages in polite pleasantries, ALWAYS respond warmly, professionally, and politely. Welcome them to the organization, introduce your role as the AI assistant, and invite them to ask any questions. Never reply with "I do not have enough details" to a casual greeting!
+2. FACTUAL GROUNDING: For factual questions regarding the organization, products, services, features, policies, or pricing, answer accurately based ONLY on the provided Context Sources.
+3. CONCISENESS & CLARITY: Keep responses crisp and easy to read on a compact website chat widget (2 to 3 sentences or clear bullet points). Avoid lengthy walls of text.
+4. UNKNOWN FACTS: Only if a visitor asks a specific factual business question that is genuinely not covered in the Context Sources, say directly:
+   "I apologize, but I do not have enough details on that in our current documentation. Please feel free to leave your contact email below and our team will be glad to follow up!"
    and append [LEAD_TRIGGER] at the end.
-6. CITATIONS: Use bracketed numbers [1], [2] when referencing source facts.
+5. CITATIONS: Use bracketed numbers [1], [2] when referencing source facts.
 """
+
+def detect_conversational_intent(query: str, asst_name: str = "Our Team", welcome_msg: str = "") -> Optional[str]:
+    """
+    Detects purely conversational messages (greetings, pleasantries, identity queries, thanks, farewells)
+    and returns a warm, helpful, brand-aligned response immediately.
+    Returns None if the query contains a factual or business-specific question.
+    """
+    raw = query.strip()
+    q = raw.lower()
+    cleaned = re.sub(r'[\s\.,!?:;~]+', ' ', q).strip()
+    words = cleaned.split()
+    
+    if not words:
+        return None
+
+    # Check for business-specific keywords - if present, this is a real factual question, not small talk
+    business_question_indicators = {
+        "price", "pricing", "cost", "plan", "plans", "feature", "features", "service", "services",
+        "return", "refund", "shipping", "ship", "delivery", "policy", "contact", "support",
+        "human", "demo", "buy", "purchase", "order", "hours", "address", "location", "quote",
+        "discount", "coupon", "integrate", "integration", "api", "doc", "docs", "documentation",
+        "login", "sign", "signup", "register", "cancel", "downgrade", "upgrade", "refunds"
+    }
+    if any(w in words for w in business_question_indicators):
+        return None
+
+    # 1. Greetings: "hello", "hi", "hey", "good morning", "howdy", "sup", etc.
+    greeting_words = {"hi", "hello", "hey", "heyy", "heyyy", "howdy", "hola", "yo", "sup", "hiya", "greetings"}
+    if len(words) <= 4:
+        if any(w in greeting_words for w in words):
+            if welcome_msg and len(welcome_msg.strip()) > 5:
+                clean_welcome = welcome_msg.strip()
+                if not any(clean_welcome.lower().startswith(g) for g in ["hi", "hello", "hey", "welcome"]):
+                    return f"Hello! 👋 {clean_welcome}"
+                return clean_welcome
+            return f"Hello! 👋 Welcome to {asst_name}. How can I assist you today? Feel free to ask about our services, pricing, or features!"
+
+        if cleaned in {"good morning", "good afternoon", "good evening", "good day", "morning", "afternoon", "evening"}:
+            time_greeting = "Good day"
+            if "morning" in cleaned:
+                time_greeting = "Good morning"
+            elif "afternoon" in cleaned:
+                time_greeting = "Good afternoon"
+            elif "evening" in cleaned:
+                time_greeting = "Good evening"
+            return f"{time_greeting}! 👋 Welcome to {asst_name}. How can I help you today?"
+
+    # 2. Pleasantries / "How are you?":
+    if cleaned in {
+        "how are you", "how are you doing", "how are u", "how is it going", "hows it going",
+        "how do you do", "hope you are well", "hope all is well", "whats up", "what is up"
+    }:
+        return f"I'm doing great, thank you for asking! 😊 How can I help you with {asst_name} today?"
+
+    # 3. Identity & Capabilities: "Who are you?", "What can you do?", "What is your name?"
+    identity_patterns = [
+        r'^(who\s+are\s+you|what\s+are\s+you|what\s+is\s+your\s+name|who\s+made\s+you|tell\s+me\s+about\s+yourself)$',
+        r'^(what\s+can\s+you\s+do|what\s+do\s+you\s+do|how\s+can\s+you\s+help(\s+me)?|what\s+is\s+this(\s+bot)?)$'
+    ]
+    if any(re.match(pat, cleaned) for pat in identity_patterns):
+        return f"I'm the official AI assistant for {asst_name}! 🚀 I'm here to answer your questions about our products, services, features, and pricing based on our verified knowledge base. What would you like to know?"
+
+    # 4. Gratitude: "thank you", "thanks", "thanks a lot", "appreciate it"
+    thanks_words = {"thanks", "thank you", "thx", "thank u", "thanks a lot", "thank you so much", "much appreciated", "appreciate it"}
+    if cleaned in thanks_words or (len(words) <= 3 and any(w in {"thanks", "thx"} for w in words)):
+        return "You're very welcome! 😊 Let me know if there's anything else I can help you with."
+
+    # 5. Farewells: "bye", "goodbye", "see you", "see ya"
+    farewell_words = {"bye", "goodbye", "bye bye", "see you", "see ya", "have a good day", "have a great day", "cya", "talk to you later"}
+    if cleaned in farewell_words or (len(words) <= 2 and any(w in {"bye", "goodbye", "cya"} for w in words)):
+        return "Goodbye! Have a wonderful day, and feel free to return anytime if you have questions! 👋"
+
+    # 6. Acknowledgments: "ok", "okay", "cool", "great", "awesome", "perfect", "sounds good"
+    ack_words = {"ok", "okay", "cool", "great", "awesome", "perfect", "got it", "understood", "sounds good", "alright", "nice"}
+    if cleaned in ack_words:
+        return "Glad to hear that! Feel free to ask if there is anything else you would like to know."
+
+    # 7. General Help: "help", "can you help me", "i need help"
+    if cleaned in {"help", "can you help me", "i need help", "assist me", "support"}:
+        return f"I'm here to help! What would you like to know about {asst_name}? You can ask me about our offerings, pricing, specifications, or contact details."
+
+    return None
 
 def clean_extracted_noise(text: str) -> str:
     """Cleans boilerplate navigation, form fields, and junk text from crawled snippets."""
+    text = re.sub(r'^(Question|Official Answer|Answer|FAQ|Q|A)\s*[:\-•–]\s*', '', text, flags=re.I)
     text = re.sub(r'^(FAQs|Answers to your questions|See more|Our services|Services We Provide|Complete solutions|Industries We Serve)\s*[:\-•–]?\s*', '', text, flags=re.I)
     text = re.sub(r'(First Name|Last Name|Send it to Experts|Privacy Policy|All rights reserved|Terms of Service|Tell us about your goals).*', '', text, flags=re.I)
     text = re.sub(r'\s+', ' ', text).strip()
@@ -50,11 +131,24 @@ def clean_extracted_noise(text: str) -> str:
 
 def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], assistant_id: str = "asst_default") -> Dict[str, Any]:
     """Zero-key local extractive grounding optimized for concise, to-the-point answers."""
+    # 1. Check conversational intent first
+    asst = get_assistant(assistant_id) if assistant_id else None
+    asst_name = asst.get("name") if asst else "Our Team"
+    welcome_msg = asst.get("welcome_message") if asst else ""
+    conv_reply = detect_conversational_intent(query, asst_name=asst_name, welcome_msg=welcome_msg)
+    if conv_reply:
+        return {
+            "answer": conv_reply,
+            "sources": [],
+            "lead_prompted": False
+        }
+
     if not chunks:
-        try:
-            log_unanswered_question(assistant_id, query)
-        except Exception:
-            pass
+        if len(query.strip()) >= 4 and not is_trivial_or_conversational(query):
+            try:
+                log_unanswered_question(assistant_id, query)
+            except Exception:
+                pass
         return {
             "answer": "I apologize, but I do not have enough details on that in our current documentation. Please feel free to leave your contact email below and our team will be glad to follow up with you!",
             "sources": [],
@@ -80,6 +174,18 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
             "snippet": content[:200] + ("..." if len(content) > 200 else ""),
             "similarity": c.get("similarity", 0.0)
         })
+
+        # Priority 0: Check for explicit FAQ / Q&A chunk patterns (e.g., from resolved Knowledge Gaps or FAQs)
+        faq_match = re.search(r'(?:Question|Q):\s*(.+?)\s*\n+\s*(?:Official Answer|Answer|A):\s*(.+?)(?=\n+(?:Question|Q):|\Z)', content, re.IGNORECASE | re.DOTALL)
+        if faq_match:
+            faq_q = faq_match.group(1).strip()
+            faq_a = faq_match.group(2).strip()
+            faq_q_words = set(w for w in re.findall(r"[a-z0-9]{3,}", faq_q.lower()) if w not in stop_words)
+            overlap = len(meaningful_query_words & faq_q_words) if meaningful_query_words else 0
+            if overlap >= 1 or (not meaningful_query_words and query.lower() in faq_q.lower()):
+                clean_ans = clean_extracted_noise(faq_a)
+                if len(clean_ans) >= 10:
+                    candidates.append((overlap * 12 + 40, clean_ans, idx))
 
         sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+|\n+', content) if s.strip()]
         for i, s in enumerate(sentences):
@@ -124,15 +230,19 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
             break
 
     if chosen_points:
-        if len(chosen_points) == 1:
+        # If top candidate is a high-confidence FAQ / Knowledge Gap answer, return it cleanly
+        if candidates and candidates[0][0] >= 40:
+            formatted_answer = f"{candidates[0][1]} [{candidates[0][2]}]"
+        elif len(chosen_points) == 1:
             formatted_answer = chosen_points[0]
         else:
             formatted_answer = "\n".join([f"• {pt}" for pt in chosen_points])
     else:
-        try:
-            log_unanswered_question(assistant_id, query)
-        except Exception:
-            pass
+        if len(query.strip()) >= 4 and not is_trivial_or_conversational(query):
+            try:
+                log_unanswered_question(assistant_id, query)
+            except Exception:
+                pass
         return {
             "answer": "I apologize, but I do not have enough details on that in our current documentation. Please feel free to leave your contact email below and our team will be glad to follow up with you!",
             "sources": [],
@@ -349,6 +459,19 @@ def generate_grounded_response(
     top_k: int = 4
 ) -> Dict[str, Any]:
     """Executes grounded RAG workflow partitioned by assistant."""
+    # 1. First, check if this is a conversational greeting, pleasantry, identity query, or farewell
+    asst = get_assistant(assistant_id) if assistant_id else None
+    asst_name = asst.get("name") if asst else "Our Team"
+    welcome_msg = asst.get("welcome_message") if asst else ""
+    
+    conversational_reply = detect_conversational_intent(query, asst_name=asst_name, welcome_msg=welcome_msg)
+    if conversational_reply:
+        return {
+            "answer": conversational_reply,
+            "sources": [],
+            "lead_prompted": False
+        }
+
     chunks = search_relevant_chunks(query, assistant_id=assistant_id, top_k=top_k)
     if not chunks and assistant_id != "asst_default":
         chunks = search_relevant_chunks(query, assistant_id="asst_default", top_k=top_k)

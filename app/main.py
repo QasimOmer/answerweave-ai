@@ -39,6 +39,10 @@ from app.db import (
     list_conversations_with_metadata,
     list_unanswered_questions,
     resolve_unanswered_question,
+    delete_unanswered_question,
+    dismiss_unanswered_question,
+    add_unanswered_question,
+    invalidate_chunks_cache,
     get_subscription_info,
     update_subscription_plan,
     get_assistant_analytics,
@@ -144,7 +148,16 @@ class IngestTextRequest(BaseModel):
     url: Optional[str] = None
 
 class ResolveGapRequest(BaseModel):
-    official_answer: str
+    official_answer: Optional[str] = None
+    answer: Optional[str] = None
+
+    @property
+    def get_answer(self) -> str:
+        return (self.official_answer or self.answer or "").strip()
+
+class CreateCustomQARequest(BaseModel):
+    question: str
+    answer: str
 
 class UpgradePlanRequest(BaseModel):
     plan_key: str
@@ -554,13 +567,17 @@ def api_list_knowledge_gaps(asst_id: str, status: Optional[str] = None):
 @app.post("/api/assistants/{asst_id}/gaps/{gap_id}/resolve")
 def api_resolve_gap(asst_id: str, gap_id: int, req: ResolveGapRequest):
     """Resolves an unanswered question by indexing the official answer into the knowledge base."""
+    answer_text = req.get_answer
+    if not answer_text:
+        raise HTTPException(status_code=400, detail="Answer text cannot be empty.")
+
     gaps = list_unanswered_questions(assistant_id=asst_id)
     target = next((g for g in gaps if g["id"] == gap_id), None)
     if not target:
         raise HTTPException(status_code=404, detail="Knowledge gap item not found")
 
     title = f"FAQ: {target['question'][:60]}"
-    body = f"Question: {target['question']}\n\nOfficial Answer: {req.official_answer}"
+    body = f"Question: {target['question']}\n\nOfficial Answer: {answer_text}"
     
     src_id = add_source(asst_id, "faq", title, "Knowledge Gap Resolution", body)
     chunks = chunk_text(body)
@@ -570,7 +587,8 @@ def api_resolve_gap(asst_id: str, gap_id: int, req: ResolveGapRequest):
             add_chunk(asst_id, src_id, idx, c_text, title, "Knowledge Gap Resolution", emb)
         update_source_chunk_count(src_id, len(chunks))
 
-    resolve_unanswered_question(gap_id, req.official_answer)
+    resolve_unanswered_question(gap_id, answer_text)
+    invalidate_chunks_cache(asst_id)
 
     return {
         "status": "success",
@@ -578,6 +596,46 @@ def api_resolve_gap(asst_id: str, gap_id: int, req: ResolveGapRequest):
         "source_id": src_id,
         "message": "Answer added to knowledge base and question marked as resolved!"
     }
+
+@app.post("/api/assistants/{asst_id}/gaps/custom")
+def api_add_custom_qa(asst_id: str, req: CreateCustomQARequest):
+    """Proactively adds a verified Q&A pair directly into knowledge vault."""
+    q = req.question.strip()
+    a = req.answer.strip()
+    if not q or not a:
+        raise HTTPException(status_code=400, detail="Both question and answer are required.")
+
+    title = f"FAQ: {q[:60]}"
+    body = f"Question: {q}\n\nOfficial Answer: {a}"
+    src_id = add_source(asst_id, "faq", title, "Custom Knowledge FAQ", body)
+    chunks = chunk_text(body)
+    if chunks:
+        embs = generate_embeddings_batch(chunks)
+        for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
+            add_chunk(asst_id, src_id, idx, c_text, title, "Custom Knowledge FAQ", emb)
+        update_source_chunk_count(src_id, len(chunks))
+
+    gap_id = add_unanswered_question(asst_id, q, status="resolved", resolution_notes=a)
+    invalidate_chunks_cache(asst_id)
+
+    return {
+        "status": "success",
+        "gap_id": gap_id,
+        "source_id": src_id,
+        "message": "Custom Q&A added to knowledge vault and assistant trained!"
+    }
+
+@app.delete("/api/assistants/{asst_id}/gaps/{gap_id}")
+def api_delete_gap(asst_id: str, gap_id: int):
+    """Deletes an unanswered question item."""
+    delete_unanswered_question(gap_id)
+    return {"status": "success", "message": "Knowledge gap deleted."}
+
+@app.post("/api/assistants/{asst_id}/gaps/{gap_id}/dismiss")
+def api_dismiss_gap(asst_id: str, gap_id: int):
+    """Dismisses an unanswered question item without indexing."""
+    dismiss_unanswered_question(gap_id)
+    return {"status": "success", "message": "Knowledge gap dismissed."}
 
 # ----------------- Chat Endpoint -----------------
 @app.post("/api/chat")

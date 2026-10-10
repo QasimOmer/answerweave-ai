@@ -14,6 +14,7 @@ import json
 import os
 import re
 import shutil
+import time
 import uuid
 import hashlib
 import secrets
@@ -700,15 +701,30 @@ def list_assistants() -> List[Dict[str, Any]]:
     conn.close()
     return [dict(r) for r in rows]
 
+_ASSISTANTS_CACHE: Dict[str, Dict[str, Any]] = {}
+_ASSISTANTS_CACHE_TIMESTAMP: float = 0.0
+_ASSISTANTS_CACHE_TTL: float = 30.0
+
 def get_assistant(assistant_id: str) -> Optional[Dict[str, Any]]:
+    global _ASSISTANTS_CACHE, _ASSISTANTS_CACHE_TIMESTAMP
+    now = time.time()
+    if (now - _ASSISTANTS_CACHE_TIMESTAMP) < _ASSISTANTS_CACHE_TTL and assistant_id in _ASSISTANTS_CACHE:
+        return _ASSISTANTS_CACHE[assistant_id]
+
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM assistants WHERE id = ?", (assistant_id,))
     row = cursor.fetchone()
     conn.close()
-    return dict(row) if row else None
+    if row:
+        res = dict(row)
+        _ASSISTANTS_CACHE[assistant_id] = res
+        _ASSISTANTS_CACHE_TIMESTAMP = now
+        return res
+    return None
 
 def update_assistant(assistant_id: str, data: Dict[str, Any]) -> bool:
+    global _ASSISTANTS_CACHE
     allowed_keys = [
         "name", "domain", "primary_color", "welcome_message", "bot_avatar",
         "position", "suggested_questions", "lead_capture_enabled", "voice_enabled",
@@ -730,6 +746,7 @@ def update_assistant(assistant_id: str, data: Dict[str, Any]) -> bool:
     cursor.execute(f"UPDATE assistants SET {', '.join(updates)} WHERE id = ?", values)
     conn.commit()
     conn.close()
+    _ASSISTANTS_CACHE.pop(assistant_id, None)
     return True
 
 def delete_assistant(assistant_id: str):
@@ -746,22 +763,50 @@ def delete_assistant(assistant_id: str):
     conn.close()
 
 # ----------------- Settings Helpers -----------------
+_SETTINGS_CACHE: Dict[str, str] = {}
+_SETTINGS_CACHE_TIMESTAMP: float = 0.0
+_SETTINGS_CACHE_TTL: float = 30.0
+
+def _refresh_settings_cache():
+    global _SETTINGS_CACHE, _SETTINGS_CACHE_TIMESTAMP
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT key, value FROM settings")
+        rows = cursor.fetchall()
+        conn.close()
+        _SETTINGS_CACHE = {r["key"]: r["value"] for r in rows}
+        _SETTINGS_CACHE_TIMESTAMP = time.time()
+    except Exception:
+        pass
+
 def get_setting(key: str, default: str = "") -> str:
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
-    row = cursor.fetchone()
-    conn.close()
-    return row["value"] if row else default
+    global _SETTINGS_CACHE, _SETTINGS_CACHE_TIMESTAMP
+    now = time.time()
+    if not _SETTINGS_CACHE or (now - _SETTINGS_CACHE_TIMESTAMP) > _SETTINGS_CACHE_TTL:
+        _refresh_settings_cache()
+    return _SETTINGS_CACHE.get(key, default)
 
 def set_setting(key: str, value: str):
+    global _SETTINGS_CACHE
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
     conn.commit()
     conn.close()
+    _SETTINGS_CACHE[key] = value
 
 # ----------------- Source & Chunk Helpers -----------------
+_CHUNKS_CACHE: Dict[str, Dict[str, Any]] = {}
+_CHUNKS_CACHE_TTL: float = 60.0
+
+def invalidate_chunks_cache(assistant_id: Optional[str] = None):
+    global _CHUNKS_CACHE
+    if assistant_id:
+        _CHUNKS_CACHE.pop(assistant_id, None)
+    else:
+        _CHUNKS_CACHE.clear()
+
 def add_source(assistant_id: str, source_type: str, title: str, url: str, content: str) -> int:
     conn = get_db()
     cursor = conn.cursor()
@@ -772,6 +817,7 @@ def add_source(assistant_id: str, source_type: str, title: str, url: str, conten
     source_id = cursor.lastrowid
     conn.commit()
     conn.close()
+    invalidate_chunks_cache(assistant_id)
     return source_id
 
 def add_chunk(assistant_id: str, source_id: int, chunk_index: int, content: str, title: str, url: str, embedding: List[float]):
@@ -783,6 +829,7 @@ def add_chunk(assistant_id: str, source_id: int, chunk_index: int, content: str,
     """, (assistant_id, source_id, chunk_index, content, title, url, json.dumps(embedding)))
     conn.commit()
     conn.close()
+    invalidate_chunks_cache(assistant_id)
 
 def update_source_chunk_count(source_id: int, count: int):
     conn = get_db()
@@ -807,12 +854,27 @@ def list_sources(assistant_id: str = "asst_default") -> List[Dict[str, Any]]:
 def delete_source(source_id: int):
     conn = get_db()
     cursor = conn.cursor()
+    # Find assistant_id before deleting so we can invalidate chunk cache
+    cursor.execute("SELECT assistant_id FROM sources WHERE id = ?", (source_id,))
+    row = cursor.fetchone()
+    asst_id = row["assistant_id"] if row else None
+    
     cursor.execute("DELETE FROM chunks WHERE source_id = ?", (source_id,))
     cursor.execute("DELETE FROM sources WHERE id = ?", (source_id,))
     conn.commit()
     conn.close()
+    if asst_id:
+        invalidate_chunks_cache(asst_id)
+    else:
+        invalidate_chunks_cache()
 
 def get_chunks_for_assistant(assistant_id: str) -> List[Dict[str, Any]]:
+    global _CHUNKS_CACHE
+    now = time.time()
+    cached = _CHUNKS_CACHE.get(assistant_id)
+    if cached and (now - cached["timestamp"]) < _CHUNKS_CACHE_TTL:
+        return cached["chunks"]
+
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
@@ -837,6 +899,7 @@ def get_chunks_for_assistant(assistant_id: str) -> List[Dict[str, Any]]:
             "url": r["url"],
             "embedding": emb
         })
+    _CHUNKS_CACHE[assistant_id] = {"timestamp": now, "chunks": results}
     return results
 
 # ----------------- Leads Helpers -----------------
@@ -968,11 +1031,27 @@ def list_conversations_with_metadata(assistant_id: str) -> List[Dict[str, Any]]:
     return result
 
 # ----------------- Knowledge Gaps / Unanswered Questions -----------------
+def is_trivial_or_conversational(text: str) -> bool:
+    """Returns True if the text is a greeting, single-word filler, or conversational pleasantry."""
+    cleaned = text.strip().lower()
+    if len(cleaned) < 3:
+        return True
+    cleaned = re.sub(r'[!?.,:;~]+$', '', cleaned).strip()
+    trivial_words = {
+        "hi", "hello", "hey", "hola", "howdy", "sup", "yo", "good morning", "good afternoon", "good evening",
+        "thanks", "thank you", "thx", "bye", "goodbye", "cya", "ok", "okay", "test", "testing", "asdf",
+        "who are you", "what can you do", "help", "yes", "no", "cool", "great", "nice", "awesome"
+    }
+    return cleaned in trivial_words
+
 def log_unanswered_question(assistant_id: str, question: str):
-    """Logs questions where the bot lacked documentation or had low confidence."""
+    """Logs questions where the bot lacked documentation or had low confidence, skipping greetings and filler."""
+    cleaned = question.strip()
+    if not cleaned or is_trivial_or_conversational(cleaned):
+        return
+
     conn = get_db()
     cursor = conn.cursor()
-    cleaned = question.strip()
     # Check if exists pending
     cursor.execute("""
         SELECT id, frequency FROM unanswered_questions
@@ -989,16 +1068,51 @@ def log_unanswered_question(assistant_id: str, question: str):
     conn.commit()
     conn.close()
 
+def add_unanswered_question(assistant_id: str, question: str, status: str = "pending", resolution_notes: str = "") -> int:
+    """Manually adds a knowledge gap item or custom Q&A."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO unanswered_questions (assistant_id, question, frequency, status, resolution_notes)
+        VALUES (?, ?, 1, ?, ?)
+    """, (assistant_id, question.strip(), status, resolution_notes.strip()))
+    gap_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return gap_id
+
 def list_unanswered_questions(assistant_id: str, status: Optional[str] = None) -> List[Dict[str, Any]]:
     conn = get_db()
     cursor = conn.cursor()
     if status:
-        cursor.execute("SELECT * FROM unanswered_questions WHERE assistant_id = ? AND status = ? ORDER BY frequency DESC, updated_at DESC", (assistant_id, status))
+        cursor.execute("""
+            SELECT * FROM unanswered_questions 
+            WHERE assistant_id = ? AND status = ? 
+            ORDER BY frequency DESC, updated_at DESC
+        """, (assistant_id, status))
     else:
-        cursor.execute("SELECT * FROM unanswered_questions WHERE assistant_id = ? ORDER BY status ASC, frequency DESC", (assistant_id,))
+        cursor.execute("""
+            SELECT * FROM unanswered_questions 
+            WHERE assistant_id = ? 
+            ORDER BY CASE WHEN status = 'pending' THEN 0 ELSE 1 END, frequency DESC, updated_at DESC
+        """, (assistant_id,))
     rows = cursor.fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    result = []
+    for r in rows:
+        d = dict(r)
+        if hasattr(d.get("created_at"), "isoformat"):
+            d["created_at"] = d["created_at"].isoformat()
+        elif d.get("created_at") is not None:
+            d["created_at"] = str(d["created_at"])
+        if hasattr(d.get("updated_at"), "isoformat"):
+            d["updated_at"] = d["updated_at"].isoformat()
+        elif d.get("updated_at") is not None:
+            d["updated_at"] = str(d["updated_at"])
+        # Add boolean helper for frontend convenience
+        d["resolved"] = d.get("status") == "resolved"
+        result.append(d)
+    return result
 
 def resolve_unanswered_question(gap_id: int, resolution_notes: str):
     conn = get_db()
@@ -1008,6 +1122,20 @@ def resolve_unanswered_question(gap_id: int, resolution_notes: str):
         SET status = 'resolved', resolution_notes = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     """, (resolution_notes, gap_id))
+    conn.commit()
+    conn.close()
+
+def delete_unanswered_question(gap_id: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM unanswered_questions WHERE id = ?", (gap_id,))
+    conn.commit()
+    conn.close()
+
+def dismiss_unanswered_question(gap_id: int):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE unanswered_questions SET status = 'dismissed', updated_at = CURRENT_TIMESTAMP WHERE id = ?", (gap_id,))
     conn.commit()
     conn.close()
 

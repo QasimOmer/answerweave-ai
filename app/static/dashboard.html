@@ -267,10 +267,10 @@
                     <span id="engineStatusText">Zero-Key Grounded RAG</span>
                 </div>
 
-                <a href="/" target="_blank" class="text-xs bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 border border-white/10 transition shadow-sm">
-                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                    <span>Landing Page</span>
-                </a>
+                <button onclick="toggleBotTester()" class="text-xs bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold px-3.5 py-1.5 rounded-xl flex items-center gap-2 border border-white/10 shadow-lg shadow-brand-500/25 transition cursor-pointer" title="Test hello, customer queries and trained knowledge in real-time">
+                    <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                    <span>Test Bot Live</span>
+                </button>
 
                 <a href="/demo" target="_blank" class="text-xs bg-white/10 hover:bg-white/15 text-white font-semibold px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 border border-white/10 transition shadow-sm">
                     <i data-lucide="eye" class="w-3.5 h-3.5 text-slate-300"></i>
@@ -565,28 +565,116 @@
 
                 <!-- ================= TAB 4: KNOWLEDGE GAPS ================= -->
                 <section id="tab-gaps" class="tab-pane hidden space-y-6">
-                    <div class="glass-panel rounded-2xl border border-white/5 overflow-hidden">
-                        <div class="px-6 py-4 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
-                            <div>
-                                <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                                    <i data-lucide="help-circle" class="w-4 h-4 text-amber-400"></i>
-                                    Knowledge Gaps &amp; Unanswered Questions Queue
-                                </h4>
-                                <p class="text-xs text-slate-400 mt-0.5">Questions visitors asked that were missing from documentation. Resolve them in 1 click.</p>
+                    <!-- Knowledge Gaps KPI Metrics -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="glass-panel p-4 rounded-2xl border border-white/5 hover:border-white/10 transition">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Inquiries</span>
+                                <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center border border-brand-500/20">
+                                    <i data-lucide="help-circle" class="w-4 h-4"></i>
+                                </div>
                             </div>
-                            <button onclick="loadGaps()" class="text-xs text-brand-400 hover:text-brand-300 font-bold flex items-center gap-1">
-                                <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh Queue
-                            </button>
+                            <div class="text-2xl font-black text-white mt-1.5 font-mono" id="gapsKpiTotal">0</div>
+                            <div class="text-[10px] text-slate-400 mt-1">Queries logged from chat widget</div>
                         </div>
+
+                        <div class="glass-panel p-4 rounded-2xl border border-amber-500/10 hover:border-amber-500/20 transition bg-amber-500/[0.02]">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400">Needs Training</span>
+                                <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+                                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black text-amber-400 mt-1.5 font-mono" id="gapsKpiPending">0</div>
+                            <div class="text-[10px] text-amber-300/80 mt-1 flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                <span>Action required by team</span>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel p-4 rounded-2xl border border-emerald-500/10 hover:border-emerald-500/20 transition bg-emerald-500/[0.02]">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Trained &amp; Active</span>
+                                <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+                                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black text-emerald-400 mt-1.5 font-mono" id="gapsKpiResolved">0</div>
+                            <div class="text-[10px] text-emerald-400/80 mt-1 flex items-center gap-1">
+                                <span>Verified answers in AI memory</span>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel p-4 rounded-2xl border border-purple-500/10 hover:border-purple-500/20 transition bg-purple-500/[0.02]">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-purple-400">AI Knowledge Coverage</span>
+                                <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20">
+                                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                            <div class="text-2xl font-black text-purple-400 mt-1.5 font-mono" id="gapsKpiRate">100%</div>
+                            <div class="text-[10px] text-purple-300/80 mt-1">Resolution &amp; documentation rate</div>
+                        </div>
+                    </div>
+
+                    <!-- Knowledge Gaps Queue Card -->
+                    <div class="glass-panel rounded-2xl border border-white/5 overflow-hidden shadow-2xl">
+                        <!-- Top Header & Filter Bar -->
+                        <div class="p-6 border-b border-white/5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div>
+                                <h4 class="text-sm font-extrabold text-white tracking-tight flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                                    <span>Knowledge Gaps &amp; FAQ Training Center</span>
+                                </h4>
+                                <p class="text-xs text-slate-400 mt-0.5">When visitors ask questions not yet covered in your documentation, teach your AI once and it answers accurately forever.</p>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-3">
+                                <!-- Filter Tabs -->
+                                <div class="flex items-center bg-obsidian-950 p-1 rounded-xl border border-white/5 text-xs">
+                                    <button onclick="setGapsFilter('all')" id="gapFilterAll" class="gap-filter-btn px-3 py-1.5 rounded-lg font-bold transition bg-brand-600 text-white shadow-sm">
+                                        All (<span id="gapFilterCountAll">0</span>)
+                                    </button>
+                                    <button onclick="setGapsFilter('pending')" id="gapFilterPending" class="gap-filter-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition">
+                                        Needs Training (<span id="gapFilterCountPending">0</span>)
+                                    </button>
+                                    <button onclick="setGapsFilter('resolved')" id="gapFilterResolved" class="gap-filter-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition">
+                                        Trained (<span id="gapFilterCountResolved">0</span>)
+                                    </button>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <button onclick="openAddCustomQAModal()" class="text-xs bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold px-3.5 py-2 rounded-xl shadow-md shadow-brand-500/20 transition flex items-center gap-1.5 cursor-pointer">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>Teach New Q&amp;A</span>
+                                </button>
+
+                                <button onclick="loadGaps()" class="text-xs text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 font-semibold px-3 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer" title="Refresh Knowledge Gaps">
+                                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                    <span>Refresh</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Search Bar -->
+                        <div class="px-6 py-3 bg-obsidian-950/40 border-b border-white/5 flex items-center gap-3">
+                            <div class="relative flex-1">
+                                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                                <input type="text" id="gapsSearchInput" oninput="filterGaps()" placeholder="Type to filter visitor questions or verified answers in real-time..." class="glass-input w-full text-xs rounded-xl pl-9 pr-4 py-2 outline-none">
+                            </div>
+                            <span class="text-[11px] text-slate-500 font-mono" id="gapsFilteredCounter">Showing all</span>
+                        </div>
+
+                        <!-- Gaps Table -->
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-white/5 text-xs">
-                                <thead class="bg-obsidian-900/60 text-slate-400 uppercase font-semibold">
+                                <thead class="bg-obsidian-900/80 text-slate-400 uppercase font-semibold text-[10px] tracking-wider">
                                     <tr>
-                                        <th class="px-6 py-3 text-left">Question Asked by Visitors</th>
-                                        <th class="px-6 py-3 text-left">Times Asked</th>
-                                        <th class="px-6 py-3 text-left">Status</th>
-                                        <th class="px-6 py-3 text-left">Date Logged</th>
-                                        <th class="px-6 py-3 text-right">Action</th>
+                                        <th class="px-6 py-3.5 text-left">Visitor Question</th>
+                                        <th class="px-6 py-3.5 text-left">Times Asked</th>
+                                        <th class="px-6 py-3.5 text-left">Training Status</th>
+                                        <th class="px-6 py-3.5 text-left">Verified Answer in AI Vault</th>
+                                        <th class="px-6 py-3.5 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="gapsTableBody" class="divide-y divide-white/5">
@@ -1198,28 +1286,150 @@
 
     <!-- Modal: Resolve Knowledge Gap -->
     <div id="resolveGapModal" class="fixed inset-0 bg-obsidian-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel-elevated rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/10 gradient-border">
-            <h3 class="text-base font-extrabold text-white mb-1 flex items-center gap-2">
-                <i data-lucide="sparkles" class="w-4 h-4 text-brand-400"></i>
-                Resolve Knowledge Gap
-            </h3>
-            <p class="text-xs text-slate-400 mb-4">Add the official answer to train the AI so it never misses this question again.</p>
+        <div class="glass-panel-elevated rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-white/10 gradient-border animate-in fade-in zoom-in-95 duration-200">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </span>
+                    <span id="resolveGapModalTitle">Teach AI Official Answer</span>
+                </h3>
+                <button type="button" onclick="closeResolveGapModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-400 mb-4">Provide the verified answer. The AI indexes it immediately into its knowledge base and will answer accurately on your website widget.</p>
 
             <form id="resolveGapForm" class="space-y-4">
                 <input type="hidden" id="gapModalId" />
                 <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1">Visitor Question</label>
-                    <div class="text-xs p-3 rounded-xl bg-obsidian-950 border border-white/10 text-slate-200 font-medium" id="gapModalQuestion"></div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1 flex items-center gap-1.5">
+                        <i data-lucide="help-circle" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>Visitor Question</span>
+                    </label>
+                    <div class="text-xs p-3 rounded-xl bg-obsidian-950 border border-white/10 text-white font-semibold leading-relaxed shadow-inner" id="gapModalQuestion"></div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1">Official Grounded Answer</label>
-                    <textarea id="gapModalAnswer" rows="4" required placeholder="Type the verified answer that the AI assistant should provide..." class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none"></textarea>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                            <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i>
+                            <span>Verified Official Answer</span>
+                        </label>
+                        <span class="text-[10px] text-slate-500 font-mono" id="gapAnswerCharCount">0 chars</span>
+                    </div>
+                    <textarea id="gapModalAnswer" rows="5" required placeholder="Type the verified answer that the AI assistant should provide to visitors..." oninput="document.getElementById('gapAnswerCharCount').innerText = this.value.length + ' chars'" class="glass-input w-full text-xs rounded-xl p-3 outline-none leading-relaxed focus:border-brand-500"></textarea>
                 </div>
+
+                <div class="p-3 rounded-xl bg-brand-500/5 border border-brand-500/15 text-[11px] text-brand-300/90 flex items-start gap-2.5">
+                    <i data-lucide="lightbulb" class="w-4 h-4 text-brand-400 shrink-0 mt-0.5"></i>
+                    <span>This answer will be chunked, embedded, and indexed directly into the active assistant's knowledge base. It takes effect instantly in live chat.</span>
+                </div>
+
                 <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
-                    <button type="button" onclick="closeResolveGapModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-white/5 rounded-xl">Cancel</button>
-                    <button type="submit" class="px-4 py-2 text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white rounded-xl shadow-lg shadow-brand-500/20">Add to Knowledge Vault</button>
+                    <button type="button" onclick="closeResolveGapModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition">Cancel</button>
+                    <button type="submit" id="resolveGapSubmitBtn" class="px-5 py-2 text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white rounded-xl shadow-lg shadow-brand-500/25 transition flex items-center gap-2 cursor-pointer">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        <span>Save &amp; Index into AI Memory</span>
+                    </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal: Teach Custom Q&A -->
+    <div id="addCustomQAModal" class="fixed inset-0 bg-obsidian-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel-elevated rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-white/10 gradient-border animate-in fade-in zoom-in-95 duration-200">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    </span>
+                    <span>Teach New Q&amp;A to AI</span>
+                </h3>
+                <button type="button" onclick="closeAddCustomQAModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-400 mb-4">Proactively add questions and answers so your bot is trained before visitors even ask.</p>
+
+            <form id="addCustomQAForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Question Visitors Might Ask</label>
+                    <input type="text" id="customQAModalQuestion" required placeholder="e.g. Do you ship internationally?" class="glass-input w-full text-xs rounded-xl px-3 py-2.5 outline-none font-semibold text-white" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Verified Official Answer</label>
+                    <textarea id="customQAModalAnswer" rows="4" required placeholder="e.g. Yes! We ship to over 150 countries worldwide. International delivery typically takes 5 to 7 business days." class="glass-input w-full text-xs rounded-xl p-3 outline-none leading-relaxed"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
+                    <button type="button" onclick="closeAddCustomQAModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition">Cancel</button>
+                    <button type="submit" id="customQASubmitBtn" class="px-5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/25 transition flex items-center gap-2 cursor-pointer">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                        <span>Train AI Memory</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Drawer: Live Bot Sandbox Tester -->
+    <div id="botTesterBackdrop" onclick="closeBotTester()" class="fixed inset-0 bg-obsidian-950/70 backdrop-blur-sm z-50 hidden transition-opacity duration-300"></div>
+    <div id="botTesterDrawer" class="fixed inset-y-0 right-0 w-full sm:w-[440px] bg-obsidian-900 border-l border-white/10 z-50 flex flex-col shadow-2xl transition-transform duration-300 transform translate-x-full">
+        <!-- Tester Header -->
+        <div class="h-16 px-5 border-b border-white/10 flex items-center justify-between shrink-0 bg-obsidian-950/60">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-brand-500/20 text-brand-400 border border-brand-500/30 flex items-center justify-center font-bold text-sm shadow-sm" id="testerBotAvatar">
+                    ⚡
+                </div>
+                <div>
+                    <h4 class="text-xs font-extrabold text-white tracking-tight leading-none" id="testerBotTitle">Assistant Test Sandbox</h4>
+                    <div class="flex items-center gap-1.5 mt-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span class="text-[10px] text-emerald-400 font-semibold">Live Grounded Engine</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-1">
+                <button onclick="resetTesterChat()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition" title="Clear Sandbox Chat">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                </button>
+                <button onclick="closeBotTester()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/5 transition" title="Close Sandbox">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Prompt Chips -->
+        <div class="p-3 bg-obsidian-950/40 border-b border-white/5 overflow-x-auto whitespace-nowrap flex items-center gap-2">
+            <span class="text-[10px] text-slate-500 font-semibold uppercase tracking-wider shrink-0">Try:</span>
+            <button onclick="sendTesterMessage('Hello!')" class="text-[11px] bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-white/5 transition shrink-0">Hello! 👋</button>
+            <button onclick="sendTesterMessage('Who are you?')" class="text-[11px] bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-white/5 transition shrink-0">Who are you?</button>
+            <button onclick="sendTesterMessage('How can you help me?')" class="text-[11px] bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-white/5 transition shrink-0">How can you help?</button>
+            <button onclick="sendTesterMessage('What services do you provide?')" class="text-[11px] bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-white/5 transition shrink-0">Services</button>
+        </div>
+
+        <!-- Chat Feed Area -->
+        <div id="testerMessagesContainer" class="flex-1 p-4 overflow-y-auto space-y-3.5 text-xs bg-obsidian-950/30">
+            <div class="flex items-start gap-2.5">
+                <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 text-xs font-bold">⚡</div>
+                <div class="glass-panel p-3 rounded-2xl rounded-tl-sm text-slate-200 border border-white/10 max-w-[85%] leading-relaxed">
+                    Hello! I'm your website AI assistant. You can test greetings, questions, or your newly trained knowledge gaps right here in real-time!
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Input Footer -->
+        <div class="p-3 border-t border-white/10 bg-obsidian-950/80">
+            <form id="testerChatForm" onsubmit="handleTesterSubmit(event)" class="flex items-center gap-2">
+                <input type="text" id="testerInput" placeholder="Ask a question or test 'Hello'..." autocomplete="off" class="glass-input flex-1 text-xs rounded-xl px-3.5 py-2.5 outline-none text-white focus:border-brand-500" />
+                <button type="submit" id="testerSendBtn" class="w-9 h-9 rounded-xl bg-brand-600 hover:bg-brand-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-brand-500/20 transition cursor-pointer">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+            </form>
+            <div class="text-[10px] text-slate-500 text-center mt-1.5 flex items-center justify-center gap-1">
+                <i data-lucide="shield-check" class="w-3 h-3 text-emerald-400"></i>
+                <span>Strict Factual Grounding &bull; Zero Hallucination</span>
+            </div>
         </div>
     </div>
 
@@ -1701,13 +1911,22 @@
                 const totalQueries = asst.total_messages || convs.length || 0;
                 const totalLeads = leads.length || 0;
                 const totalGaps = gaps.length || 0;
+                const pendingGaps = Array.isArray(gaps) ? gaps.filter(g => g.status !== 'resolved' && !g.resolved).length : 0;
 
                 document.getElementById('kpiQueries').innerText = totalQueries;
                 document.getElementById('kpiLeads').innerText = totalLeads;
-                document.getElementById('kpiGaps').innerText = totalGaps;
+                document.getElementById('kpiGaps').innerText = pendingGaps;
 
                 document.getElementById('navInboxBadge').innerText = convs.length;
-                document.getElementById('navGapsBadge').innerText = totalGaps;
+                const navGapsBadge = document.getElementById('navGapsBadge');
+                if (navGapsBadge) {
+                    navGapsBadge.innerText = pendingGaps;
+                    if (pendingGaps > 0) {
+                        navGapsBadge.className = "ml-auto text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-md border border-amber-500/30";
+                    } else {
+                        navGapsBadge.className = "ml-auto text-[10px] font-mono font-bold bg-white/10 text-slate-300 px-1.5 py-0.5 rounded-md";
+                    }
+                }
                 document.getElementById('navLeadsBadge').innerText = totalLeads;
 
                 const convRate = totalQueries > 0 ? ((totalLeads / totalQueries) * 100).toFixed(1) : 0;
@@ -2053,57 +2272,233 @@
             }
         }
 
+        // ================= KNOWLEDGE GAPS & FAQ MANAGEMENT =================
+        window.allKnowledgeGaps = [];
+        window.currentGapsFilter = 'all';
+
         async function loadGaps() {
             try {
                 const res = await fetch(`/api/assistants/${currentAssistantId}/gaps`);
                 const gaps = await res.json();
-                const tbody = document.getElementById('gapsTableBody');
+                window.allKnowledgeGaps = Array.isArray(gaps) ? gaps : [];
 
-                if (!gaps || gaps.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500">Zero knowledge gaps! All visitor questions were fully answered by current documentation.</td></tr>`;
-                    return;
+                const total = window.allKnowledgeGaps.length;
+                const pending = window.allKnowledgeGaps.filter(g => g.status !== 'resolved' && !g.resolved).length;
+                const resolved = window.allKnowledgeGaps.filter(g => g.status === 'resolved' || g.resolved).length;
+                const rate = total > 0 ? Math.round((resolved / total) * 100) : 100;
+
+                const kpiTotalEl = document.getElementById('gapsKpiTotal');
+                const kpiPendingEl = document.getElementById('gapsKpiPending');
+                const kpiResolvedEl = document.getElementById('gapsKpiResolved');
+                const kpiRateEl = document.getElementById('gapsKpiRate');
+                if (kpiTotalEl) kpiTotalEl.innerText = total;
+                if (kpiPendingEl) kpiPendingEl.innerText = pending;
+                if (kpiResolvedEl) kpiResolvedEl.innerText = resolved;
+                if (kpiRateEl) kpiRateEl.innerText = rate + '%';
+
+                const countAll = document.getElementById('gapFilterCountAll');
+                const countPending = document.getElementById('gapFilterCountPending');
+                const countResolved = document.getElementById('gapFilterCountResolved');
+                if (countAll) countAll.innerText = total;
+                if (countPending) countPending.innerText = pending;
+                if (countResolved) countResolved.innerText = resolved;
+
+                const navBadge = document.getElementById('navGapsBadge');
+                if (navBadge) {
+                    navBadge.innerText = pending;
+                    if (pending > 0) {
+                        navBadge.className = "ml-auto text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-md border border-amber-500/30";
+                    } else {
+                        navBadge.className = "ml-auto text-[10px] font-mono font-bold bg-white/10 text-slate-300 px-1.5 py-0.5 rounded-md";
+                    }
                 }
 
-                tbody.innerHTML = gaps.map(g => `
-                    <tr class="hover:bg-white/5 transition">
-                        <td class="px-6 py-3.5">
-                            <div class="font-bold text-white text-xs">${escapeHtml(g.question)}</div>
-                        </td>
-                        <td class="px-6 py-3.5 whitespace-nowrap">
-                            <span class="font-mono text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
-                                ${g.times_asked || 1}x asked
-                            </span>
-                        </td>
-                        <td class="px-6 py-3.5 whitespace-nowrap">
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${g.resolved ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'}">
-                                <span class="w-1.5 h-1.5 rounded-full ${g.resolved ? 'bg-emerald-400' : 'bg-amber-400'}"></span>
-                                ${g.resolved ? 'Resolved' : 'Pending Action'}
-                            </span>
-                        </td>
-                        <td class="px-6 py-3.5 whitespace-nowrap text-slate-400 text-[11px] font-mono">
-                            ${g.created_at ? g.created_at.split(' ')[0] : 'Recent'}
-                        </td>
-                        <td class="px-6 py-3.5 whitespace-nowrap text-right">
-                            ${!g.resolved ? `
-                                <button onclick="openResolveGapModal(${g.id}, '${escapeHtml(g.question.replace(/'/g, "\\'"))}')" class="text-xs bg-brand-600 hover:bg-brand-500 text-white font-bold px-3 py-1.5 rounded-xl shadow-md transition">
-                                    Resolve &amp; Teach AI
-                                </button>
-                            ` : `<span class="text-slate-500 text-xs font-semibold">Trained ✓</span>`}
-                        </td>
-                    </tr>
-                `).join('');
-                refreshIcons();
+                renderGapsTable();
 
             } catch (err) {
                 console.error("Error loading gaps:", err);
             }
         }
 
-        function openResolveGapModal(gapId, question) {
+        function setGapsFilter(filter) {
+            window.currentGapsFilter = filter;
+            const btnAll = document.getElementById('gapFilterAll');
+            const btnPending = document.getElementById('gapFilterPending');
+            const btnResolved = document.getElementById('gapFilterResolved');
+
+            [btnAll, btnPending, btnResolved].forEach(btn => {
+                if (!btn) return;
+                btn.className = "gap-filter-btn px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition";
+            });
+
+            if (filter === 'all' && btnAll) btnAll.className = "gap-filter-btn px-3 py-1.5 rounded-lg font-bold transition bg-brand-600 text-white shadow-sm";
+            if (filter === 'pending' && btnPending) btnPending.className = "gap-filter-btn px-3 py-1.5 rounded-lg font-bold transition bg-amber-600 text-white shadow-sm";
+            if (filter === 'resolved' && btnResolved) btnResolved.className = "gap-filter-btn px-3 py-1.5 rounded-lg font-bold transition bg-emerald-600 text-white shadow-sm";
+
+            renderGapsTable();
+        }
+
+        function filterGaps() {
+            renderGapsTable();
+        }
+
+        function renderGapsTable() {
+            const tbody = document.getElementById('gapsTableBody');
+            if (!tbody) return;
+
+            const searchInput = document.getElementById('gapsSearchInput');
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+            let list = window.allKnowledgeGaps || [];
+
+            // 1. Filter by status
+            if (window.currentGapsFilter === 'pending') {
+                list = list.filter(g => g.status !== 'resolved' && !g.resolved);
+            } else if (window.currentGapsFilter === 'resolved') {
+                list = list.filter(g => g.status === 'resolved' || g.resolved);
+            }
+
+            // 2. Search query filter
+            if (query) {
+                list = list.filter(g => {
+                    const qText = (g.question || '').toLowerCase();
+                    const aText = (g.resolution_notes || '').toLowerCase();
+                    return qText.includes(query) || aText.includes(query);
+                });
+            }
+
+            const counterEl = document.getElementById('gapsFilteredCounter');
+            if (counterEl) {
+                counterEl.innerText = `Showing ${list.length} of ${window.allKnowledgeGaps.length}`;
+            }
+
+            if (!list || list.length === 0) {
+                if (window.allKnowledgeGaps.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-slate-400">
+                                <div class="max-w-md mx-auto space-y-3">
+                                    <div class="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center mx-auto border border-brand-500/20">
+                                        <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-400"></i>
+                                    </div>
+                                    <h5 class="text-sm font-bold text-white">All Documentation is Up-to-Date!</h5>
+                                    <p class="text-xs text-slate-400">Your AI assistant has successfully answered all visitor questions. You can proactively teach it more Q&amp;As anytime.</p>
+                                    <button onclick="openAddCustomQAModal()" class="text-xs bg-brand-600 hover:bg-brand-500 text-white font-bold px-4 py-2 rounded-xl transition inline-flex items-center gap-1.5 shadow-md shadow-brand-500/20">
+                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Teach First Custom Q&amp;A
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="px-6 py-10 text-center text-slate-500 text-xs">
+                                No questions matching the current filter. <button onclick="setGapsFilter('all'); if (document.getElementById('gapsSearchInput')) document.getElementById('gapsSearchInput').value='';" class="text-brand-400 underline font-semibold ml-1">Clear filters</button>
+                            </td>
+                        </tr>
+                    `;
+                }
+                refreshIcons();
+                return;
+            }
+
+            tbody.innerHTML = list.map(g => {
+                const isResolved = g.status === 'resolved' || Boolean(g.resolved);
+                const freq = g.frequency || 1;
+                const dateStr = g.created_at ? g.created_at.split('T')[0].split(' ')[0] : 'Recent';
+                const answerText = g.resolution_notes || '';
+                const escapedQuestion = escapeHtml(g.question || '');
+                const cleanQuestionForAttr = (g.question || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const cleanAnswerForAttr = answerText.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+                return `
+                    <tr class="hover:bg-white/[0.03] transition border-b border-white/5">
+                        <!-- Visitor Question -->
+                        <td class="px-6 py-4 max-w-xs sm:max-w-md">
+                            <div class="font-bold text-white text-xs leading-snug flex items-start gap-2">
+                                <i data-lucide="help-circle" class="w-3.5 h-3.5 text-brand-400 shrink-0 mt-0.5"></i>
+                                <span>${escapedQuestion}</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500 font-mono mt-1 ml-5.5 flex items-center gap-2">
+                                <span>Logged: ${dateStr}</span>
+                                <span>&bull;</span>
+                                <span>ID: #${g.id}</span>
+                            </div>
+                        </td>
+
+                        <!-- Times Asked -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1 font-mono text-xs font-bold ${freq > 1 ? 'text-amber-400 bg-amber-500/10 border border-amber-500/25 shadow-sm' : 'text-slate-300 bg-white/5 border border-white/10'} px-2.5 py-1 rounded-lg">
+                                ${freq > 1 ? '<i data-lucide="flame" class="w-3 h-3 text-amber-400"></i>' : ''}
+                                <span>${freq}x asked</span>
+                            </span>
+                        </td>
+
+                        <!-- Status -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${isResolved ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' : 'bg-amber-500/10 text-amber-300 border border-amber-500/25'}">
+                                <span class="w-1.5 h-1.5 rounded-full ${isResolved ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}"></span>
+                                <span>${isResolved ? 'Trained &amp; Active' : 'Needs Answer'}</span>
+                            </span>
+                        </td>
+
+                        <!-- Verified Answer in AI Vault -->
+                        <td class="px-6 py-4 max-w-xs sm:max-w-md">
+                            ${isResolved && answerText ? `
+                                <div class="p-2.5 rounded-xl bg-emerald-500/[0.05] border border-emerald-500/20 text-slate-200 text-xs leading-relaxed flex items-start gap-2">
+                                    <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5"></i>
+                                    <span class="line-clamp-2">${escapeHtml(answerText)}</span>
+                                </div>
+                            ` : `
+                                <span class="text-slate-500 italic text-[11px] flex items-center gap-1.5">
+                                    <span class="w-1 h-1 rounded-full bg-slate-600"></span>
+                                    <span>Not in knowledge vault yet</span>
+                                </span>
+                            `}
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                ${!isResolved ? `
+                                    <button onclick="openResolveGapModal(${g.id}, '${cleanQuestionForAttr}')" class="text-xs bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-xl shadow-md shadow-brand-500/25 transition flex items-center gap-1.5 cursor-pointer">
+                                        <i data-lucide="sparkles" class="w-3 h-3"></i>
+                                        <span>Teach AI</span>
+                                    </button>
+                                ` : `
+                                    <button onclick="openResolveGapModal(${g.id}, '${cleanQuestionForAttr}', '${cleanAnswerForAttr}')" class="text-xs bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-semibold px-2.5 py-1.5 rounded-xl border border-white/10 transition flex items-center gap-1 cursor-pointer" title="Edit official answer">
+                                        <i data-lucide="edit-3" class="w-3 h-3"></i>
+                                        <span>Edit</span>
+                                    </button>
+                                `}
+                                <button onclick="deleteGap(${g.id})" class="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition cursor-pointer" title="Delete entry">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            refreshIcons();
+        }
+
+        function openResolveGapModal(gapId, question, existingAnswer = '') {
             document.getElementById('gapModalId').value = gapId;
             document.getElementById('gapModalQuestion').innerText = question;
-            document.getElementById('gapModalAnswer').value = '';
+            const answerField = document.getElementById('gapModalAnswer');
+            answerField.value = existingAnswer || '';
+            const charCount = document.getElementById('gapAnswerCharCount');
+            if (charCount) charCount.innerText = (existingAnswer ? existingAnswer.length : 0) + ' chars';
+
+            const titleEl = document.getElementById('resolveGapModalTitle');
+            if (titleEl) {
+                titleEl.innerText = existingAnswer ? 'Edit Verified Answer' : 'Teach AI Official Answer';
+            }
+
             document.getElementById('resolveGapModal').classList.remove('hidden');
+            setTimeout(() => answerField.focus(), 50);
         }
 
         function closeResolveGapModal() {
@@ -2115,21 +2510,253 @@
             const gapId = document.getElementById('gapModalId').value;
             const answer = document.getElementById('gapModalAnswer').value.trim();
 
+            if (!answer) {
+                showToast("Please type an official answer.", "error");
+                return;
+            }
+
+            const submitBtn = document.getElementById('resolveGapSubmitBtn');
+            const originalHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <span class="flex items-center gap-2">
+                    <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span>Indexing into AI...</span>
+                </span>
+            `;
+
             try {
-                await fetch(`/api/assistants/${currentAssistantId}/gaps/${gapId}/resolve`, {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/gaps/${gapId}/resolve`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ answer: answer })
+                    body: JSON.stringify({
+                        official_answer: answer,
+                        answer: answer
+                    })
                 });
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.detail || `Server returned ${res.status}`);
+                }
+
                 closeResolveGapModal();
-                showToast("Knowledge gap resolved and added to knowledge vault");
-                loadGaps();
-                loadSources();
-                loadAnalytics();
+                showToast("Knowledge gap resolved & indexed into AI memory! ✨");
+                await loadGaps();
+                if (typeof loadSources === 'function') loadSources();
+                if (typeof loadAnalytics === 'function') loadAnalytics();
+
             } catch (err) {
-                alert("Error resolving knowledge gap.");
+                console.error("Error resolving gap:", err);
+                showToast("Error saving answer: " + err.message, "error");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHtml;
+                refreshIcons();
             }
         };
+
+        async function deleteGap(gapId) {
+            if (!confirm("Are you sure you want to delete this knowledge gap entry?")) return;
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/gaps/${gapId}`, {
+                    method: 'DELETE'
+                });
+                if (!res.ok) throw new Error("Delete failed");
+                showToast("Knowledge gap entry deleted");
+                await loadGaps();
+                if (typeof loadAnalytics === 'function') loadAnalytics();
+            } catch (err) {
+                showToast("Error deleting gap: " + err.message, "error");
+            }
+        }
+
+        function openAddCustomQAModal() {
+            document.getElementById('customQAModalQuestion').value = '';
+            document.getElementById('customQAModalAnswer').value = '';
+            document.getElementById('addCustomQAModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('customQAModalQuestion').focus(), 50);
+        }
+
+        function closeAddCustomQAModal() {
+            document.getElementById('addCustomQAModal').classList.add('hidden');
+        }
+
+        document.getElementById('addCustomQAForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const q = document.getElementById('customQAModalQuestion').value.trim();
+            const a = document.getElementById('customQAModalAnswer').value.trim();
+            if (!q || !a) return;
+
+            const submitBtn = document.getElementById('customQASubmitBtn');
+            const originalHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span>Training AI...</span>`;
+
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/gaps/custom`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: q, answer: a })
+                });
+                if (!res.ok) throw new Error("Failed to add custom Q&A");
+                closeAddCustomQAModal();
+                showToast("Custom Q&A added to AI knowledge vault! ✨");
+                await loadGaps();
+                if (typeof loadSources === 'function') loadSources();
+                if (typeof loadAnalytics === 'function') loadAnalytics();
+            } catch (err) {
+                showToast("Error: " + err.message, "error");
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHtml;
+                refreshIcons();
+            }
+        };
+
+        // ================= INTERACTIVE BOT TESTER DRAWER =================
+        let testerConversationId = `tester_${Math.random().toString(36).substring(2, 9)}`;
+
+        function toggleBotTester() {
+            const drawer = document.getElementById('botTesterDrawer');
+            const backdrop = document.getElementById('botTesterBackdrop');
+            if (drawer.classList.contains('translate-x-full')) {
+                // Open
+                drawer.classList.remove('translate-x-full');
+                backdrop.classList.remove('hidden');
+                // Update title & avatar
+                const asstNameEl = document.getElementById('topAsstName');
+                const avatarEl = document.getElementById('topAvatarBadge');
+                if (asstNameEl) document.getElementById('testerBotTitle').innerText = asstNameEl.innerText + " (Tester)";
+                if (avatarEl) document.getElementById('testerBotAvatar').innerText = avatarEl.innerText.trim();
+                setTimeout(() => document.getElementById('testerInput').focus(), 150);
+            } else {
+                closeBotTester();
+            }
+        }
+
+        function closeBotTester() {
+            const drawer = document.getElementById('botTesterDrawer');
+            const backdrop = document.getElementById('botTesterBackdrop');
+            drawer.classList.add('translate-x-full');
+            backdrop.classList.add('hidden');
+        }
+
+        function resetTesterChat() {
+            testerConversationId = `tester_${Math.random().toString(36).substring(2, 9)}`;
+            const container = document.getElementById('testerMessagesContainer');
+            container.innerHTML = `
+                <div class="flex items-start gap-2.5">
+                    <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 text-xs font-bold">⚡</div>
+                    <div class="glass-panel p-3 rounded-2xl rounded-tl-sm text-slate-200 border border-white/10 max-w-[85%] leading-relaxed">
+                        Sandbox reset! Ask me anything, test "Hello", or test any questions you just trained in Knowledge Gaps.
+                    </div>
+                </div>
+            `;
+            refreshIcons();
+        }
+
+        async function sendTesterMessage(msgText) {
+            const container = document.getElementById('testerMessagesContainer');
+            const userMsg = msgText.trim();
+            if (!userMsg) return;
+
+            // Append user bubble
+            const userDiv = document.createElement('div');
+            userDiv.className = "flex items-start justify-end gap-2";
+            userDiv.innerHTML = `
+                <div class="bg-brand-600 text-white p-3 rounded-2xl rounded-tr-sm max-w-[85%] leading-relaxed shadow-md">
+                    ${escapeHtml(userMsg)}
+                </div>
+            `;
+            container.appendChild(userDiv);
+
+            // Append typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.id = "testerTypingIndicator";
+            typingDiv.className = "flex items-start gap-2.5";
+            typingDiv.innerHTML = `
+                <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 text-xs font-bold">⚡</div>
+                <div class="glass-panel p-3 rounded-2xl rounded-tl-sm text-slate-400 border border-white/10 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" style="animation-delay: 0.2s"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" style="animation-delay: 0.4s"></span>
+                    <span class="text-[11px] ml-1">Thinking...</span>
+                </div>
+            `;
+            container.appendChild(typingDiv);
+            container.scrollTop = container.scrollHeight;
+
+            const t0 = performance.now();
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        assistant_id: currentAssistantId,
+                        conversation_id: testerConversationId,
+                        message: userMsg
+                    })
+                });
+
+                const data = await res.json();
+                const latency = Math.round(performance.now() - t0);
+
+                const indicator = document.getElementById('testerTypingIndicator');
+                if (indicator) indicator.remove();
+
+                const botDiv = document.createElement('div');
+                botDiv.className = "flex items-start gap-2.5";
+                
+                let sourcesHtml = '';
+                if (data.sources && data.sources.length > 0) {
+                    sourcesHtml = `
+                        <div class="mt-2.5 pt-2 border-t border-white/10 space-y-1">
+                            <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Grounded Sources (${data.sources.length}):</span>
+                            ${data.sources.map(s => `
+                                <div class="text-[10px] text-brand-300 font-mono flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-md">
+                                    <span>[${s.index}] ${escapeHtml(s.title || 'Doc')}</span>
+                                    <span class="text-slate-500 ml-auto">${Math.round((s.similarity || 0) * 100)}% match</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                botDiv.innerHTML = `
+                    <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 text-xs font-bold">⚡</div>
+                    <div class="glass-panel-elevated p-3.5 rounded-2xl rounded-tl-sm text-slate-100 border border-white/10 max-w-[85%] leading-relaxed shadow-lg">
+                        <div>${escapeHtml(data.answer || '').replace(/\n/g, '<br>')}</div>
+                        ${sourcesHtml}
+                        <div class="mt-1.5 text-[9px] text-slate-500 font-mono flex items-center justify-between">
+                            <span>Latency: ${latency}ms</span>
+                            <span>${data.sources && data.sources.length > 0 ? 'Document Grounded ✓' : 'Conversational ✓'}</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(botDiv);
+
+            } catch (err) {
+                const indicator = document.getElementById('testerTypingIndicator');
+                if (indicator) indicator.remove();
+                const errDiv = document.createElement('div');
+                errDiv.className = "p-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-xl text-xs";
+                errDiv.innerText = "Error: " + err.message;
+                container.appendChild(errDiv);
+            }
+
+            container.scrollTop = container.scrollHeight;
+            refreshIcons();
+        }
+
+        function handleTesterSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('testerInput');
+            const val = input.value.trim();
+            if (!val) return;
+            input.value = '';
+            sendTesterMessage(val);
+        }
 
         async function loadLeads() {
             try {
