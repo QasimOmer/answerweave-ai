@@ -533,6 +533,16 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
         }
 
+        .wf-link-inline {
+            color: #2563eb !important;
+            text-decoration: underline !important;
+            font-weight: 600 !important;
+            transition: color 0.15s ease !important;
+        }
+        .wf-link-inline:hover {
+            color: #1d4ed8 !important;
+        }
+
         /* Citations list inside message */
         .wf-citations {
             margin-top: 10px !important;
@@ -1530,6 +1540,8 @@
         escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         // Italic: *text*
         escaped = escaped.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        // Markdown Links: [text](url)
+        escaped = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="wf-link-inline">$1</a>');
         // Inline Citations: [1], [2]
         escaped = escaped.replace(/\[(\d+)\]/g, '<span class="wf-citation-inline">[$1]</span>');
         

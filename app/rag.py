@@ -32,11 +32,30 @@ GROUNDED_SYSTEM_PROMPT = """You are an intelligent, grounded AI assistant repres
 PRIMARY DIRECTIVES:
 1. GREETINGS & CASUAL INTERACTION: When a visitor greets you ("hello", "hi", "good morning"), introduces themselves, asks who you are, or engages in polite pleasantries, ALWAYS respond warmly, professionally, and politely. Welcome them to the organization, introduce your role as the AI assistant, and invite them to ask any questions. Never reply with "I do not have enough details" to a casual greeting!
 2. FACTUAL GROUNDING: For factual questions regarding the organization, products, services, features, policies, or pricing, answer accurately based ONLY on the provided Context Sources.
-3. CONCISENESS & CLARITY: Keep responses crisp and easy to read on a compact website chat widget (2 to 3 sentences or clear bullet points). Avoid lengthy walls of text.
+3. CONCISENESS & CLARITY: Keep responses crisp and easy to read on a compact website chat widget (clean bullet points or short paragraphs). Avoid lengthy walls of text.
 4. UNKNOWN FACTS: Only if a visitor asks a specific factual business question that is genuinely not covered in the Context Sources, say directly:
    "I apologize, but I do not have enough details on that in our current documentation. Please feel free to leave your contact email below and our team will be glad to follow up!"
    and append [LEAD_TRIGGER] at the end.
 5. CITATIONS: Use bracketed numbers [1], [2] when referencing source facts.
+6. E-COMMERCE & PRODUCT RECOMMENDATIONS:
+   - When a visitor asks about products, suggestions, or items under a specific budget (e.g. "any product under 500aed", "shoes under $100"):
+   - Accurately evaluate prices against their requested budget. Compare amounts mathematically (e.g. 450 AED is under 500 AED; 700 AED is over).
+   - Match the currency requested (AED, $, USD, EUR, GBP, SAR, etc.).
+   - Clearly present matching products from the Context Sources:
+     • **Product Name** — **Price** (with currency)
+       Key features, specifications, and availability
+       Direct link / URL if available in the source
+   - If no products in the Context Sources fall under the visitor's exact budget, clearly explain that items under that specific budget are currently unavailable, highlight the closest or lowest priced alternatives that ARE available in the sources, and invite them to leave contact info for updates.
+7. REAL ESTATE & PROPERTY RECOMMENDATIONS:
+   - Differentiate between **Rental Properties** (per month / per year) and **Properties for Sale**.
+   - When a visitor asks for rentals under a budget (e.g. "any rental property under 1000 aed or $", "2 bedroom apartment for rent under 60k"):
+     - Accurately check rental rates and frequency (e.g., 950 AED / month, $1,200 / month, 45,000 AED / year).
+     - Present matching listings clearly:
+       • **Property Title / Listing** — **Price / Rent** (with frequency, e.g. 950 AED / month)
+         Location / Neighborhood • Bedrooms / Bathrooms • Size & Amenities
+         Direct link / URL if available in the source
+     - If the requested budget is lower than any rental properties in the documentation (e.g. asking for 1,000 AED rentals when typical rents in the documentation start higher):
+       Politely inform the visitor of the typical starting rates from the documentation, offer to connect them with a leasing specialist, and append [LEAD_TRIGGER].
 """
 
 def detect_conversational_intent(query: str, asst_name: str = "Our Team", welcome_msg: str = "") -> Optional[str]:
@@ -130,7 +149,7 @@ def clean_extracted_noise(text: str) -> str:
     return text
 
 def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], assistant_id: str = "asst_default") -> Dict[str, Any]:
-    """Zero-key local extractive grounding optimized for concise, to-the-point answers."""
+    """Zero-key local extractive grounding optimized for concise, to-the-point answers and catalog discovery."""
     # 1. Check conversational intent first
     asst = get_assistant(assistant_id) if assistant_id else None
     asst_name = asst.get("name") if asst else "Our Team"
@@ -142,6 +161,62 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
             "sources": [],
             "lead_prompted": False
         }
+
+    sources_list = []
+    for idx, c in enumerate(chunks, 1):
+        content = c.get("content", "")
+        title = c.get("title", "Documentation")
+        url = c.get("url", "#")
+        sources_list.append({
+            "index": idx,
+            "title": title,
+            "url": url,
+            "snippet": content[:200] + ("..." if len(content) > 200 else ""),
+            "similarity": c.get("similarity", 0.0)
+        })
+
+    # 2. Check catalog, e-commerce product, and real estate property intent
+    from app.catalog_intelligence import (
+        parse_user_query_intent,
+        extract_catalog_items_from_chunk,
+        match_items_against_query,
+        format_catalog_recommendation_answer
+    )
+    intent = parse_user_query_intent(query)
+    if intent.get("is_catalog_query"):
+        all_chunk_items = []
+        for idx, c in enumerate(chunks, 1):
+            items = extract_catalog_items_from_chunk(
+                c.get("content", ""),
+                chunk_index=idx,
+                url=c.get("url", "#"),
+                title=c.get("title", "Listing")
+            )
+            all_chunk_items.extend(items)
+
+        if all_chunk_items:
+            matched_items = match_items_against_query(all_chunk_items, intent)
+            if matched_items:
+                cat_res = format_catalog_recommendation_answer(matched_items, intent, assistant_name=asst_name)
+                if cat_res.get("answer"):
+                    return {
+                        "answer": cat_res["answer"],
+                        "sources": sources_list,
+                        "lead_prompted": cat_res.get("lead_prompted", False)
+                    }
+
+        # If user asked for items under a specific budget, but no matching catalog items were found in chunks
+        if intent.get("max_price") is not None:
+            max_p = intent["max_price"]
+            curr = intent.get("currency")
+            curr_str = f"**{max_p:,.0f} AED or $**" if curr == "AED_OR_USD" else f"**{curr + ' ' if curr not in ['ANY', ''] else ''}{max_p:,.0f}**"
+            item_type = "rental properties" if intent.get("deal_type") == "rent" else ("properties" if intent.get("entity_type") == "property" else "products")
+            
+            return {
+                "answer": f"I apologize, but we do not currently have {item_type} listed under {curr_str} in our current documentation.\n\nPlease feel free to leave your contact email below and our team will be glad to follow up with custom options matching your exact budget!",
+                "sources": sources_list,
+                "lead_prompted": True
+            }
 
     if not chunks:
         if len(query.strip()) >= 4 and not is_trivial_or_conversational(query):
@@ -158,23 +233,10 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
     from app.embeddings import STOPWORDS
     stop_words = STOPWORDS | {'what', 'when', 'where', 'which', 'who', 'how', 'why', 'are', 'the', 'you', 'for', 'and', 'with', 'does', 'can', 'about', 'your', 'our', 'tell', 'help'}
     meaningful_query_words = set(w for w in re.findall(r"[a-z0-9]{3,}", query.lower()) if w not in stop_words)
-    
-    sources_list = []
     candidates = []
 
     for idx, c in enumerate(chunks, 1):
         content = c.get("content", "")
-        title = c.get("title", "Documentation")
-        url = c.get("url", "#")
-        
-        sources_list.append({
-            "index": idx,
-            "title": title,
-            "url": url,
-            "snippet": content[:200] + ("..." if len(content) > 200 else ""),
-            "similarity": c.get("similarity", 0.0)
-        })
-
         # Priority 0: Check for explicit FAQ / Q&A chunk patterns (e.g., from resolved Knowledge Gaps or FAQs)
         faq_match = re.search(r'(?:Question|Q):\s*(.+?)\s*\n+\s*(?:Official Answer|Answer|A):\s*(.+?)(?=\n+(?:Question|Q):|\Z)', content, re.IGNORECASE | re.DOTALL)
         if faq_match:
@@ -302,7 +364,7 @@ def call_groq_llm(api_key: str, prompt: str, system_prompt: str, model: str = No
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.2,
-        "max_tokens": 300
+        "max_tokens": 750
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=20)
     if not resp.ok:
@@ -339,7 +401,7 @@ def call_openai_llm(api_key: str, prompt: str, system_prompt: str) -> str:
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.2,
-        "max_tokens": 300
+        "max_tokens": 750
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=20)
     resp.raise_for_status()
@@ -364,7 +426,7 @@ def call_siliconflow_llm(api_key: str, prompt: str, system_prompt: str, model: s
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.2,
-        "max_tokens": 300
+        "max_tokens": 750
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=25)
     resp.raise_for_status()
@@ -388,7 +450,7 @@ def call_deepseek_llm(api_key: str, prompt: str, system_prompt: str, model: str 
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.2,
-        "max_tokens": 300
+        "max_tokens": 750
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=25)
     resp.raise_for_status()
@@ -412,7 +474,7 @@ def call_qwen_llm(api_key: str, prompt: str, system_prompt: str, model: str = DE
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.2,
-        "max_tokens": 300
+        "max_tokens": 750
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=25)
     resp.raise_for_status()
@@ -439,7 +501,7 @@ def call_openrouter_llm(api_key: str, prompt: str, system_prompt: str, model: st
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.2,
-        "max_tokens": 300
+        "max_tokens": 750
     }
     resp = requests.post(url, headers=headers, json=payload, timeout=25)
     if not resp.ok:
@@ -513,12 +575,20 @@ def generate_grounded_response(
             role = "User" if msg.get("role") == "user" else "Assistant"
             history_str += f"{role}: {msg.get('content', '')}\n"
 
+    from app.catalog_intelligence import parse_user_query_intent
+    catalog_intent = parse_user_query_intent(query)
+    catalog_hint = ""
+    if catalog_intent.get("is_catalog_query") and catalog_intent.get("max_price") is not None:
+        curr_hint = catalog_intent.get("currency")
+        curr_text = "AED or $" if curr_hint == "AED_OR_USD" else (curr_hint if curr_hint not in ["ANY", ""] else "")
+        catalog_hint = f"\n[Special Directives for this Query: The user is asking about {catalog_intent.get('entity_type')}s with a maximum budget of {catalog_intent.get('max_price')} {curr_text}. Carefully check item prices against this budget. List matching items clearly with bold title, exact price, key details, and direct URL link. If no items in the Context Sources fall under this budget, state what the lowest available starting price is and offer to follow up.]\n"
+
     user_prompt = f"""Conversation History:
 {history_str}
 
 Context Sources:
 {context_text if has_relevant_docs else "[No matching knowledge base documents found]"}
-
+{catalog_hint}
 User Question: {query}
 """
 
@@ -547,7 +617,7 @@ User Question: {query}
                     config=types.GenerateContentConfig(
                         system_instruction=GROUNDED_SYSTEM_PROMPT,
                         temperature=0.2,
-                        max_output_tokens=300,
+                        max_output_tokens=750,
                     )
                 )
                 raw_answer = resp.text or ""
@@ -558,7 +628,7 @@ User Question: {query}
                     config=types.GenerateContentConfig(
                         system_instruction=GROUNDED_SYSTEM_PROMPT,
                         temperature=0.2,
-                        max_output_tokens=300,
+                        max_output_tokens=750,
                     )
                 )
                 raw_answer = resp.text or ""

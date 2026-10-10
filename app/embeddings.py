@@ -88,10 +88,12 @@ def cosine_similarity(v1: List[float], v2: List[float]) -> float:
 def search_relevant_chunks(
     query: str,
     assistant_id: str = "asst_default",
-    top_k: int = 4,
-    min_similarity: float = 0.15
+    top_k: int = 5,
+    min_similarity: float = 0.12
 ) -> List[Dict[str, Any]]:
-    """Retrieves top_k most relevant chunks for a user query isolated to specific assistant."""
+    """Retrieves top_k most relevant chunks for a user query isolated to specific assistant with budget awareness."""
+    from app.catalog_intelligence import parse_user_query_intent, extract_catalog_items_from_chunk, match_items_against_query
+
     query_emb = generate_embedding(query)
     if not query_emb:
         return []
@@ -100,20 +102,67 @@ def search_relevant_chunks(
     if not chunks:
         return []
         
-    meaningful_query_words = set(w for w in re.findall(r"[a-z0-9]{3,}", query.lower()) if w not in STOPWORDS)
+    # Analyze query intent (catalog, budget, deal type, entity type)
+    intent = parse_user_query_intent(query)
+    is_catalog_query = intent.get("is_catalog_query", False)
+    effective_top_k = max(top_k, 8) if is_catalog_query else top_k
+
+    # Extract query words including numbers, price symbols, and specs (e.g. 2, 50, 500k, 2bhk)
+    query_lower = query.lower()
+    meaningful_query_words = set(
+        w for w in re.findall(r"[a-z0-9]+", query_lower)
+        if w not in STOPWORDS and (len(w) >= 3 or w.isdigit() or any(c.isdigit() for c in w))
+    )
 
     scored_chunks = []
     for c in chunks:
         sim = cosine_similarity(query_emb, c["embedding"])
+        content_lower = c["content"].lower()
         
         # Keyword boost: calculate overlap of words
-        content_lower = c["content"].lower()
         keyword_hits = sum(1 for w in meaningful_query_words if w in content_lower) if meaningful_query_words else 0
-        effective_sim = sim + (keyword_hits * 0.15)
+        effective_sim = sim + (keyword_hits * 0.18)
+
+        # Catalog & Budget Intelligence Boost
+        if is_catalog_query:
+            items = extract_catalog_items_from_chunk(
+                c["content"],
+                chunk_index=c.get("chunk_index", 1),
+                url=c.get("url", ""),
+                title=c.get("title", "")
+            )
+            if items:
+                matched_items = match_items_against_query(items, intent)
+                has_fitting = any(it.get("within_budget", False) for it in matched_items)
+                
+                if has_fitting:
+                    # Item fits user's budget and criteria! Massive priority boost
+                    effective_sim += 0.85
+                elif matched_items:
+                    # Items match entity/category even if over budget
+                    effective_sim += 0.35
+                else:
+                    effective_sim += 0.15
+
+                # Rent vs Sale deal-type match
+                if intent.get("deal_type") == "rent" and any(it.get("deal_type") == "rent" for it in items):
+                    effective_sim += 0.30
+
+                # Bedroom count match
+                if intent.get("bedrooms") and any(it.get("bedrooms") == intent["bedrooms"] for it in items):
+                    effective_sim += 0.25
+
+                # Location match
+                if intent.get("locations") and any(any(loc in (it.get("location", "") + it.get("name", "")).lower() for loc in intent["locations"]) for it in items):
+                    effective_sim += 0.30
+            else:
+                # If chunk is not structured catalog but has pricing info or catalog tags
+                if any(tag in c["content"] for tag in ["PRODUCT SPECIFICATION", "PROPERTY LISTING", "• Price:", "Price:", "AED", "$"]):
+                    effective_sim += 0.15
 
         # Grounding condition: require at least 1 keyword hit if using fallback pseudo-embedding
         client = get_genai_client()
-        if not client and meaningful_query_words and keyword_hits == 0:
+        if not client and meaningful_query_words and keyword_hits == 0 and not (is_catalog_query and any(p in c["content"] for p in ["• Price:", "Price:", "AED", "$"])):
             continue
 
         if effective_sim >= min_similarity:
@@ -129,5 +178,5 @@ def search_relevant_chunks(
             })
             
     scored_chunks.sort(key=lambda x: x["similarity"], reverse=True)
-    return scored_chunks[:top_k]
+    return scored_chunks[:effective_top_k]
 
