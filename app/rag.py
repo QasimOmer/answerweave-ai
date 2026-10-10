@@ -9,7 +9,7 @@ Features:
 
 import re
 import requests
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 from google import genai
 from google.genai import types
 
@@ -44,7 +44,7 @@ PRIMARY DIRECTIVES:
    - Clearly present matching products from the Context Sources:
      • **Product Name** — **Price** (with currency)
        Key features, specifications, and availability
-       Direct link / URL if available in the source
+       Direct link / URL ONLY IF the exact full URL is explicitly written in the Context Sources for that item.
    - If no products in the Context Sources fall under the visitor's exact budget, clearly explain that items under that specific budget are currently unavailable, highlight the closest or lowest priced alternatives that ARE available in the sources, and invite them to leave contact info for updates.
 7. REAL ESTATE & PROPERTY RECOMMENDATIONS:
    - Differentiate between **Rental Properties** (per month / per year) and **Properties for Sale**.
@@ -53,9 +53,13 @@ PRIMARY DIRECTIVES:
      - Present matching listings clearly:
        • **Property Title / Listing** — **Price / Rent** (with frequency, e.g. 950 AED / month)
          Location / Neighborhood • Bedrooms / Bathrooms • Size & Amenities
-         Direct link / URL if available in the source
+         Direct link / URL ONLY IF the exact full URL is explicitly written in the Context Sources for that item.
      - If the requested budget is lower than any rental properties in the documentation (e.g. asking for 1,000 AED rentals when typical rents in the documentation start higher):
        Politely inform the visitor of the typical starting rates from the documentation, offer to connect them with a leasing specialist, and append [LEAD_TRIGGER].
+8. STRICT LINK & URL ACCURACY DIRECTIVE (ZERO 404 BROKEN LINKS):
+   - CRITICAL: NEVER invent, fabricate, or guess web URLs or paths (e.g., never create links like '/properties/123', '/rent/...', or '/product/xyz').
+   - You may ONLY link to a URL if that EXACT full URL is explicitly stated in the provided Context Sources.
+   - If an item does not have an exact URL in the sources, present all available details (name, price, specs, location) WITHOUT generating a markdown link. Any broken link or 404 is strictly unacceptable.
 """
 
 def detect_conversational_intent(query: str, asst_name: str = "Our Team", welcome_msg: str = "") -> Optional[str]:
@@ -140,6 +144,91 @@ def detect_conversational_intent(query: str, asst_name: str = "Our Team", welcom
 
     return None
 
+def normalize_url(u: str) -> str:
+    """Canonical normalization for URLs."""
+    return u.strip().rstrip("/").lower()
+
+def get_verified_assistant_urls(assistant_id: str, chunks: Optional[List[Dict[str, Any]]] = None) -> Set[str]:
+    """
+    Returns the set of all verified, crawled, and indexed URLs for this assistant.
+    Aggregates chunk URLs, assistant sources, and URLs mentioned inside chunk text.
+    Used to strictly prevent hallucinated 404 links.
+    """
+    valid_urls = set()
+
+    # 1. From chunks passed in
+    if chunks:
+        for c in chunks:
+            u = c.get("url")
+            if u and isinstance(u, str) and u.startswith("http"):
+                valid_urls.add(u.strip())
+            # Also extract explicit URLs found in chunk text
+            content = c.get("content", "")
+            if content and "http" in content:
+                for match in re.findall(r'https?://[^\s\)"\'\]><]+', content):
+                    clean_u = match.strip().rstrip(".,;:)!")
+                    if clean_u:
+                        valid_urls.add(clean_u)
+
+    # 2. From all registered sources for this assistant
+    if assistant_id:
+        try:
+            from app.db import list_sources
+            sources = list_sources(assistant_id)
+            for s in sources:
+                u = s.get("url")
+                if u and isinstance(u, str) and u.startswith("http"):
+                    valid_urls.add(u.strip())
+        except Exception:
+            pass
+
+    return valid_urls
+
+def sanitize_hallucinated_urls(answer: str, verified_urls: Set[str]) -> str:
+    """
+    Scans the answer for any markdown links [anchor](url) or raw URLs.
+    If a URL is not present in verified_urls, it strips or sanitizes the link to prevent 404 errors.
+    - If anchor is generic ('View Listing', 'Click here', etc.), removes the link element cleanly.
+    - If anchor is descriptive ('Downtown Studio', 'Sneaker XYZ'), keeps the text without the broken link.
+    """
+    if not answer:
+        return ""
+    if not verified_urls:
+        verified_urls = set()
+
+    norm_verified = {normalize_url(u) for u in verified_urls if u}
+
+    generic_anchors = {
+        "view listing", "view product", "view details", "view property",
+        "click here", "link", "details", "website", "here", "direct url",
+        "product page", "listing page", "view more", "learn more", "visit here",
+        "listing", "view"
+    }
+
+    def replace_markdown_link(match):
+        prefix = match.group(1) or ""
+        anchor = match.group(2).strip()
+        url = match.group(3).strip()
+        norm_u = normalize_url(url)
+
+        if norm_u in norm_verified:
+            return match.group(0)
+
+        # Unverified URL!
+        clean_anchor = anchor.strip().lower()
+        if clean_anchor in generic_anchors:
+            return ""
+        return f"{prefix}**{anchor}**" if not anchor.startswith("**") else f"{prefix}{anchor}"
+
+    # Match optional bullet/emoji prefix + markdown link
+    link_pattern = re.compile(r'((?:\n\s*)?(?:🔗\s*|•\s*)?)\[([^\]]+)\]\((https?://[^\s\)]+)\)')
+    cleaned = link_pattern.sub(replace_markdown_link, answer)
+
+    # Clean leftover empty lines or dangling emojis
+    cleaned = re.sub(r'🔗\s*(?:\n|$)', '', cleaned)
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+    return cleaned.strip()
+
 def clean_extracted_noise(text: str) -> str:
     """Cleans boilerplate navigation, form fields, and junk text from crawled snippets."""
     text = re.sub(r'^(Question|Official Answer|Answer|FAQ|Q|A)\s*[:\-•–]\s*', '', text, flags=re.I)
@@ -197,10 +286,12 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
         if all_chunk_items:
             matched_items = match_items_against_query(all_chunk_items, intent)
             if matched_items:
-                cat_res = format_catalog_recommendation_answer(matched_items, intent, assistant_name=asst_name)
+                verified_urls = get_verified_assistant_urls(assistant_id, chunks)
+                cat_res = format_catalog_recommendation_answer(matched_items, intent, assistant_name=asst_name, allowed_urls=verified_urls)
                 if cat_res.get("answer"):
+                    clean_cat_ans = sanitize_hallucinated_urls(cat_res["answer"], verified_urls)
                     return {
-                        "answer": cat_res["answer"],
+                        "answer": clean_cat_ans,
                         "sources": sources_list,
                         "lead_prompted": cat_res.get("lead_prompted", False)
                     }
@@ -314,8 +405,11 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
     lower_q = query.lower()
     lead_trigger = any(w in lower_q for w in ["contact", "speak to human", "sales", "call me", "reach out", "email me", "support ticket", "pricing", "quote", "demo"])
 
+    verified_urls = get_verified_assistant_urls(assistant_id, chunks)
+    clean_formatted_answer = sanitize_hallucinated_urls(formatted_answer, verified_urls)
+
     return {
-        "answer": formatted_answer,
+        "answer": clean_formatted_answer,
         "sources": sources_list,
         "lead_prompted": lead_trigger
     }
@@ -581,7 +675,7 @@ def generate_grounded_response(
     if catalog_intent.get("is_catalog_query") and catalog_intent.get("max_price") is not None:
         curr_hint = catalog_intent.get("currency")
         curr_text = "AED or $" if curr_hint == "AED_OR_USD" else (curr_hint if curr_hint not in ["ANY", ""] else "")
-        catalog_hint = f"\n[Special Directives for this Query: The user is asking about {catalog_intent.get('entity_type')}s with a maximum budget of {catalog_intent.get('max_price')} {curr_text}. Carefully check item prices against this budget. List matching items clearly with bold title, exact price, key details, and direct URL link. If no items in the Context Sources fall under this budget, state what the lowest available starting price is and offer to follow up.]\n"
+        catalog_hint = f"\n[Special Directives for this Query: The user is asking about {catalog_intent.get('entity_type')}s with a maximum budget of {catalog_intent.get('max_price')} {curr_text}. Carefully check item prices against this budget. List matching items clearly with bold title, exact price, and key details. Do NOT fabricate or guess URLs - only use URLs explicitly present in Context Sources. If no items in the Context Sources fall under this budget, state what the lowest available starting price is and offer to follow up.]\n"
 
     user_prompt = f"""Conversation History:
 {history_str}
@@ -650,8 +744,11 @@ User Question: {query}
         if any(w in lower_q for w in ["contact", "speak to human", "sales", "call me", "reach out", "email me", "support ticket", "quote", "demo"]):
             lead_trigger = True
 
+        verified_urls = get_verified_assistant_urls(assistant_id, chunks)
+        cleaned_answer = sanitize_hallucinated_urls(raw_answer, verified_urls)
+
         return {
-            "answer": raw_answer,
+            "answer": cleaned_answer,
             "sources": sources_list if has_relevant_docs else [],
             "lead_prompted": lead_trigger
         }

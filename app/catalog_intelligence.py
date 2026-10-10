@@ -8,7 +8,7 @@ Specialized in:
 """
 
 import re
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Set
 
 # Currency normalization helpers
 CURRENCY_MAP = {
@@ -480,17 +480,21 @@ def match_items_against_query(
 def format_catalog_recommendation_answer(
     matched_items: List[Dict[str, Any]],
     query_intent: Dict[str, Any],
-    assistant_name: str = "Our Team"
+    assistant_name: str = "Our Team",
+    allowed_urls: Optional[Set[str]] = None
 ) -> Dict[str, Any]:
     """
     Generates a clear, professional, structured answer for product/property queries.
     Used for local extractive mode as well as zero-key offline generation.
+    Strictly prevents 404 links by verifying URLs against allowed_urls.
     """
     if not matched_items:
         return {
             "answer": None,
             "lead_prompted": True
         }
+
+    norm_allowed = {u.strip().rstrip("/").lower() for u in allowed_urls if u} if allowed_urls is not None else None
 
     max_p = query_intent.get("max_price")
     curr = query_intent.get("currency")
@@ -530,7 +534,12 @@ def format_catalog_recommendation_answer(
             if details:
                 entry += f"\n  {' • '.join(details)}"
             if url and url != "#" and url.startswith("http"):
-                entry += f"\n  🔗 [View Listing]({url})"
+                norm_u = url.strip().rstrip("/").lower()
+                is_valid_url = True
+                if norm_allowed is not None:
+                    is_valid_url = norm_u in norm_allowed
+                if is_valid_url:
+                    entry += f"\n  🔗 [View Listing]({url})"
             entry += f" [{idx}]"
             lines.append(entry)
 

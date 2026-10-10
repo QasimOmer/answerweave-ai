@@ -99,7 +99,7 @@ URBANKICKS_PRODUCTS = {
 
 IDEALHOMES_PROPERTIES = {
     "title": "Ideal Homes Dubai Properties & Rental Catalog",
-    "url": "https://idealhomes.ae/listings",
+    "url": "https://idealhomes.ae",
     "content": """# Ideal Homes Dubai Featured Rental & Sale Properties
 ==================================================
 🏠 PROPERTY LISTING (FOR RENT): Furnished Studio in Dubai Silicon Oasis
@@ -108,7 +108,7 @@ IDEALHOMES_PROPERTIES = {
 • Category / Type: Studio Apartment
 • Location / Neighborhood: Dubai Silicon Oasis (DSO), Dubai
 • Key Specs & Features: Studio • 1 Bath • 420 sqft • High-speed WiFi & DEWA included • Balcony
-• Direct URL: https://idealhomes.ae/rent/dso-studio-950
+• Direct URL: https://idealhomes.ae/contact
 ==================================================
 🏠 PROPERTY LISTING (FOR RENT): Cozy Studio in Jumeirah Village Circle
 • Price: $850 / month
@@ -116,7 +116,7 @@ IDEALHOMES_PROPERTIES = {
 • Category / Type: Studio Apartment
 • Location / Neighborhood: Jumeirah Village Circle (JVC), Dubai
 • Key Specs & Features: Studio • 1 Bath • 460 sqft • Pool & Gym Access • Near Circle Mall
-• Direct URL: https://idealhomes.ae/rent/jvc-studio-850
+• Direct URL: https://idealhomes.ae/contact
 ==================================================
 🏠 PROPERTY LISTING (FOR RENT): 1-Bedroom Apartment in Al Barsha 1
 • Price: 3,800 AED / month
@@ -124,7 +124,7 @@ IDEALHOMES_PROPERTIES = {
 • Category / Type: 1-Bedroom Apartment
 • Location / Neighborhood: Al Barsha 1, Dubai
 • Key Specs & Features: 1 Bed • 2 Baths • 780 sqft • Near Mall of the Emirates & Metro
-• Direct URL: https://idealhomes.ae/rent/barsha-1bed
+• Direct URL: https://idealhomes.ae/contact
 ==================================================
 🏠 PROPERTY LISTING (FOR RENT): 2-Bedroom Modern Apartment in Dubai Marina
 • Price: 7,500 AED / month
@@ -132,7 +132,7 @@ IDEALHOMES_PROPERTIES = {
 • Category / Type: 2-Bedroom Apartment
 • Location / Neighborhood: Dubai Marina, Dubai
 • Key Specs & Features: 2 Beds • 2 Baths • 1,200 sqft • Full Marina View • Chiller Free
-• Direct URL: https://idealhomes.ae/rent/marina-2bed
+• Direct URL: https://idealhomes.ae/contact
 ==================================================
 🏠 PROPERTY LISTING (FOR SALE): 3-Bedroom Villa in Arabian Ranches
 • Price: 3,250,000 AED
@@ -140,7 +140,7 @@ IDEALHOMES_PROPERTIES = {
 • Category / Type: Villa
 • Location / Neighborhood: Arabian Ranches, Dubai
 • Key Specs & Features: 3 Beds • 4 Baths • 3,100 sqft • Private Garden • Near Community Park
-• Direct URL: https://idealhomes.ae/buy/ranches-villa
+• Direct URL: https://idealhomes.ae/off-plan
 =================================================="""
 }
 
@@ -216,10 +216,10 @@ def seed():
   2. Send link to UrbanKicks printable size guide."""
     )
 
-    # 3. Seed Ideal Homes Real Estate Properties Catalog
+    # 3. Seed Ideal Homes Real Estate Properties Catalog (Dedicated Demo Assistant)
     print("  Adding Ideal Homes real estate rental & sale catalog...")
-    asst_re = get_assistant("asst_8667289e")
-    re_id = "asst_8667289e" if asst_re else "asst_realestate"
+    asst_re = get_assistant("asst_realestate")
+    re_id = "asst_realestate"
     if not asst_re:
         from app.db import get_db
         conn = get_db()
