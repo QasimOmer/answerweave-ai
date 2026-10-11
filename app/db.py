@@ -267,7 +267,11 @@ def init_db():
             lead_title TEXT DEFAULT 'Get in touch with our team',
             lead_fields TEXT DEFAULT 'name_email',
             sound_enabled INTEGER DEFAULT 1,
-            show_branding INTEGER DEFAULT 1
+            show_branding INTEGER DEFAULT 1,
+            whatsapp_number TEXT DEFAULT '',
+            input_placeholder TEXT DEFAULT 'Ask a question...',
+            launcher_pulse INTEGER DEFAULT 1,
+            border_radius TEXT DEFAULT '22px'
         );
 
         CREATE TABLE IF NOT EXISTS sources (
@@ -349,7 +353,14 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """)
-        conn.commit()
+        try:
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS whatsapp_number TEXT DEFAULT '';")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS input_placeholder TEXT DEFAULT 'Ask a question...';")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS launcher_pulse INTEGER DEFAULT 1;")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS border_radius TEXT DEFAULT '22px';")
+        except Exception:
+            pass
+        conn.commit();
 
         # Check if assistants table in Postgres has data
         cursor.execute("SELECT count(*) as cnt FROM assistants;")
@@ -560,7 +571,11 @@ def init_db():
         ("assistants", "lead_title", "TEXT DEFAULT 'Get in touch with our team'"),
         ("assistants", "lead_fields", "TEXT DEFAULT 'name_email'"),
         ("assistants", "sound_enabled", "INTEGER DEFAULT 1"),
-        ("assistants", "show_branding", "INTEGER DEFAULT 1")
+        ("assistants", "show_branding", "INTEGER DEFAULT 1"),
+        ("assistants", "whatsapp_number", "TEXT DEFAULT ''"),
+        ("assistants", "input_placeholder", "TEXT DEFAULT 'Ask a question...'"),
+        ("assistants", "launcher_pulse", "INTEGER DEFAULT 1"),
+        ("assistants", "border_radius", "TEXT DEFAULT '22px'")
     ]
     for tbl, col, col_def in tables_to_migrate:
         try:
@@ -730,7 +745,8 @@ def update_assistant(assistant_id: str, data: Dict[str, Any]) -> bool:
         "position", "suggested_questions", "lead_capture_enabled", "voice_enabled",
         "notification_email", "webhook_url",
         "theme_mode", "widget_subtitle", "launcher_text", "launcher_style",
-        "teaser_message", "lead_title", "lead_fields", "sound_enabled", "show_branding"
+        "teaser_message", "lead_title", "lead_fields", "sound_enabled", "show_branding", "whatsapp_number",
+        "input_placeholder", "launcher_pulse", "border_radius"
     ]
     updates = []
     values = []

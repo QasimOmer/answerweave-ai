@@ -485,9 +485,13 @@
                                 </h4>
                                 <p class="text-xs text-slate-400 mt-0.5">Every response is strictly grounded in these verified sources.</p>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <input type="text" id="sourceSearchInput" oninput="filterSourcesTable()" placeholder="Search indexed sources..." class="glass-input text-xs rounded-xl px-3 py-1.5 outline-none w-56" />
-                                <button onclick="loadSources()" class="text-xs text-brand-400 hover:text-brand-300 font-bold flex items-center gap-1">
+                            <div class="flex items-center gap-2.5">
+                                <input type="text" id="sourceSearchInput" oninput="filterSourcesTable()" placeholder="Search indexed sources..." class="glass-input text-xs rounded-xl px-3 py-1.5 outline-none w-44 sm:w-56" />
+                                <button id="syncKnowledgeBtn" onclick="syncAssistantKnowledge()" class="bg-brand-600/20 hover:bg-brand-600 text-brand-300 hover:text-white border border-brand-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+                                    <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+                                    <span>Sync &amp; Re-crawl</span>
+                                </button>
+                                <button onclick="loadSources()" class="text-xs text-brand-400 hover:text-brand-300 font-bold flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-white/5 transition cursor-pointer">
                                     <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh
                                 </button>
                             </div>
@@ -738,28 +742,24 @@
                                 <p class="text-xs text-slate-400 mt-0.5">Customize styling, popular questions, voice mode, and copy embed tag.</p>
                             </div>
 
-                            <form id="assistantBrandingForm" class="space-y-4">
-                                <!-- Bot Name & Subtitle -->
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Bot Name</label>
-                                        <input type="text" id="asstName" oninput="onLiveNameChange(this.value)" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2 outline-none" />
+                            <form id="assistantBrandingForm" class="space-y-5">
+                                <!-- Section 1: Brand Identity & Contact -->
+                                <div class="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
+                                    <div class="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider mb-1">
+                                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-400"></i>
+                                        <span>Brand Identity &amp; Contact</span>
                                     </div>
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Status / Subtitle</label>
-                                        <input type="text" id="asstSubtitle" oninput="onLiveSubtitleChange(this.value)" placeholder="Online" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
-                                    </div>
-                                </div>
-
-                                <!-- Theme Color & Avatar -->
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Header Background</label>
-                                        <div class="flex items-center gap-2">
-                                            <input type="color" id="asstColorPicker" oninput="onLiveColorChange(this.value)" class="w-9 h-9 rounded-lg border border-white/10 bg-transparent cursor-pointer" />
-                                            <input type="text" id="asstColorText" oninput="onLiveColorChange(this.value)" class="glass-input w-full text-xs font-mono rounded-lg px-2 py-2 outline-none" />
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Bot Name</label>
+                                            <input type="text" id="asstName" oninput="onLiveNameChange(this.value)" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2 outline-none" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Status / Subtitle</label>
+                                            <input type="text" id="asstSubtitle" oninput="onLiveSubtitleChange(this.value)" placeholder="Online" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
                                         </div>
                                     </div>
+
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-300 mb-1">Brand Icon / Logo</label>
                                         <div class="flex items-center gap-2.5">
@@ -781,57 +781,160 @@
                                             </div>
                                         </div>
                                     </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
+                                                <span class="text-emerald-400">💬</span> WhatsApp Number
+                                            </label>
+                                            <input type="text" id="asstWhatsapp" placeholder="+971505594888" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none font-mono" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">White-Label Footer</label>
+                                            <select id="asstShowBranding" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="true">Show "Powered by WeaveFlow"</option>
+                                                <option value="false">Hidden (White-Label)</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <!-- Placement & Voice -->
-                                <div class="grid grid-cols-2 gap-3">
+                                <!-- Section 2: Theme, Palette & Geometry -->
+                                <div class="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
+                                    <div class="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider mb-1">
+                                        <i data-lucide="palette" class="w-3.5 h-3.5 text-brand-400"></i>
+                                        <span>Appearance &amp; Theme Styling</span>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Theme Mode</label>
+                                            <select id="asstThemeMode" onchange="onLiveThemeModeChange(this.value)" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="light">Light Mode (Crisp Clean)</option>
+                                                <option value="dark">Dark Mode (Obsidian Midnight)</option>
+                                                <option value="auto">Auto (Match Visitor OS Preference)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Widget Corner Radius</label>
+                                            <select id="asstRadius" onchange="onLiveRadiusChange(this.value)" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="22px">Modern Curved (22px)</option>
+                                                <option value="14px">Sharp Minimal (14px)</option>
+                                                <option value="28px">Soft Pill (28px)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Corner Placement</label>
-                                        <select id="asstPosition" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
-                                            <option value="bottom-right">Bottom-Right Corner</option>
-                                            <option value="bottom-left">Bottom-Left Corner</option>
-                                        </select>
+                                        <div class="flex items-center justify-between mb-1.5">
+                                            <label class="block text-xs font-semibold text-slate-300">Theme Color &amp; 1-Click Presets</label>
+                                            <span class="text-[10px] text-slate-400">Quick swatches</span>
+                                        </div>
+                                        <!-- Quick Color Swatches -->
+                                        <div class="flex items-center gap-1.5 mb-2">
+                                            <button type="button" onclick="onLivePresetColor('#0f172a')" class="w-6 h-6 rounded-lg bg-[#0f172a] border border-white/30 shadow-sm hover:scale-110 transition cursor-pointer" title="Obsidian Luxury"></button>
+                                            <button type="button" onclick="onLivePresetColor('#4f46e5')" class="w-6 h-6 rounded-lg bg-[#4f46e5] border border-white/30 shadow-sm hover:scale-110 transition cursor-pointer" title="Indigo Electric"></button>
+                                            <button type="button" onclick="onLivePresetColor('#2563eb')" class="w-6 h-6 rounded-lg bg-[#2563eb] border border-white/30 shadow-sm hover:scale-110 transition cursor-pointer" title="Royal Blue"></button>
+                                            <button type="button" onclick="onLivePresetColor('#059669')" class="w-6 h-6 rounded-lg bg-[#059669] border border-white/30 shadow-sm hover:scale-110 transition cursor-pointer" title="Emerald Growth"></button>
+                                            <button type="button" onclick="onLivePresetColor('#7c3aed')" class="w-6 h-6 rounded-lg bg-[#7c3aed] border border-white/30 shadow-sm hover:scale-110 transition cursor-pointer" title="Cyber Violet"></button>
+                                            <button type="button" onclick="onLivePresetColor('#e11d48')" class="w-6 h-6 rounded-lg bg-[#e11d48] border border-white/30 shadow-sm hover:scale-110 transition cursor-pointer" title="Rose Crimson"></button>
+                                            <button type="button" onclick="onLivePresetColor('#d97706')" class="w-6 h-6 rounded-lg bg-[#d97706] border border-white/30 shadow-sm hover:scale-110 transition cursor-pointer" title="Warm Amber"></button>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <input type="color" id="asstColorPicker" oninput="onLiveColorChange(this.value)" class="w-9 h-9 rounded-lg border border-white/10 bg-transparent cursor-pointer shrink-0" />
+                                            <input type="text" id="asstColorText" oninput="onLiveColorChange(this.value)" class="glass-input w-full text-xs font-mono rounded-lg px-2.5 py-2 outline-none" />
+                                        </div>
                                     </div>
+                                </div>
+
+                                <!-- Section 3: Floating Launcher Button -->
+                                <div class="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
+                                    <div class="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider mb-1">
+                                        <i data-lucide="radio" class="w-3.5 h-3.5 text-brand-400"></i>
+                                        <span>Floating Launcher Button</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Launcher Style</label>
+                                            <select id="asstLauncherStyle" onchange="onLiveLauncherStyleChange(this.value)" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="circle">Floating Circle Icon</option>
+                                                <option value="pill">Floating Pill with Label Text</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Attention Pulse Ring</label>
+                                            <select id="asstLauncherPulse" onchange="onLivePulseChange(this.value === 'true')" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="true">Enabled (Breathing Pulse Glow)</option>
+                                                <option value="false">Disabled (Static)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Pill Label Text</label>
+                                            <input type="text" id="asstLauncherText" oninput="onLiveLauncherTextChange(this.value)" placeholder="Chat with us" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Corner Placement</label>
+                                            <select id="asstPosition" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="bottom-right">Bottom-Right Corner</option>
+                                                <option value="bottom-left">Bottom-Left Corner</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Section 4: Chat Greetings & Experience -->
+                                <div class="p-4 bg-white/5 rounded-2xl border border-white/5 space-y-3">
+                                    <div class="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider mb-1">
+                                        <i data-lucide="message-square" class="w-3.5 h-3.5 text-brand-400"></i>
+                                        <span>Greetings &amp; Chat Behavior</span>
+                                    </div>
+
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Voice Input (Mic 🎤)</label>
-                                        <select id="asstVoice" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
-                                            <option value="true">Enabled (Speech-to-Text)</option>
-                                            <option value="false">Disabled</option>
-                                        </select>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Welcome Message</label>
+                                        <textarea id="asstWelcome" oninput="onLiveWelcomeChange(this.value)" rows="2" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none"></textarea>
                                     </div>
-                                </div>
 
-                                <!-- Welcome Greeting Message -->
-                                <div>
-                                    <label class="block text-xs font-semibold text-slate-300 mb-1">Welcome Message</label>
-                                    <textarea id="asstWelcome" oninput="onLiveWelcomeChange(this.value)" rows="2" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none"></textarea>
-                                </div>
-
-                                <!-- Popular Questions / Starter Prompts -->
-                                <div>
-                                    <div class="flex items-center justify-between mb-1">
-                                        <label class="block text-xs font-semibold text-slate-300">Popular Questions (Cards with Arrow)</label>
-                                        <span class="text-[10px] text-slate-500">One question per line</span>
-                                    </div>
-                                    <textarea id="asstQuestions" oninput="onLiveQuestionsChange(this.value)" rows="3" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none leading-relaxed" placeholder="What legal process outsourcing services do you offer?&#10;Can you build a custom AI solution for my business?&#10;How does HazenTech save firms 50% on back-office costs?"></textarea>
-                                </div>
-
-                                <!-- Proactive Greeting Teaser Bubble -->
-                                <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Proactive Teaser Popup</label>
-                                        <input type="text" id="asstTeaser" oninput="onLiveTeaserChange(this.value)" placeholder="👋 Hi! Need quick answers?" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                        <div class="flex items-center justify-between mb-1">
+                                            <label class="block text-xs font-semibold text-slate-300">Popular Questions (Cards with Arrow)</label>
+                                            <span class="text-[10px] text-slate-500">One per line</span>
+                                        </div>
+                                        <textarea id="asstQuestions" oninput="onLiveQuestionsChange(this.value)" rows="3" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none leading-relaxed" placeholder="What services do you offer?&#10;How does pricing work?&#10;Can I speak with a specialist?"></textarea>
                                     </div>
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-300 mb-1">White-Label Branding</label>
-                                        <select id="asstShowBranding" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
-                                            <option value="true">Show "Powered by WeaveFlow"</option>
-                                            <option value="false">Hidden (White-Label)</option>
-                                        </select>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Proactive Teaser Popup</label>
+                                            <input type="text" id="asstTeaser" oninput="onLiveTeaserChange(this.value)" placeholder="👋 Hi! Need quick answers?" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Input Placeholder</label>
+                                            <input type="text" id="asstPlaceholder" oninput="onLivePlaceholderChange(this.value)" placeholder="Ask a question..." class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Voice Input (Mic 🎤)</label>
+                                            <select id="asstVoice" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="true">Enabled (Speech-to-Text)</option>
+                                                <option value="false">Disabled</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-slate-300 mb-1">Audio Chime (Sound)</label>
+                                            <select id="asstSound" onchange="onLiveSoundChange(this.value === 'true')" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="true">Enabled (Pleasant Chime)</option>
+                                                <option value="false">Disabled (Silent)</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-1.5">
+                                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-brand-500/25 flex items-center justify-center gap-1.5 cursor-pointer">
                                     <i data-lucide="check" class="w-4 h-4"></i>
                                     <span>Save Widget Customization</span>
                                 </button>
@@ -888,21 +991,25 @@
                                     </div>
 
                                     <!-- Interactive Widget Window inside Mockup -->
-                                    <div class="w-full max-w-xs bg-white text-slate-800 rounded-[24px] shadow-2xl border border-slate-200 overflow-hidden relative z-10 flex flex-col h-[450px]">
+                                    <div id="prevChatWindow" class="w-full max-w-xs bg-white text-slate-800 rounded-[22px] shadow-2xl border border-slate-200 overflow-hidden relative z-10 flex flex-col h-[450px] transition-all">
                                         <!-- Widget Header -->
                                         <div id="prevHeader" class="bg-[#081726] text-white p-3.5 flex items-center justify-between transition-colors shrink-0">
                                             <div class="flex items-center gap-2.5">
-                                                <div id="prevAvatar" class="w-8 h-8 rounded-full bg-white text-[#081726] flex items-center justify-center text-sm font-bold shadow-sm">⚡</div>
+                                                <div id="prevAvatar" class="w-8 h-8 rounded-full bg-white text-[#081726] flex items-center justify-center text-sm font-bold shadow-sm shrink-0">⚡</div>
                                                 <div>
-                                                    <div id="prevTitle" class="font-bold text-xs leading-none">EcomAlign Assistant</div>
+                                                    <div class="flex items-center gap-1.5 leading-none">
+                                                        <span id="prevTitle" class="font-bold text-xs">EcomAlign Assistant</span>
+                                                        <span class="inline-flex items-center gap-0.5 text-[9px] font-bold text-white/90 bg-white/15 px-1.5 py-0.5 rounded-full backdrop-blur-sm">✓ AI</span>
+                                                    </div>
                                                     <div class="text-[10.5px] text-slate-400 flex items-center gap-1 mt-0.5">
-                                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                                                         <span id="prevSubtitle">Online</span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <!-- Action Icons in Header (Mail, Reset, Close) -->
+                                            <!-- Action Icons in Header (Sound, Mail, Reset, Close) -->
                                             <div class="flex items-center gap-1.5 text-slate-400">
+                                                <span id="prevSoundIndicator" class="p-1 hover:text-white cursor-pointer text-xs" title="Audio Chimes">🔔</span>
                                                 <span class="p-1 hover:text-white cursor-pointer text-xs" title="Contact Email">✉</span>
                                                 <span class="p-1 hover:text-white cursor-pointer text-xs" title="New Chat">✎</span>
                                                 <span class="w-[1px] h-3 bg-white/20 mx-0.5"></span>
@@ -1669,6 +1776,30 @@
             document.getElementById('asstQuestions').value = asst.suggested_questions || '';
             document.getElementById('asstTeaser').value = asst.teaser_message || '👋 Hi! Need quick answers?';
             document.getElementById('asstShowBranding').value = asst.show_branding !== 0 ? 'true' : 'false';
+            if (document.getElementById('asstWhatsapp')) {
+                document.getElementById('asstWhatsapp').value = asst.whatsapp_number || '';
+            }
+            if (document.getElementById('asstThemeMode')) {
+                document.getElementById('asstThemeMode').value = asst.theme_mode || 'light';
+            }
+            if (document.getElementById('asstRadius')) {
+                document.getElementById('asstRadius').value = asst.border_radius || '22px';
+            }
+            if (document.getElementById('asstLauncherStyle')) {
+                document.getElementById('asstLauncherStyle').value = asst.launcher_style || 'circle';
+            }
+            if (document.getElementById('asstLauncherPulse')) {
+                document.getElementById('asstLauncherPulse').value = asst.launcher_pulse !== 0 ? 'true' : 'false';
+            }
+            if (document.getElementById('asstLauncherText')) {
+                document.getElementById('asstLauncherText').value = asst.launcher_text || 'Chat with us';
+            }
+            if (document.getElementById('asstPlaceholder')) {
+                document.getElementById('asstPlaceholder').value = asst.input_placeholder || 'Ask a question...';
+            }
+            if (document.getElementById('asstSound')) {
+                document.getElementById('asstSound').value = asst.sound_enabled !== 0 ? 'true' : 'false';
+            }
 
             document.getElementById('asstDomain').value = asst.domain || '*';
             document.getElementById('asstWebhook').value = asst.webhook_url || '';
@@ -1680,14 +1811,17 @@
 
         function updateLivePreviewDevice(asst) {
             const color = asst.primary_color || '#081726';
-            document.getElementById('prevHeader').style.backgroundColor = color;
-            document.getElementById('prevPopularBar').style.backgroundColor = color;
-            document.getElementById('prevSendBtn').style.backgroundColor = color;
+            onLiveColorChange(color);
             onLiveAvatarChange(asst.bot_avatar || '⚡');
             document.getElementById('prevTitle').innerText = asst.name || 'EcomAlign Assistant';
             document.getElementById('prevSubtitle').innerText = asst.widget_subtitle || 'Online';
             document.getElementById('prevWelcome').innerText = asst.welcome_message || 'Hi! How can I help you today?';
             document.getElementById('prevTeaserText').innerText = asst.teaser_message || '👋 Hi! Need quick answers?';
+            onLivePlaceholderChange(asst.input_placeholder || 'Ask a question...');
+            onLiveThemeModeChange(asst.theme_mode || 'light');
+            onLiveRadiusChange(asst.border_radius || '22px');
+            onLiveLauncherStyleChange(asst.launcher_style || 'circle');
+            onLivePulseChange(asst.launcher_pulse !== 0);
             renderMockPopularCards(asst.suggested_questions);
         }
 
@@ -1699,16 +1833,20 @@
                 ? questionsText.split('\n').filter(q => q.trim())
                 : (questionsText || []);
 
+            const isDark = document.getElementById('asstThemeMode') && document.getElementById('asstThemeMode').value === 'dark';
+
             questions.slice(0, 3).forEach(q => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = "w-full bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl p-2.5 px-3 flex items-center justify-between text-left shadow-sm transition group cursor-pointer";
+                btn.className = isDark
+                    ? "w-full bg-slate-800/90 hover:bg-slate-700/80 border border-slate-700 hover:border-slate-600 rounded-2xl p-2.5 px-3 flex items-center justify-between text-left shadow-sm transition group cursor-pointer"
+                    : "w-full bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl p-2.5 px-3 flex items-center justify-between text-left shadow-sm transition group cursor-pointer";
                 btn.innerHTML = `
                     <div class="flex items-center gap-2 flex-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
-                        <span class="font-semibold text-slate-800 text-[11px] leading-tight">${escapeHtml(q)}</span>
+                        <span class="w-1.5 h-1.5 rounded-full ${isDark ? 'bg-slate-500' : 'bg-slate-400'} shrink-0"></span>
+                        <span class="font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'} text-[11px] leading-tight">${escapeHtml(q)}</span>
                     </div>
-                    <span class="text-slate-400 group-hover:text-slate-900 group-hover:translate-x-0.5 transition text-xs font-bold">→</span>
+                    <span class="${isDark ? 'text-slate-500 group-hover:text-white' : 'text-slate-400 group-hover:text-slate-900'} group-hover:translate-x-0.5 transition text-xs font-bold">→</span>
                 `;
                 btn.onclick = () => {
                     document.getElementById('prevChatInput').value = q;
@@ -1733,6 +1871,10 @@
             document.getElementById('prevPopularBar').style.backgroundColor = val;
             document.getElementById('prevBubble').style.backgroundColor = val;
             document.getElementById('prevSendBtn').style.backgroundColor = val;
+        }
+
+        function onLivePresetColor(val) {
+            onLiveColorChange(val);
         }
 
         function handleBrandIconUpload(input, targetInputId) {
@@ -1830,6 +1972,123 @@
             document.getElementById('prevTeaserText').innerText = val || '👋 Hi! Need quick answers?';
         }
 
+        function onLivePlaceholderChange(val) {
+            const input = document.getElementById('prevChatInput');
+            if (input) {
+                input.placeholder = val || 'Ask a question...';
+            }
+        }
+
+        function onLiveRadiusChange(val) {
+            const win = document.getElementById('prevChatWindow');
+            if (win) {
+                win.style.borderRadius = val || '22px';
+            }
+        }
+
+        function onLiveThemeModeChange(mode) {
+            const win = document.getElementById('prevChatWindow');
+            const body = document.getElementById('prevChatBody');
+            const welcome = document.getElementById('prevWelcome');
+            const form = document.getElementById('prevChatForm');
+            const inputContainer = form ? form.querySelector('div') : null;
+            const input = document.getElementById('prevChatInput');
+            const teaser = document.getElementById('prevTeaserBubble');
+
+            if (mode === 'dark') {
+                if (win) {
+                    win.classList.add('bg-slate-900', 'text-slate-100', 'border-slate-800');
+                    win.classList.remove('bg-white', 'text-slate-800', 'border-slate-200');
+                }
+                if (body) {
+                    body.style.backgroundColor = '#0b1120';
+                    body.style.backgroundImage = 'radial-gradient(#334155 1.2px, transparent 1.2px)';
+                }
+                if (welcome) {
+                    welcome.className = "bg-slate-800 text-slate-100 p-2.5 rounded-2xl rounded-bl-sm border border-slate-700 shadow-sm text-[11.5px] leading-relaxed";
+                }
+                if (form) {
+                    form.className = "p-2.5 bg-slate-900 border-t border-slate-800 flex items-center gap-2 shrink-0";
+                }
+                if (inputContainer) {
+                    inputContainer.className = "flex-1 bg-slate-800 border border-slate-700 rounded-full flex items-center px-3 py-1";
+                }
+                if (input) {
+                    input.className = "flex-1 text-xs bg-transparent text-slate-100 outline-none";
+                }
+                if (teaser) {
+                    teaser.className = "bg-slate-900 text-slate-100 px-3 py-1.5 rounded-2xl rounded-br-sm shadow-lg border border-slate-700 text-[11px] font-semibold flex items-center gap-1.5";
+                }
+            } else {
+                if (win) {
+                    win.classList.add('bg-white', 'text-slate-800', 'border-slate-200');
+                    win.classList.remove('bg-slate-900', 'text-slate-100', 'border-slate-800');
+                }
+                if (body) {
+                    body.style.backgroundColor = '#f8fafc';
+                    body.style.backgroundImage = 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)';
+                }
+                if (welcome) {
+                    welcome.className = "bg-white text-slate-800 p-2.5 rounded-2xl rounded-bl-sm border border-slate-200 shadow-sm text-[11.5px] leading-relaxed";
+                }
+                if (form) {
+                    form.className = "p-2.5 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0";
+                }
+                if (inputContainer) {
+                    inputContainer.className = "flex-1 bg-slate-100 border border-slate-200 rounded-full flex items-center px-3 py-1";
+                }
+                if (input) {
+                    input.className = "flex-1 text-xs bg-transparent text-slate-800 outline-none";
+                }
+                if (teaser) {
+                    teaser.className = "bg-white text-slate-800 px-3 py-1.5 rounded-2xl rounded-br-sm shadow-lg border border-slate-200 text-[11px] font-semibold flex items-center gap-1.5";
+                }
+            }
+            renderMockPopularCards(document.getElementById('asstQuestions') ? document.getElementById('asstQuestions').value : '');
+        }
+
+        function onLiveLauncherStyleChange(style) {
+            const bubble = document.getElementById('prevBubble');
+            if (!bubble) return;
+            const text = (document.getElementById('asstLauncherText') && document.getElementById('asstLauncherText').value.trim()) || 'Chat with us';
+            const avatarVal = (document.getElementById('asstAvatar') && document.getElementById('asstAvatar').value) || '⚡';
+            const isImg = avatarVal.startsWith('data:image') || avatarVal.startsWith('http');
+            const iconHtml = isImg ? `<img src="${avatarVal}" class="w-4 h-4 rounded-full object-cover shrink-0" alt="Icon" />` : `<span>${avatarVal}</span>`;
+
+            if (style === 'pill') {
+                bubble.className = "h-11 px-4 rounded-full text-white flex items-center justify-center gap-2 shadow-xl transition-all cursor-pointer font-bold text-xs shrink-0";
+                bubble.innerHTML = `${iconHtml} <span>${escapeHtml(text)}</span>`;
+            } else {
+                bubble.className = "w-12 h-12 rounded-full text-white flex items-center justify-center text-xl shadow-xl transition-all cursor-pointer shrink-0";
+                bubble.innerHTML = isImg ? `<img src="${avatarVal}" class="w-full h-full object-cover rounded-full p-0.5" alt="Icon" />` : avatarVal;
+            }
+        }
+
+        function onLiveLauncherTextChange(text) {
+            const style = document.getElementById('asstLauncherStyle') ? document.getElementById('asstLauncherStyle').value : 'circle';
+            if (style === 'pill') {
+                onLiveLauncherStyleChange('pill');
+            }
+        }
+
+        function onLivePulseChange(enabled) {
+            const bubble = document.getElementById('prevBubble');
+            if (!bubble) return;
+            if (enabled) {
+                bubble.classList.add('ring-4', 'ring-brand-400/50', 'animate-pulse');
+            } else {
+                bubble.classList.remove('ring-4', 'ring-brand-400/50', 'animate-pulse');
+            }
+        }
+
+        function onLiveSoundChange(enabled) {
+            const el = document.getElementById('prevSoundIndicator');
+            if (el) {
+                el.innerText = enabled ? '🔔' : '🔕';
+                el.title = enabled ? 'Audio Chimes Enabled' : 'Audio Chimes Muted';
+            }
+        }
+
         async function handleMockSubmit(e) {
             e.preventDefault();
             const input = document.getElementById('prevChatInput');
@@ -1838,6 +2097,7 @@
 
             input.value = '';
             const body = document.getElementById('prevChatBody');
+            const isDark = document.getElementById('asstThemeMode') && document.getElementById('asstThemeMode').value === 'dark';
             
             // Append user bubble
             const userBubble = document.createElement('div');
@@ -1848,7 +2108,9 @@
 
             // Append typing indicator
             const typingBubble = document.createElement('div');
-            typingBubble.className = "bg-white p-2 rounded-xl rounded-bl-sm border border-slate-200 text-slate-500 text-[10px] w-20 flex items-center justify-center gap-1";
+            typingBubble.className = isDark
+                ? "bg-slate-800 p-2 rounded-xl rounded-bl-sm border border-slate-700 text-slate-400 text-[10px] w-20 flex items-center justify-center gap-1"
+                : "bg-white p-2 rounded-xl rounded-bl-sm border border-slate-200 text-slate-500 text-[10px] w-20 flex items-center justify-center gap-1";
             typingBubble.innerHTML = `<span class="animate-ping w-1 h-1 bg-slate-400 rounded-full"></span> Thinking...`;
             body.appendChild(typingBubble);
             body.scrollTop = body.scrollHeight;
@@ -1866,14 +2128,16 @@
                 typingBubble.remove();
 
                 const botBubble = document.createElement('div');
-                botBubble.className = "bg-white p-2.5 rounded-xl rounded-bl-sm border border-slate-200 shadow-sm text-slate-800 text-[11.5px] leading-relaxed";
+                botBubble.className = isDark
+                    ? "bg-slate-800 p-2.5 rounded-xl rounded-bl-sm border border-slate-700 shadow-sm text-slate-100 text-[11.5px] leading-relaxed"
+                    : "bg-white p-2.5 rounded-xl rounded-bl-sm border border-slate-200 shadow-sm text-slate-800 text-[11.5px] leading-relaxed";
                 
                 let citationHtml = '';
                 if (data.sources && data.sources.length > 0) {
                     citationHtml = `
-                        <div class="mt-2 pt-2 border-t border-slate-100 flex flex-wrap gap-1">
+                        <div class="mt-2 pt-2 border-t ${isDark ? 'border-slate-700' : 'border-slate-100'} flex flex-wrap gap-1">
                             ${data.sources.map(s => `
-                                <a href="${s.url}" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded border border-brand-200">
+                                <a href="${s.url}" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20">
                                     [${s.index}] ${s.title.substring(0, 18)}...
                                 </a>
                             `).join('')}
@@ -2049,6 +2313,42 @@
                 status.innerText = `Error: ${err.message || 'Error saving text document.'}`;
             }
         };
+
+        async function syncAssistantKnowledge() {
+            if (!currentAssistantId) {
+                showToast("Please select an active assistant first", "warning");
+                return;
+            }
+            const btn = document.getElementById("syncKnowledgeBtn");
+            const origHtml = btn ? btn.innerHTML : "";
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="inline-block animate-spin">⚡</span> <span>Syncing...</span>`;
+            }
+            try {
+                showToast("Re-crawling active web sources and refreshing vector embeddings...", "info");
+                const res = await fetch(`/api/assistants/${encodeURIComponent(currentAssistantId)}/sync`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    showToast(data.message || `Successfully synced ${data.synced_sources} sources!`, "success");
+                    await loadSources();
+                    if (typeof loadAnalytics === 'function') loadAnalytics();
+                } else {
+                    showToast(data.message || data.detail || "Knowledge sync complete.", "warning");
+                    await loadSources();
+                }
+            } catch (err) {
+                showToast("Error syncing knowledge: " + err.message, "error");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
+        }
 
         async function loadSources() {
             try {
@@ -2867,7 +3167,15 @@
                 welcome_message: document.getElementById('asstWelcome').value.trim(),
                 suggested_questions: document.getElementById('asstQuestions').value.trim(),
                 teaser_message: document.getElementById('asstTeaser').value.trim(),
-                show_branding: document.getElementById('asstShowBranding').value === 'true' ? 1 : 0
+                show_branding: document.getElementById('asstShowBranding').value === 'true' ? 1 : 0,
+                whatsapp_number: document.getElementById('asstWhatsapp') ? document.getElementById('asstWhatsapp').value.trim() : '',
+                theme_mode: document.getElementById('asstThemeMode') ? document.getElementById('asstThemeMode').value : 'light',
+                border_radius: document.getElementById('asstRadius') ? document.getElementById('asstRadius').value : '22px',
+                launcher_style: document.getElementById('asstLauncherStyle') ? document.getElementById('asstLauncherStyle').value : 'circle',
+                launcher_text: document.getElementById('asstLauncherText') ? document.getElementById('asstLauncherText').value.trim() : 'Chat with us',
+                launcher_pulse: document.getElementById('asstLauncherPulse') ? (document.getElementById('asstLauncherPulse').value === 'true' ? 1 : 0) : 1,
+                input_placeholder: document.getElementById('asstPlaceholder') ? document.getElementById('asstPlaceholder').value.trim() : 'Ask a question...',
+                sound_enabled: document.getElementById('asstSound') ? (document.getElementById('asstSound').value === 'true' ? 1 : 0) : 1
             };
 
             try {

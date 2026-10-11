@@ -228,7 +228,8 @@ def sanitize_hallucinated_urls(answer: str, verified_urls: Set[str]) -> str:
         url = match.group(3).strip()
         norm_u = normalize_url(url)
 
-        if norm_u in norm_verified:
+        # Preserve verified URLs, WhatsApp links, and tel links
+        if norm_u in norm_verified or "wa.me/" in url or "whatsapp.com/" in url or url.startswith("tel:"):
             return match.group(0)
 
         # Unverified URL!
@@ -237,12 +238,12 @@ def sanitize_hallucinated_urls(answer: str, verified_urls: Set[str]) -> str:
             return ""
         return f"{prefix}**{anchor}**" if not anchor.startswith("**") else f"{prefix}{anchor}"
 
-    # Match optional bullet/emoji prefix + markdown link
-    link_pattern = re.compile(r'((?:\n\s*)?(?:🔗\s*|•\s*)?)\[([^\]]+)\]\((https?://[^\s\)]+)\)')
+    # Match optional bullet/emoji prefix + markdown link (excluding image tags ![])
+    link_pattern = re.compile(r'((?:\n\s*)?(?:[🔗🟢•]\s*)?)(?<!\!)\[([^\]]+)\]\((https?://[^\s\)]+)\)')
     cleaned = link_pattern.sub(replace_markdown_link, answer)
 
     # Clean leftover empty lines or dangling emojis
-    cleaned = re.sub(r'🔗\s*(?:\n|$)', '', cleaned)
+    cleaned = re.sub(r'[🔗🟢]\s*(?:\n|$)', '', cleaned)
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
     return cleaned.strip()
 
@@ -323,7 +324,16 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
             matched_items = match_items_against_query(all_chunk_items, intent)
             if matched_items:
                 verified_urls = get_verified_assistant_urls(assistant_id, chunks)
-                cat_res = format_catalog_recommendation_answer(matched_items, intent, assistant_name=asst_name, allowed_urls=verified_urls)
+                whatsapp_num = (asst.get("whatsapp_number") or "") if asst else ""
+                if not whatsapp_num and asst_name and "ideal homes" in asst_name.lower():
+                    whatsapp_num = "+971505594888"
+                cat_res = format_catalog_recommendation_answer(
+                    matched_items,
+                    intent,
+                    assistant_name=asst_name,
+                    allowed_urls=verified_urls,
+                    whatsapp_number=whatsapp_num
+                )
                 if cat_res.get("answer"):
                     clean_cat_ans = sanitize_hallucinated_urls(cat_res["answer"], verified_urls)
                     return {
@@ -335,7 +345,16 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
         # If real estate domain or property inquiry, synthesize the comprehensive real estate overview
         if is_real_estate:
             verified_urls = get_verified_assistant_urls(assistant_id, chunks)
-            overview_res = build_real_estate_overview_answer(intent, chunks, assistant_name=asst_name, allowed_urls=verified_urls)
+            whatsapp_num = (asst.get("whatsapp_number") or "") if asst else ""
+            if not whatsapp_num and asst_name and "ideal homes" in asst_name.lower():
+                whatsapp_num = "+971505594888"
+            overview_res = build_real_estate_overview_answer(
+                intent,
+                chunks,
+                assistant_name=asst_name,
+                allowed_urls=verified_urls,
+                whatsapp_number=whatsapp_num
+            )
             if overview_res.get("answer"):
                 clean_overview = sanitize_hallucinated_urls(overview_res["answer"], verified_urls)
                 return {

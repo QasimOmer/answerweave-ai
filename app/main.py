@@ -135,6 +135,10 @@ class UpdateAssistantRequest(BaseModel):
     lead_fields: Optional[str] = None
     sound_enabled: Optional[bool] = None
     show_branding: Optional[bool] = None
+    whatsapp_number: Optional[str] = None
+    input_placeholder: Optional[str] = None
+    launcher_pulse: Optional[bool] = None
+    border_radius: Optional[str] = None
 
 class IngestUrlRequest(BaseModel):
     url: str
@@ -382,6 +386,8 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
         data["sound_enabled"] = 1 if data["sound_enabled"] else 0
     if "show_branding" in data:
         data["show_branding"] = 1 if data["show_branding"] else 0
+    if "launcher_pulse" in data:
+        data["launcher_pulse"] = 1 if data["launcher_pulse"] else 0
     success = update_assistant(asst_id, data)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to update assistant")
@@ -548,6 +554,74 @@ def api_list_sources(asst_id: str):
 def api_delete_source(source_id: int):
     delete_source(source_id)
     return {"status": "success", "deleted_id": source_id}
+
+@app.post("/api/assistants/{asst_id}/sync")
+def api_sync_assistant_knowledge(asst_id: str):
+    """
+    1-Click 'Re-crawl & Sync Knowledge':
+    Re-crawls active web sources for the given assistant, updates chunks & embeddings,
+    clears stale knowledge, and invalidates the cache.
+    """
+    asst = get_assistant(asst_id)
+    if not asst:
+        raise HTTPException(status_code=404, detail="Assistant not found")
+
+    sources = list_sources(assistant_id=asst_id)
+    url_sources = [s for s in sources if s.get("source_type") == "url" and str(s.get("url", "")).startswith("http")]
+
+    if not url_sources:
+        domain = asst.get("domain", "")
+        if domain and domain != "*":
+            domain_url = f"https://{domain}" if not domain.startswith("http") else domain
+            url_sources = [{"id": None, "url": domain_url, "title": asst.get("name", "Website")}]
+        else:
+            return {
+                "status": "warning",
+                "message": "No active web URL sources found to re-crawl for this assistant.",
+                "synced_sources": 0,
+                "refreshed_chunks": 0
+            }
+
+    synced_count = 0
+    refreshed_chunks = 0
+
+    for s in url_sources:
+        u = s.get("url")
+        src_id = s.get("id")
+        try:
+            parsed = fetch_url(u, timeout=15)
+            content = parsed.get("content", "")
+            title = parsed.get("title", s.get("title", "Updated Document"))
+            if not content or len(content) < 50:
+                continue
+
+            chunks = chunk_text(content)
+            if not chunks:
+                continue
+
+            if src_id:
+                delete_source(src_id)
+
+            new_src_id = add_source(asst_id, "url", title, u, content)
+            embs = generate_embeddings_batch(chunks)
+            for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
+                add_chunk(asst_id, new_src_id, idx, c_text, title, u, emb)
+            update_source_chunk_count(new_src_id, len(chunks))
+
+            refreshed_chunks += len(chunks)
+            synced_count += 1
+        except Exception as e:
+            print(f"[Sync] Error refreshing {u}: {e}")
+            continue
+
+    invalidate_chunks_cache(asst_id)
+    return {
+        "status": "success",
+        "assistant_id": asst_id,
+        "synced_sources": synced_count,
+        "refreshed_chunks": refreshed_chunks,
+        "message": f"Successfully re-crawled and synchronized {synced_count} sources ({refreshed_chunks} chunks updated)."
+    }
 
 # ----------------- Visitor Conversations Inbox -----------------
 @app.get("/api/assistants/{asst_id}/conversations")

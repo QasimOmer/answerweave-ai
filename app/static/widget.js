@@ -51,8 +51,15 @@
         lead_capture_enabled: 1,
         voice_enabled: 1,
         launcher_style: "circle",
+        launcher_text: "Chat with us",
+        launcher_pulse: 1,
         teaser_message: "",
-        show_branding: 1
+        show_branding: 1,
+        whatsapp_number: "",
+        theme_mode: "light",
+        border_radius: "22px",
+        input_placeholder: "Ask a question...",
+        sound_enabled: 1
     };
 
     let conversationId = sessionStorage.getItem(`wf_conv_${ASSISTANT_ID}`) || (`wf_${ASSISTANT_ID}_${Math.random().toString(36).substring(2, 10)}`);
@@ -89,7 +96,50 @@
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             -webkit-font-smoothing: antialiased !important;
             box-sizing: border-box !important;
-            color: #0f172a !important;
+            color: var(--wf-text, #0f172a) !important;
+            --wf-primary: #0f172a;
+            --wf-radius: 22px;
+            --wf-bg: #ffffff;
+            --wf-surface: #f8fafc;
+            --wf-surface-hover: #f1f5f9;
+            --wf-card-bg: #ffffff;
+            --wf-card-border: rgba(226, 232, 240, 0.9);
+            --wf-card-border-hover: rgba(203, 213, 225, 1);
+            --wf-text: #0f172a;
+            --wf-text-muted: #64748b;
+            --wf-text-subtle: #94a3b8;
+            --wf-bot-bubble-bg: #ffffff;
+            --wf-bot-bubble-border: #e2e8f0;
+            --wf-bot-bubble-text: #0f172a;
+            --wf-bot-bubble-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+            --wf-input-wrap-bg: #ffffff;
+            --wf-input-field-bg: #f1f5f9;
+            --wf-input-field-border: #e2e8f0;
+            --wf-footer-bg: #ffffff;
+            --wf-window-shadow: 0 25px 70px -12px rgba(15, 23, 42, 0.24), 0 4px 16px rgba(0, 0, 0, 0.05);
+            --wf-window-border: rgba(226, 232, 240, 0.9);
+        }
+
+        .wf-dark {
+            --wf-bg: #0b0f17 !important;
+            --wf-surface: #07090e !important;
+            --wf-surface-hover: #141b2a !important;
+            --wf-card-bg: #111827 !important;
+            --wf-card-border: rgba(255, 255, 255, 0.09) !important;
+            --wf-card-border-hover: rgba(255, 255, 255, 0.2) !important;
+            --wf-text: #f8fafc !important;
+            --wf-text-muted: #94a3b8 !important;
+            --wf-text-subtle: #64748b !important;
+            --wf-bot-bubble-bg: #111827 !important;
+            --wf-bot-bubble-border: rgba(255, 255, 255, 0.09) !important;
+            --wf-bot-bubble-text: #f3f4f6 !important;
+            --wf-bot-bubble-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+            --wf-input-wrap-bg: #0b0f17 !important;
+            --wf-input-field-bg: #141b2a !important;
+            --wf-input-field-border: rgba(255, 255, 255, 0.12) !important;
+            --wf-footer-bg: #0b0f17 !important;
+            --wf-window-shadow: 0 30px 80px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+            --wf-window-border: rgba(255, 255, 255, 0.12) !important;
         }
 
         *, *::before, *::after {
@@ -126,12 +176,12 @@
             position: absolute !important;
             bottom: 72px !important;
             right: 0 !important;
-            background: #ffffff !important;
-            color: #0f172a !important;
+            background: var(--wf-card-bg, #ffffff) !important;
+            color: var(--wf-text, #0f172a) !important;
             padding: 10px 16px !important;
             border-radius: 18px 18px 4px 18px !important;
-            box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.05) !important;
-            border: 1px solid rgba(226, 232, 240, 0.9) !important;
+            box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+            border: 1px solid var(--wf-card-border, rgba(226, 232, 240, 0.9)) !important;
             font-size: 13px !important;
             font-weight: 600 !important;
             white-space: nowrap !important;
@@ -150,16 +200,17 @@
         }
         .wf-teaser-bubble:hover {
             transform: translateY(-2px) !important;
-            box-shadow: 0 14px 30px -4px rgba(0, 0, 0, 0.2) !important;
+            box-shadow: 0 14px 30px -4px rgba(0, 0, 0, 0.25) !important;
         }
         .wf-teaser-close {
-            color: #94a3b8 !important;
+            color: var(--wf-text-subtle, #94a3b8) !important;
             font-size: 14px !important;
             padding: 2px !important;
             cursor: pointer !important;
         }
-        .wf-teaser-close:hover { color: #475569 !important; }
+        .wf-teaser-close:hover { color: var(--wf-text, #0f172a) !important; }
 
+        /* Floating Launcher Button */
         button.wf-launcher {
             all: unset !important;
             width: 60px !important;
@@ -167,9 +218,9 @@
             min-width: 60px !important;
             min-height: 60px !important;
             border-radius: 50% !important;
-            background: #0f172a !important;
+            background: var(--wf-primary, #0f172a) !important;
             box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.4), 0 4px 8px rgba(0,0,0,0.1) !important;
-            border: 1px solid rgba(255, 255, 255, 0.18) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
             cursor: pointer !important;
             display: inline-flex !important;
             align-items: center !important;
@@ -181,10 +232,39 @@
             transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease !important;
             outline: none !important;
             pointer-events: auto !important;
+            position: relative !important;
         }
         button.wf-launcher:hover {
-            transform: scale(1.08) !important;
-            box-shadow: 0 14px 36px -4px rgba(15, 23, 42, 0.5), 0 6px 12px rgba(0,0,0,0.15) !important;
+            transform: scale(1.08) translateY(-2px) !important;
+            box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.5), 0 6px 12px rgba(0,0,0,0.15) !important;
+        }
+        button.wf-launcher.wf-launcher-pill {
+            width: auto !important;
+            min-width: unset !important;
+            height: 52px !important;
+            min-height: 52px !important;
+            padding: 0 20px !important;
+            border-radius: 9999px !important;
+            gap: 10px !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            letter-spacing: -0.01em !important;
+        }
+        .wf-has-pulse::before {
+            content: '' !important;
+            position: absolute !important;
+            inset: -5px !important;
+            border-radius: inherit !important;
+            background: inherit !important;
+            opacity: 0.45 !important;
+            z-index: -1 !important;
+            animation: wfPulseRing 2.4s cubic-bezier(0.24, 0, 0.38, 1) infinite !important;
+            pointer-events: none !important;
+        }
+        @keyframes wfPulseRing {
+            0% { transform: scale(1); opacity: 0.45; }
+            60% { transform: scale(1.22); opacity: 0; }
+            100% { transform: scale(1.22); opacity: 0; }
         }
         button.wf-launcher svg {
             width: 24px !important;
@@ -204,18 +284,18 @@
             height: 630px !important;
             max-width: calc(100vw - 36px) !important;
             max-height: calc(100dvh - 120px) !important;
-            background: #ffffff !important;
-            border-radius: 22px !important;
-            box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.28), 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+            background: var(--wf-bg, #ffffff) !important;
+            border-radius: var(--wf-radius, 22px) !important;
+            box-shadow: var(--wf-window-shadow) !important;
             display: flex !important;
             flex-direction: column !important;
             overflow: hidden !important;
             opacity: 0 !important;
             pointer-events: none !important;
             transform: translateY(20px) scale(0.96) !important;
-            transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.2s !important;
             z-index: 2147483647 !important;
-            border: 1px solid rgba(226, 232, 240, 0.85) !important;
+            border: 1px solid var(--wf-window-border, rgba(226, 232, 240, 0.85)) !important;
         }
         .wf-position-left .wf-window {
             right: auto !important;
@@ -229,13 +309,13 @@
 
         /* Header Bar */
         .wf-header {
-            background: #0f172a !important;
+            background: var(--wf-primary, #0f172a) !important;
             color: #ffffff !important;
             padding: 16px 20px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
             user-select: none !important;
             flex-shrink: 0 !important;
         }
@@ -269,6 +349,11 @@
             display: flex !important;
             flex-direction: column !important;
         }
+        .wf-title-row {
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+        }
         .wf-header-title {
             font-weight: 700 !important;
             font-size: 15px !important;
@@ -276,36 +361,70 @@
             line-height: 1.2 !important;
             letter-spacing: -0.01em !important;
         }
+        .wf-verified-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 3px !important;
+            background: rgba(255, 255, 255, 0.18) !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            color: #ffffff !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            padding: 1px 6px !important;
+            border-radius: 9999px !important;
+            letter-spacing: 0.02em !important;
+        }
         .wf-status-row {
             display: flex !important;
             align-items: center !important;
             gap: 6px !important;
             margin-top: 3px !important;
             font-size: 11.5px !important;
-            color: #94a3b8 !important;
+            color: rgba(255, 255, 255, 0.75) !important;
             font-weight: 500 !important;
+        }
+        .wf-status-pulse-wrap {
+            position: relative !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 8px !important;
+            height: 8px !important;
+        }
+        .wf-status-pulse-ring {
+            position: absolute !important;
+            width: 14px !important;
+            height: 14px !important;
+            border-radius: 50% !important;
+            background: #10b981 !important;
+            opacity: 0.5 !important;
+            animation: wfStatusHeartbeat 2.2s infinite ease-out !important;
         }
         .wf-status-dot {
             width: 7px !important;
             height: 7px !important;
-            min-width: 7px !important;
             border-radius: 50% !important;
             background: #10b981 !important;
-            box-shadow: 0 0 10px #10b981 !important;
+            box-shadow: 0 0 8px #10b981 !important;
             display: inline-block !important;
+        }
+        @keyframes wfStatusHeartbeat {
+            0% { transform: scale(0.6); opacity: 0.8; }
+            70% { transform: scale(1.6); opacity: 0; }
+            100% { transform: scale(1.6); opacity: 0; }
         }
 
         /* Top Header Action Buttons */
         .wf-header-actions {
             display: flex !important;
             align-items: center !important;
-            gap: 8px !important;
+            gap: 6px !important;
         }
         .wf-header-divider {
             width: 1px !important;
             height: 20px !important;
             background: rgba(255, 255, 255, 0.15) !important;
-            margin: 0 4px !important;
+            margin: 0 2px !important;
         }
         button.wf-icon-btn {
             all: unset !important;
@@ -347,8 +466,8 @@
             flex: 1 !important;
             padding: 18px !important;
             overflow-y: auto !important;
-            background-color: #f8fafc !important;
-            background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px) !important;
+            background-color: var(--wf-surface, #f8fafc) !important;
+            background-image: radial-gradient(var(--wf-card-border, #cbd5e1) 1.2px, transparent 1.2px) !important;
             background-size: 16px 16px !important;
             display: flex !important;
             flex-direction: column !important;
@@ -366,6 +485,7 @@
             animation: wfFadeUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
             word-break: break-word !important;
             overflow-wrap: anywhere !important;
+            position: relative !important;
         }
         .wf-msg-p {
             margin: 0 0 6px 0 !important;
@@ -397,6 +517,10 @@
             margin: 0 2px !important;
             vertical-align: middle !important;
         }
+        .wf-dark .wf-citation-inline {
+            background: rgba(99, 102, 241, 0.25) !important;
+            color: #a5b4fc !important;
+        }
         @keyframes wfFadeUp {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
@@ -405,12 +529,12 @@
         /* Welcome Message Bubble */
         .wf-welcome-bubble {
             align-self: flex-start !important;
-            background: #ffffff !important;
-            color: #0f172a !important;
+            background: var(--wf-bot-bubble-bg, #ffffff) !important;
+            color: var(--wf-bot-bubble-text, #0f172a) !important;
             padding: 13px 18px !important;
             border-radius: 18px 18px 18px 6px !important;
-            border: 1px solid #e2e8f0 !important;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+            border: 1px solid var(--wf-bot-bubble-border, #e2e8f0) !important;
+            box-shadow: var(--wf-bot-bubble-shadow) !important;
             font-size: 13.5px !important;
             font-weight: 500 !important;
             line-height: 1.5 !important;
@@ -430,7 +554,7 @@
         .wf-popular-bar {
             width: 3.5px !important;
             height: 24px !important;
-            background: #f59e0b !important;
+            background: var(--wf-primary, #f59e0b) !important;
             border-radius: 4px !important;
             flex-shrink: 0 !important;
             margin-top: 1px !important;
@@ -438,13 +562,13 @@
         .wf-popular-title {
             font-size: 14.5px !important;
             font-weight: 700 !important;
-            color: #0f172a !important;
+            color: var(--wf-text, #0f172a) !important;
             line-height: 1.2 !important;
             letter-spacing: -0.01em !important;
         }
         .wf-popular-sub {
             font-size: 12px !important;
-            color: #64748b !important;
+            color: var(--wf-text-muted, #64748b) !important;
             margin-top: 3px !important;
         }
 
@@ -456,8 +580,8 @@
         }
         button.wf-question-card {
             all: unset !important;
-            background: #ffffff !important;
-            border: 1px solid #e2e8f0 !important;
+            background: var(--wf-card-bg, #ffffff) !important;
+            border: 1px solid var(--wf-card-border, #e2e8f0) !important;
             border-radius: 16px !important;
             padding: 12px 16px !important;
             display: flex !important;
@@ -470,12 +594,13 @@
             text-align: left !important;
             width: 100% !important;
             box-sizing: border-box !important;
+            color: var(--wf-text, #0f172a) !important;
         }
         button.wf-question-card:hover {
             transform: translateY(-2px) !important;
-            border-color: #f59e0b !important;
-            box-shadow: 0 6px 16px rgba(245, 158, 11, 0.12) !important;
-            background: #fffbeb !important;
+            border-color: var(--wf-primary, #f59e0b) !important;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+            background: var(--wf-surface-hover, #f8fafc) !important;
         }
         .wf-question-left {
             display: flex !important;
@@ -488,49 +613,95 @@
             height: 6px !important;
             min-width: 6px !important;
             border-radius: 50% !important;
-            background: #f59e0b !important;
+            background: var(--wf-primary, #f59e0b) !important;
             flex-shrink: 0 !important;
             display: inline-block !important;
         }
         .wf-question-text {
             font-size: 13px !important;
             font-weight: 600 !important;
-            color: #0f172a !important;
+            color: var(--wf-text, #0f172a) !important;
             line-height: 1.35 !important;
             flex: 1 !important;
         }
         .wf-question-arrow {
-            color: #94a3b8 !important;
+            color: var(--wf-text-subtle, #94a3b8) !important;
             font-size: 14px !important;
             font-weight: 700 !important;
             flex-shrink: 0 !important;
             transition: transform 0.15s ease, color 0.15s ease !important;
         }
         button.wf-question-card:hover .wf-question-arrow {
-            color: #d97706 !important;
+            color: var(--wf-primary, #d97706) !important;
             transform: translateX(3px) !important;
         }
 
         /* User Message Bubble */
         .wf-bubble-user {
             align-self: flex-end !important;
-            background: #0f172a !important;
+            background: var(--wf-primary, #0f172a) !important;
             color: #ffffff !important;
             padding: 11px 16px !important;
             border-radius: 18px 18px 4px 18px !important;
-            box-shadow: 0 3px 10px rgba(15, 23, 42, 0.18) !important;
+            box-shadow: 0 3px 10px rgba(15, 23, 42, 0.2) !important;
             font-weight: 500 !important;
         }
 
         /* Assistant Grounded Bubble */
         .wf-bubble-bot {
             align-self: flex-start !important;
-            background: #ffffff !important;
-            color: #0f172a !important;
+            background: var(--wf-bot-bubble-bg, #ffffff) !important;
+            color: var(--wf-bot-bubble-text, #0f172a) !important;
             padding: 13px 16px !important;
             border-radius: 18px 18px 18px 4px !important;
-            border: 1px solid #e2e8f0 !important;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+            border: 1px solid var(--wf-bot-bubble-border, #e2e8f0) !important;
+            box-shadow: var(--wf-bot-bubble-shadow) !important;
+            position: relative !important;
+        }
+
+        /* 1-Click Copy Button on Bot Bubbles */
+        .wf-copy-btn {
+            all: unset !important;
+            position: absolute !important;
+            bottom: 6px !important;
+            right: 8px !important;
+            opacity: 0 !important;
+            background: var(--wf-card-bg, #ffffff) !important;
+            border: 1px solid var(--wf-card-border, #e2e8f0) !important;
+            border-radius: 6px !important;
+            padding: 2px 7px !important;
+            font-size: 10.5px !important;
+            font-weight: 600 !important;
+            color: var(--wf-text-muted, #64748b) !important;
+            cursor: pointer !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            transition: opacity 0.2s, color 0.15s, background 0.15s !important;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+            z-index: 2 !important;
+        }
+        .wf-bubble-bot:hover .wf-copy-btn {
+            opacity: 1 !important;
+        }
+        .wf-copy-btn:hover {
+            color: var(--wf-text, #0f172a) !important;
+            background: var(--wf-surface-hover, #f1f5f9) !important;
+        }
+
+        /* Real-Time Typewriter Cursor Beam */
+        .wf-cursor-beam {
+            display: inline-block !important;
+            width: 2px !important;
+            height: 14px !important;
+            background: var(--wf-primary, #4f46e5) !important;
+            margin-left: 3px !important;
+            vertical-align: text-bottom !important;
+            animation: wfBlinkCursor 0.8s infinite !important;
+        }
+        @keyframes wfBlinkCursor {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
         }
 
         .wf-link-inline {
@@ -548,9 +719,9 @@
             display: inline-flex !important;
             align-items: center !important;
             gap: 6px !important;
-            background: #f8fafc !important;
-            color: #0f172a !important;
-            border: 1px solid #cbd5e1 !important;
+            background: var(--wf-card-bg, #f8fafc) !important;
+            color: var(--wf-text, #0f172a) !important;
+            border: 1px solid var(--wf-card-border, #cbd5e1) !important;
             border-radius: 8px !important;
             padding: 5px 12px !important;
             font-size: 12px !important;
@@ -562,9 +733,9 @@
             cursor: pointer !important;
         }
         .wf-action-btn:hover {
-            background: #0f172a !important;
+            background: var(--wf-primary, #0f172a) !important;
             color: #ffffff !important;
-            border-color: #0f172a !important;
+            border-color: var(--wf-primary, #0f172a) !important;
             transform: translateY(-1px) !important;
             box-shadow: 0 3px 8px rgba(15, 23, 42, 0.15) !important;
         }
@@ -572,9 +743,48 @@
             font-size: 11px !important;
             opacity: 0.7 !important;
         }
+        /* WhatsApp Action Buttons & Card Media */
+        .wf-whatsapp-btn {
+            background: linear-gradient(135deg, #25D366, #128C7E) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            box-shadow: 0 2px 6px rgba(37, 211, 102, 0.25) !important;
+        }
+        .wf-whatsapp-btn:hover {
+            background: linear-gradient(135deg, #1ebe5d, #075E54) !important;
+            color: #ffffff !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4) !important;
+        }
+        .wf-header-wa-btn {
+            color: #25D366 !important;
+        }
+        .wf-header-wa-btn:hover {
+            color: #ffffff !important;
+            background: rgba(37, 211, 102, 0.25) !important;
+        }
+        .wf-card-media {
+            margin: 6px 0 8px 0 !important;
+            border-radius: 10px !important;
+            overflow: hidden !important;
+            background: var(--wf-surface-hover, #f1f5f9) !important;
+            border: 1px solid var(--wf-card-border, rgba(0, 0, 0, 0.08)) !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+            max-width: 280px !important;
+        }
+        .wf-card-img {
+            width: 100% !important;
+            height: 140px !important;
+            object-fit: cover !important;
+            display: block !important;
+            transition: transform 0.3s ease !important;
+        }
+        .wf-card-img:hover {
+            transform: scale(1.03) !important;
+        }
         .wf-price-badge {
             display: inline-block !important;
-            background: rgba(16, 185, 129, 0.1) !important;
+            background: rgba(16, 185, 129, 0.12) !important;
             color: #059669 !important;
             border: 1px solid rgba(16, 185, 129, 0.25) !important;
             border-radius: 6px !important;
@@ -582,23 +792,12 @@
             font-weight: 700 !important;
             font-size: 12px !important;
         }
-        .wf-citation-inline {
-            display: inline-block !important;
-            font-size: 10px !important;
-            font-weight: 700 !important;
-            color: #64748b !important;
-            background: #f1f5f9 !important;
-            border-radius: 4px !important;
-            padding: 0 4px !important;
-            margin: 0 2px !important;
-            vertical-align: baseline !important;
-        }
 
         /* Citations list inside message */
         .wf-citations {
             margin-top: 10px !important;
             padding-top: 8px !important;
-            border-top: 1px solid #f1f5f9 !important;
+            border-top: 1px solid var(--wf-card-border, #f1f5f9) !important;
             display: flex !important;
             flex-wrap: wrap !important;
             gap: 6px !important;
@@ -607,8 +806,8 @@
             display: inline-flex !important;
             align-items: center !important;
             gap: 4px !important;
-            background: #f8fafc !important;
-            border: 1px solid #cbd5e1 !important;
+            background: var(--wf-input-field-bg, #f8fafc) !important;
+            border: 1px solid var(--wf-card-border, #cbd5e1) !important;
             border-radius: 6px !important;
             padding: 3px 8px !important;
             font-size: 11px !important;
@@ -618,15 +817,15 @@
             transition: all 0.15s !important;
         }
         .wf-citation-pill:hover {
-            background: #eff6ff !important;
+            background: var(--wf-surface-hover, #eff6ff) !important;
             border-color: #93c5fd !important;
             color: #1d4ed8 !important;
         }
 
         /* In-chat Lead Capture Card */
         .wf-lead-card {
-            background: #ffffff !important;
-            border: 1px solid #cbd5e1 !important;
+            background: var(--wf-card-bg, #ffffff) !important;
+            border: 1px solid var(--wf-card-border, #cbd5e1) !important;
             border-radius: 16px !important;
             padding: 16px !important;
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
@@ -640,37 +839,37 @@
             margin: 0 0 4px 0 !important;
             font-size: 13.5px !important;
             font-weight: 700 !important;
-            color: #0f172a !important;
+            color: var(--wf-text, #0f172a) !important;
         }
         .wf-lead-card p {
             margin: 0 0 10px 0 !important;
             font-size: 11.5px !important;
-            color: #64748b !important;
+            color: var(--wf-text-muted, #64748b) !important;
         }
         input.wf-lead-input {
             all: unset !important;
             width: 100% !important;
             padding: 9px 12px !important;
-            border: 1px solid #cbd5e1 !important;
+            border: 1px solid var(--wf-input-field-border, #cbd5e1) !important;
             border-radius: 10px !important;
             font-size: 12px !important;
             margin-bottom: 8px !important;
             box-sizing: border-box !important;
             outline: none !important;
-            background: #f8fafc !important;
+            background: var(--wf-input-field-bg, #f8fafc) !important;
             transition: all 0.15s !important;
             font-family: inherit !important;
-            color: #0f172a !important;
+            color: var(--wf-text, #0f172a) !important;
         }
         input.wf-lead-input:focus {
-            border-color: #0f172a !important;
-            background: #ffffff !important;
-            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08) !important;
+            border-color: var(--wf-primary, #0f172a) !important;
+            background: var(--wf-card-bg, #ffffff) !important;
+            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1) !important;
         }
         button.wf-lead-btn {
             all: unset !important;
             width: 100% !important;
-            background: #0f172a !important;
+            background: var(--wf-primary, #0f172a) !important;
             color: #ffffff !important;
             border: none !important;
             padding: 10px !important;
@@ -689,7 +888,7 @@
         .wf-drawer {
             position: absolute !important;
             inset: 0 !important;
-            background: #ffffff !important;
+            background: var(--wf-bg, #ffffff) !important;
             z-index: 50 !important;
             transform: translateX(100%) !important;
             transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -701,16 +900,16 @@
         }
         .wf-drawer-header {
             padding: 16px 20px !important;
-            border-bottom: 1px solid #e2e8f0 !important;
+            border-bottom: 1px solid var(--wf-card-border, #e2e8f0) !important;
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
-            background: #f8fafc !important;
+            background: var(--wf-surface, #f8fafc) !important;
         }
         .wf-drawer-title {
             font-weight: 700 !important;
             font-size: 14px !important;
-            color: #0f172a !important;
+            color: var(--wf-text, #0f172a) !important;
         }
         .wf-drawer-body {
             padding: 20px !important;
@@ -722,8 +921,8 @@
         form.wf-input-wrap {
             all: unset !important;
             padding: 14px 18px !important;
-            background: #ffffff !important;
-            border-top: 1px solid #e2e8f0 !important;
+            background: var(--wf-input-wrap-bg, #ffffff) !important;
+            border-top: 1px solid var(--wf-card-border, #e2e8f0) !important;
             display: flex !important;
             gap: 10px !important;
             align-items: center !important;
@@ -732,8 +931,8 @@
         }
         .wf-field-container {
             flex: 1 !important;
-            background: #f1f5f9 !important;
-            border: 1px solid #e2e8f0 !important;
+            background: var(--wf-input-field-bg, #f1f5f9) !important;
+            border: 1px solid var(--wf-input-field-border, #e2e8f0) !important;
             border-radius: 24px !important;
             display: flex !important;
             align-items: center !important;
@@ -742,9 +941,9 @@
             box-sizing: border-box !important;
         }
         .wf-field-container:focus-within {
-            background: #ffffff !important;
-            border-color: #cbd5e1 !important;
-            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.05) !important;
+            background: var(--wf-card-bg, #ffffff) !important;
+            border-color: var(--wf-primary, #cbd5e1) !important;
+            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08) !important;
         }
         input.wf-field {
             all: unset !important;
@@ -754,17 +953,17 @@
             font-size: 13.5px !important;
             outline: none !important;
             font-family: inherit !important;
-            color: #0f172a !important;
+            color: var(--wf-text, #0f172a) !important;
             padding: 8px 4px !important;
             box-sizing: border-box !important;
         }
-        input.wf-field::placeholder { color: #94a3b8 !important; }
+        input.wf-field::placeholder { color: var(--wf-text-subtle, #94a3b8) !important; }
 
         button.wf-mic-btn {
             all: unset !important;
             background: transparent !important;
             border: none !important;
-            color: #64748b !important;
+            color: var(--wf-text-muted, #64748b) !important;
             width: 32px !important;
             height: 32px !important;
             min-width: 32px !important;
@@ -780,7 +979,7 @@
             transition: all 0.2s ease !important;
         }
         button.wf-mic-btn:hover {
-            color: #0f172a !important;
+            color: var(--wf-text, #0f172a) !important;
             background: rgba(0, 0, 0, 0.05) !important;
         }
         button.wf-mic-btn svg {
@@ -802,9 +1001,9 @@
 
         button.wf-send-btn {
             all: unset !important;
-            background: #e2e8f0 !important;
-            border: 1px solid #cbd5e1 !important;
-            color: #64748b !important;
+            background: var(--wf-surface-hover, #e2e8f0) !important;
+            border: 1px solid var(--wf-card-border, #cbd5e1) !important;
+            color: var(--wf-text-muted, #64748b) !important;
             width: 38px !important;
             height: 38px !important;
             min-width: 38px !important;
@@ -828,32 +1027,31 @@
             display: block !important;
         }
         button.wf-send-btn.wf-send-active {
-            background: #0f172a !important;
-            border-color: #0f172a !important;
+            background: var(--wf-primary, #0f172a) !important;
+            border-color: var(--wf-primary, #0f172a) !important;
             color: #ffffff !important;
             box-shadow: 0 3px 10px rgba(15, 23, 42, 0.25) !important;
         }
         button.wf-send-btn.wf-send-active:hover {
             transform: scale(1.06) !important;
-            background: #1e293b !important;
         }
 
         /* Footer Branding */
         .wf-footer {
             text-align: center !important;
             font-size: 10.5px !important;
-            color: #94a3b8 !important;
-            padding: 5px !important;
-            background: #ffffff !important;
+            color: var(--wf-text-subtle, #94a3b8) !important;
+            padding: 6px !important;
+            background: var(--wf-footer-bg, #ffffff) !important;
             font-weight: 500 !important;
-            border-top: 1px solid #f1f5f9 !important;
+            border-top: 1px solid var(--wf-card-border, #f1f5f9) !important;
         }
 
         /* Typing Dots Indicator */
         .wf-typing-bubble {
             align-self: flex-start !important;
-            background: #ffffff !important;
-            border: 1px solid #e2e8f0 !important;
+            background: var(--wf-bot-bubble-bg, #ffffff) !important;
+            border: 1px solid var(--wf-bot-bubble-border, #e2e8f0) !important;
             border-radius: 16px 16px 16px 4px !important;
             padding: 10px 14px !important;
             display: flex !important;
@@ -865,7 +1063,7 @@
             height: 5px !important;
             min-width: 5px !important;
             border-radius: 50% !important;
-            background: #94a3b8 !important;
+            background: var(--wf-text-subtle, #94a3b8) !important;
             display: inline-block !important;
             animation: wfBounceDot 1.4s infinite ease-in-out both !important;
         }
@@ -877,8 +1075,6 @@
         }
 
         /* ================= RESPONSIVE STYLES FOR ALL SCREEN SIZES ================= */
-
-        /* Tablets & Foldables (481px to 768px) */
         @media (max-width: 768px) and (min-width: 641px) {
             .wf-window {
                 width: 375px !important;
@@ -895,7 +1091,6 @@
             }
         }
 
-        /* Mobile Phones & Small Handhelds (<= 640px) */
         @media (max-width: 640px) {
             .wf-root {
                 bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
@@ -905,14 +1100,12 @@
                 left: max(16px, env(safe-area-inset-left, 16px)) !important;
                 right: auto !important;
             }
-
             button.wf-launcher {
                 width: 56px !important;
                 height: 56px !important;
                 min-width: 56px !important;
                 min-height: 56px !important;
             }
-
             .wf-teaser-bubble {
                 bottom: 68px !important;
                 max-width: calc(100vw - 90px) !important;
@@ -921,13 +1114,9 @@
                 line-height: 1.35 !important;
                 padding: 8px 14px !important;
             }
-
-            /* Hide launcher button when modal window is active on mobile */
             .wf-is-open .wf-launcher-wrap {
                 display: none !important;
             }
-
-            /* Fullscreen Mobile Viewport */
             .wf-window {
                 position: fixed !important;
                 inset: 0 !important;
@@ -956,18 +1145,10 @@
                 transform: translateY(0) !important;
                 opacity: 1 !important;
             }
-
             .wf-header {
                 padding: max(14px, env(safe-area-inset-top, 14px)) 16px 14px 16px !important;
                 border-radius: 0 !important;
             }
-            .wf-header-title {
-                font-size: 15px !important;
-            }
-            .wf-status-row {
-                font-size: 11px !important;
-            }
-
             .wf-chat-body {
                 padding: 14px !important;
                 gap: 12px !important;
@@ -977,31 +1158,10 @@
                 max-width: 92% !important;
                 font-size: 13.5px !important;
             }
-            .wf-welcome-bubble {
-                font-size: 13.5px !important;
-                padding: 12px 15px !important;
-            }
-            .wf-popular-cards {
-                gap: 8px !important;
-            }
-            button.wf-question-card {
-                padding: 10px 14px !important;
-                border-radius: 14px !important;
-            }
-            .wf-question-text {
-                font-size: 12.5px !important;
-            }
-
-            .wf-lead-card {
-                max-width: 100% !important;
-            }
-
-            /* Bottom input bar with mobile safe area */
             form.wf-input-wrap {
                 padding: 10px 14px max(14px, env(safe-area-inset-bottom, 14px)) 14px !important;
                 gap: 8px !important;
             }
-            /* Crucial: 16px font size prevents iOS Safari from auto-zooming page on input focus */
             input.wf-field {
                 font-size: 16px !important;
                 padding: 7px 4px !important;
@@ -1009,53 +1169,6 @@
             input.wf-lead-input {
                 font-size: 16px !important;
                 padding: 10px 12px !important;
-            }
-
-            .wf-drawer {
-                inset: 0 !important;
-                height: 100dvh !important;
-            }
-            .wf-drawer-header {
-                padding: max(16px, env(safe-area-inset-top, 16px)) 18px 14px 18px !important;
-            }
-        }
-
-        /* Landscape Mobile Devices (Height <= 520px) */
-        @media (max-height: 520px) {
-            .wf-window {
-                position: fixed !important;
-                inset: 0 !important;
-                top: 0 !important;
-                bottom: 0 !important;
-                left: 0 !important;
-                right: 0 !important;
-                width: 100vw !important;
-                height: 100dvh !important;
-                max-height: 100dvh !important;
-                border-radius: 0 !important;
-                transform: translateY(100%) !important;
-            }
-            .wf-window.wf-open {
-                transform: translateY(0) !important;
-            }
-            .wf-header {
-                padding: 8px 14px !important;
-            }
-            .wf-avatar-circle {
-                width: 32px !important;
-                height: 32px !important;
-                min-width: 32px !important;
-                font-size: 15px !important;
-            }
-            form.wf-input-wrap {
-                padding: 6px 12px !important;
-            }
-            .wf-chat-body {
-                padding: 10px !important;
-                gap: 8px !important;
-            }
-            .wf-popular-section {
-                display: none !important;
             }
         }
     `;
@@ -1073,15 +1186,38 @@
                 <div class="wf-header-left">
                     <div class="wf-avatar-circle" id="wf-avatar-box">⚡</div>
                     <div class="wf-header-info">
-                        <div class="wf-header-title" id="wf-header-name">${botConfig.name}</div>
+                        <div class="wf-title-row">
+                            <span class="wf-header-title" id="wf-header-name">${botConfig.name}</span>
+                            <span class="wf-verified-badge" title="Official Verified AI Assistant">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                                <span>AI</span>
+                            </span>
+                        </div>
                         <div class="wf-status-row">
-                            <span class="wf-status-dot"></span>
+                            <span class="wf-status-pulse-wrap">
+                                <span class="wf-status-pulse-ring"></span>
+                                <span class="wf-status-dot"></span>
+                            </span>
                             <span id="wf-header-status">${botConfig.widget_subtitle || 'Online'}</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="wf-header-actions">
+                    <button type="button" class="wf-icon-btn wf-header-wa-btn" id="wf-whatsapp-header-btn" title="Chat on WhatsApp" style="display: none;">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                        </svg>
+                    </button>
+                    <button type="button" class="wf-icon-btn" id="wf-sound-toggle-btn" title="Toggle audio chime">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                        </svg>
+                    </button>
                     <button type="button" class="wf-icon-btn" id="wf-email-btn" title="Leave Contact Info">
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
@@ -1128,7 +1264,7 @@
                     <button type="button" class="wf-icon-btn" id="wf-drawer-close">&times;</button>
                 </div>
                 <div class="wf-drawer-body">
-                    <p style="font-size: 12px; color: #64748b; margin-top: 0; margin-bottom: 14px; line-height: 1.5;">
+                    <p style="font-size: 12px; color: var(--wf-text-muted, #64748b); margin-top: 0; margin-bottom: 14px; line-height: 1.5;">
                         Leave your information and an e-commerce growth specialist will follow up with you within 24 hours.
                     </p>
                     <form id="wf-drawer-form">
@@ -1175,6 +1311,7 @@
                         <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
                     </svg>
                 </span>
+                <span id="wf-btn-label" style="display:none;"></span>
             </button>
         </div>
     `;
@@ -1292,7 +1429,89 @@
         }
     });
 
+    function updateThemeMode() {
+        const mode = botConfig.theme_mode || 'light';
+        let isDark = false;
+        if (mode === 'dark') {
+            isDark = true;
+        } else if (mode === 'auto') {
+            isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        }
+        if (isDark) {
+            root.classList.add('wf-dark');
+        } else {
+            root.classList.remove('wf-dark');
+        }
+    }
+
+    if (window.matchMedia) {
+        try {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateThemeMode);
+        } catch (e) {}
+    }
+
+    function playChime() {
+        if (botConfig.sound_enabled === 0 || botConfig.sound_enabled === false) return;
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, now); // D5
+            osc.frequency.exponentialRampToValueAtTime(880, now + 0.12); // A5
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.32);
+        } catch (e) {}
+    }
+
+    function attachCopyButton(bubbleEl, rawText) {
+        if (!bubbleEl || !rawText) return;
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'wf-copy-btn';
+        copyBtn.title = 'Copy response';
+        copyBtn.innerHTML = `
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+            </svg>
+            <span>Copy</span>
+        `;
+        copyBtn.onclick = async (e) => {
+            e.stopPropagation();
+            try {
+                const clean = rawText.replace(/<[^>]+>/g, '').replace(/(?:📸\s*)?!\[.*?\]\(.*?\)/g, '').trim();
+                await navigator.clipboard.writeText(clean);
+                copyBtn.innerHTML = `
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span style="color:#10b981;">Copied!</span>
+                `;
+                setTimeout(() => {
+                    copyBtn.innerHTML = `
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                        </svg>
+                        <span>Copy</span>
+                    `;
+                }, 1800);
+            } catch (err) {}
+        };
+        bubbleEl.appendChild(copyBtn);
+    }
+
     function applyConfig() {
+        updateThemeMode();
+
         const nameEl = $('wf-header-name');
         if (nameEl) nameEl.innerText = botConfig.name || "AI Assistant";
 
@@ -1312,11 +1531,83 @@
             }
         }
 
-        // Color Accents
+        // Color Accents & Radius
         const primaryColor = botConfig.primary_color || "#0f172a";
+        root.style.setProperty('--wf-primary', primaryColor);
+        const rad = botConfig.border_radius || "22px";
+        root.style.setProperty('--wf-radius', rad);
+        if (win) win.style.borderRadius = rad;
+
         const headerEl = $('wf-header');
         if (headerEl) headerEl.style.backgroundColor = primaryColor;
         if (triggerBtn) triggerBtn.style.backgroundColor = primaryColor;
+
+        // Launcher Button Style & Pulse
+        const btnLabel = $('wf-btn-label');
+        if (botConfig.launcher_style === 'pill') {
+            triggerBtn.classList.add('wf-launcher-pill');
+            if (btnLabel) {
+                btnLabel.innerText = botConfig.launcher_text || "Chat with us";
+                btnLabel.style.display = 'inline';
+            }
+        } else {
+            triggerBtn.classList.remove('wf-launcher-pill');
+            if (btnLabel) btnLabel.style.display = 'none';
+        }
+
+        if (botConfig.launcher_pulse !== 0 && botConfig.launcher_pulse !== false) {
+            triggerBtn.classList.add('wf-has-pulse');
+        } else {
+            triggerBtn.classList.remove('wf-has-pulse');
+        }
+
+        // Input Placeholder
+        if (inputEl) {
+            inputEl.placeholder = botConfig.input_placeholder || "Ask a question...";
+        }
+
+        // Header Sound Toggle
+        const soundBtn = $('wf-sound-toggle-btn');
+        if (soundBtn) {
+            const updateSoundBtnState = () => {
+                const on = botConfig.sound_enabled !== 0 && botConfig.sound_enabled !== false;
+                soundBtn.title = on ? "Mute audio chime" : "Unmute audio chime";
+                soundBtn.innerHTML = on ? `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                    </svg>
+                ` : `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <line x1="23" x2="1" y1="1" y2="23"/>
+                    </svg>
+                `;
+            };
+            updateSoundBtnState();
+            soundBtn.onclick = () => {
+                botConfig.sound_enabled = (botConfig.sound_enabled !== 0 && botConfig.sound_enabled !== false) ? 0 : 1;
+                updateSoundBtnState();
+                if (botConfig.sound_enabled) playChime();
+            };
+        }
+
+        // WhatsApp Direct Quick-Connect in Header
+        const waHeaderBtn = $('wf-whatsapp-header-btn');
+        if (waHeaderBtn) {
+            const waNum = botConfig.whatsapp_number || (botConfig.name && botConfig.name.toLowerCase().includes('ideal homes') ? '+971505594888' : '');
+            if (waNum) {
+                const clean = waNum.replace(/[^0-9]/g, '');
+                waHeaderBtn.style.display = 'inline-flex';
+                waHeaderBtn.onclick = () => {
+                    const msg = encodeURIComponent(`Hi ${botConfig.name || ''}, I have an inquiry.`);
+                    window.open(`https://wa.me/${clean}?text=${msg}`, '_blank');
+                };
+            } else {
+                waHeaderBtn.style.display = 'none';
+            }
+        }
 
         if (botConfig.position === 'bottom-left') {
             root.classList.add('wf-position-left');
@@ -1604,7 +1895,7 @@
                         const jsonPayload = JSON.parse(trimmed.substring(5).trim());
                         if (jsonPayload.type === 'token') {
                             accumulatedText += jsonPayload.token;
-                            contentDiv.innerHTML = formatMessageText(accumulatedText);
+                            contentDiv.innerHTML = formatMessageText(accumulatedText) + '<span class="wf-cursor-beam"></span>';
                             bodyEl.scrollTop = bodyEl.scrollHeight;
                         } else if (jsonPayload.type === 'done') {
                             finalData = jsonPayload;
@@ -1612,6 +1903,10 @@
                     } catch (e) {}
                 }
             }
+
+            contentDiv.innerHTML = formatMessageText(accumulatedText);
+            attachCopyButton(botBubble, accumulatedText);
+            playChime();
 
             // Finalize with formatted citations & lead card
             if (finalData) {
@@ -1666,6 +1961,12 @@
     function formatMessageText(text) {
         if (!text) return '';
         let escaped = escapeHtml(text);
+
+        // Images: 📸 ![Alt](URL) or ![Alt](URL)
+        escaped = escaped.replace(/(?:📸\s*)?!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<div class="wf-card-media"><img src="$2" alt="$1" class="wf-card-img" loading="lazy" onerror="this.parentElement.style.display=\'none\';" /></div>');
+
+        // Convert WhatsApp links with 🟢 to styled WhatsApp action buttons
+        escaped = escaped.replace(/🟢\s*\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="wf-action-btn wf-whatsapp-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block; vertical-align:middle; margin-right:2px;"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg><span>$1</span><span class="wf-action-arrow">↗</span></a>');
 
         // Convert links with 🔗 to styled action buttons
         escaped = escaped.replace(/🔗\s*\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="wf-action-btn"><span>🔗</span><span>$1</span><span class="wf-action-arrow">↗</span></a>');
@@ -1727,6 +2028,10 @@
         }
 
         bubble.innerHTML = html;
+        if (role !== 'user') {
+            attachCopyButton(bubble, text);
+            playChime();
+        }
         bodyEl.appendChild(bubble);
         bodyEl.scrollTop = bodyEl.scrollHeight;
     }

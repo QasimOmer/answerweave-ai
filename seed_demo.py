@@ -75,24 +75,28 @@ URBANKICKS_PRODUCTS = {
 • Price: 249 AED
 • Category / Type: Running Shoes
 • Key Specs & Features: Breathable Mesh • CloudFoam Cushioning • Available in Sizes 38-46
+• Image URL: https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80
 • Direct URL: https://urbankicks.shop/products/cloudstride
 ==================================================
 🏷️ PRODUCT SPECIFICATION: StreetGlide Retro Low Sneaker
 • Price: 389 AED
 • Category / Type: Casual Sneakers
 • Key Specs & Features: Premium Leather • Vintage Gum Sole • Unisex Design
+• Image URL: https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=600&auto=format&fit=crop&q=80
 • Direct URL: https://urbankicks.shop/products/streetglide-retro
 ==================================================
 🏷️ PRODUCT SPECIFICATION: AeroSpeed Carbon Marathon Racer
 • Price: 479 AED
 • Category / Type: Performance Running
 • Key Specs & Features: Carbon Fiber Plate • Ultra-light 185g • Energy Return Foam
+• Image URL: https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&auto=format&fit=crop&q=80
 • Direct URL: https://urbankicks.shop/products/aerospeed-carbon
 ==================================================
 🏷️ PRODUCT SPECIFICATION: UrbanHiker Waterproof Trail Boot
 • Price: 699 AED
 • Category / Type: Outdoor & Hiking
 • Key Specs & Features: Gore-Tex Waterproof • Vibram Traction Lug Sole
+• Image URL: https://images.unsplash.com/photo-1520639888713-7851133b1ed0?w=600&auto=format&fit=crop&q=80
 • Direct URL: https://urbankicks.shop/products/urbanhiker-boot
 =================================================="""
 }
@@ -108,6 +112,7 @@ IDEALHOMES_PROPERTIES = {
 • Category / Type: Studio Apartment
 • Location / Neighborhood: Dubai Silicon Oasis (DSO), Dubai
 • Key Specs & Features: Studio • 1 Bath • 420 sqft • High-speed WiFi & DEWA included • Balcony
+• Image URL: https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&auto=format&fit=crop&q=80
 • Direct URL: https://idealhomes.ae/contact
 ==================================================
 🏠 PROPERTY LISTING (FOR RENT): Cozy Studio in Jumeirah Village Circle
@@ -116,6 +121,7 @@ IDEALHOMES_PROPERTIES = {
 • Category / Type: Studio Apartment
 • Location / Neighborhood: Jumeirah Village Circle (JVC), Dubai
 • Key Specs & Features: Studio • 1 Bath • 460 sqft • Pool & Gym Access • Near Circle Mall
+• Image URL: https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&auto=format&fit=crop&q=80
 • Direct URL: https://idealhomes.ae/contact
 ==================================================
 🏠 PROPERTY LISTING (FOR RENT): 1-Bedroom Apartment in Al Barsha 1
@@ -124,6 +130,7 @@ IDEALHOMES_PROPERTIES = {
 • Category / Type: 1-Bedroom Apartment
 • Location / Neighborhood: Al Barsha 1, Dubai
 • Key Specs & Features: 1 Bed • 2 Baths • 780 sqft • Near Mall of the Emirates & Metro
+• Image URL: https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&auto=format&fit=crop&q=80
 • Direct URL: https://idealhomes.ae/contact
 ==================================================
 🏠 PROPERTY LISTING (FOR RENT): 2-Bedroom Modern Apartment in Dubai Marina
@@ -132,6 +139,7 @@ IDEALHOMES_PROPERTIES = {
 • Category / Type: 2-Bedroom Apartment
 • Location / Neighborhood: Dubai Marina, Dubai
 • Key Specs & Features: 2 Beds • 2 Baths • 1,200 sqft • Full Marina View • Chiller Free
+• Image URL: https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&auto=format&fit=crop&q=80
 • Direct URL: https://idealhomes.ae/contact
 ==================================================
 🏠 PROPERTY LISTING (FOR SALE): 3-Bedroom Villa in Arabian Ranches
@@ -140,6 +148,7 @@ IDEALHOMES_PROPERTIES = {
 • Category / Type: Villa
 • Location / Neighborhood: Arabian Ranches, Dubai
 • Key Specs & Features: 3 Beds • 4 Baths • 3,100 sqft • Private Garden • Near Community Park
+• Image URL: https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format&fit=crop&q=80
 • Direct URL: https://idealhomes.ae/off-plan
 =================================================="""
 }

@@ -87,6 +87,25 @@ def extract_structured_metadata(soup: BeautifulSoup, base_url: str = "") -> str:
                     baths = item.get("numberOfBathroomsTotal") or item.get("numberOfBathrooms")
                     area = item.get("floorSize", {}).get("value") if isinstance(item.get("floorSize"), dict) else item.get("floorSize")
 
+                    # Extract primary image URL
+                    image_url = ""
+                    img_val = item.get("image")
+                    if isinstance(img_val, str) and img_val.startswith("http"):
+                        image_url = img_val
+                    elif isinstance(img_val, list) and len(img_val) > 0:
+                        first_img = img_val[0]
+                        if isinstance(first_img, str) and first_img.startswith("http"):
+                            image_url = first_img
+                        elif isinstance(first_img, dict) and first_img.get("url"):
+                            image_url = str(first_img.get("url", ""))
+                    elif isinstance(img_val, dict) and img_val.get("url"):
+                        image_url = str(img_val.get("url", ""))
+
+                    if not image_url:
+                        og_img = soup.find("meta", property=re.compile(r"og:image|twitter:image", re.I))
+                        if og_img and str(og_img.get("content", "")).startswith("http"):
+                            image_url = og_img.get("content").strip()
+
                     address_str = ""
                     addr = item.get("address")
                     if isinstance(addr, dict):
@@ -108,6 +127,7 @@ def extract_structured_metadata(soup: BeautifulSoup, base_url: str = "") -> str:
                     if baths: specs.append(f"• Bathrooms: {baths}")
                     if area: specs.append(f"• Size: {area}")
                     if desc: specs.append(f"• Description: {desc[:300]}")
+                    if image_url: specs.append(f"• Image URL: {image_url}")
                     if base_url: specs.append(f"• Direct URL: {base_url}")
                     
                     if specs:
@@ -129,17 +149,29 @@ def extract_structured_metadata(soup: BeautifulSoup, base_url: str = "") -> str:
                 desc_tag = m.find(attrs={"itemprop": "description"})
                 addr_tag = m.find(attrs={"itemprop": "address"})
                 bed_tag = m.find(attrs={"itemprop": re.compile(r"numberOfBedrooms|numberOfRooms", re.I)})
+                img_tag = m.find(attrs={"itemprop": "image"})
 
                 name_val = name_tag.get_text().strip() if name_tag else ""
                 price_val = price_tag.get("content") or (price_tag.get_text().strip() if price_tag else "")
                 curr_val = curr_tag.get("content") or (curr_tag.get_text().strip() if curr_tag else "")
                 desc_val = desc_tag.get_text().strip() if desc_tag else ""
+                
+                img_val = ""
+                if img_tag:
+                    img_val = img_tag.get("src") or img_tag.get("content") or img_tag.get("href") or ""
+                    if img_val and not img_val.startswith("http") and base_url:
+                        img_val = urllib.parse.urljoin(base_url, img_val)
+                if not img_val:
+                    og_img = soup.find("meta", property=re.compile(r"og:image|twitter:image", re.I))
+                    if og_img and str(og_img.get("content", "")).startswith("http"):
+                        img_val = og_img.get("content").strip()
 
                 if name_val and price_val:
                     specs = [f"• Item Name: {name_val}", f"• Price: {curr_val + ' ' if curr_val else ''}{price_val}"]
                     if addr_tag: specs.append(f"• Location / Address: {addr_tag.get_text().strip()}")
                     if bed_tag: specs.append(f"• Bedrooms: {bed_tag.get_text().strip()}")
                     if desc_val: specs.append(f"• Description: {desc_val[:250]}")
+                    if img_val: specs.append(f"• Image URL: {img_val}")
                     if base_url: specs.append(f"• Direct URL: {base_url}")
                     label = "PROPERTY LISTING" if is_re else "PRODUCT SPECIFICATION"
                     spec_lines.append(f"🏷️ STRUCTURED {label}:\n" + "\n".join(specs))
@@ -150,21 +182,26 @@ def extract_structured_metadata(soup: BeautifulSoup, base_url: str = "") -> str:
         og_price = soup.find("meta", property=re.compile(r"product:price:amount|og:price:amount", re.I))
         og_curr = soup.find("meta", property=re.compile(r"product:price:currency|og:price:currency", re.I))
         og_desc = soup.find("meta", property=re.compile(r"og:description|twitter:description", re.I))
+        og_img = soup.find("meta", property=re.compile(r"og:image|twitter:image", re.I))
         
         if og_title and og_title.get("content"):
             title_text = og_title.get("content").strip()
             price_text = og_price.get("content", "").strip() if og_price else ""
             curr_text = og_curr.get("content", "").strip() if og_curr else ""
             desc_text = og_desc.get("content", "").strip() if og_desc else ""
+            img_text = og_img.get("content", "").strip() if og_img else ""
             
             if price_text:
-                spec_lines.append(
-                    f"🏷️ STRUCTURED ITEM SPECIFICATION:\n"
-                    f"• Item Name: {title_text}\n"
-                    f"• Price: {curr_text + ' ' if curr_text else ''}{price_text}\n"
-                    f"• Description: {desc_text[:300]}\n"
-                    f"• Direct URL: {base_url}"
-                )
+                specs = [
+                    f"• Item Name: {title_text}",
+                    f"• Price: {curr_text + ' ' if curr_text else ''}{price_text}",
+                    f"• Description: {desc_text[:300]}"
+                ]
+                if img_text and img_text.startswith("http"):
+                    specs.append(f"• Image URL: {img_text}")
+                if base_url:
+                    specs.append(f"• Direct URL: {base_url}")
+                spec_lines.append(f"🏷️ STRUCTURED ITEM SPECIFICATION:\n" + "\n".join(specs))
 
     return "\n\n".join(spec_lines)
 
@@ -268,12 +305,24 @@ def crawl_website(start_url: str, max_pages: int = 50) -> List[Dict[str, str]]:
         "User-Agent": DEFAULT_USER_AGENT
     }
 
-    # 1. Probe standard sitemap locations to seed URLs across the whole site
+    # 1. Probe robots.txt and standard sitemap locations to seed URLs across the whole site
     sitemap_candidates = [
         f"{base_domain_url}/sitemap.xml",
         f"{base_domain_url}/wp-sitemap.xml",
         f"{base_domain_url}/sitemap_index.xml"
     ]
+    try:
+        robots_resp = requests.get(f"{base_domain_url}/robots.txt", headers=headers, timeout=6)
+        if robots_resp.status_code == 200:
+            for line in robots_resp.text.splitlines():
+                line_str = line.strip()
+                if line_str.lower().startswith("sitemap:"):
+                    sm_url = line_str.split(":", 1)[1].strip()
+                    if sm_url.startswith("http") and sm_url not in sitemap_candidates:
+                        sitemap_candidates.insert(0, sm_url)
+    except Exception:
+        pass
+
     for sm_candidate in sitemap_candidates:
         sitemap_urls = crawl_sitemap(sm_candidate, max_urls=max_pages)
         if sitemap_urls:
@@ -285,9 +334,11 @@ def crawl_website(start_url: str, max_pages: int = 50) -> List[Dict[str, str]]:
 
     # Excluded URL patterns (admin, feeds, logins, media)
     exclude_pattern = re.compile(
-        r"(wp-admin|wp-includes|wp-json|xmlrpc|feed|comments|\?add-to-cart|cart|checkout|my-account|login|logout|register|\.(pdf|png|jpg|jpeg|gif|zip|exe|mp4|svg|webp|css|js|woff|woff2|ttf))$",
+        r"(wp-admin|wp-includes|wp-json|xmlrpc|feed|comments|\?add-to-cart|cart|checkout|my-account|login|logout|register|\.(pdf|png|jpg|jpeg|gif|zip|exe|mp4|svg|webp|css|js|woff|woff2|ttf))(\?|$)",
         re.I
     )
+    # Detect pagination patterns: /page/2, ?page=2, ?p=2, ?paged=2, ?pg=2, offset=10
+    pagination_pattern = re.compile(r"(/page/\d+|[?&](page|p|paged|pg|offset)=\d+)", re.I)
 
     while to_visit and len(visited) < max_pages:
         current_url = to_visit.pop(0)
@@ -322,7 +373,11 @@ def crawl_website(start_url: str, max_pages: int = 50) -> List[Dict[str, str]]:
                     parsed_link = urllib.parse.urlparse(resolved)
                     if parsed_link.netloc == domain and resolved not in visited and resolved not in to_visit:
                         if not exclude_pattern.search(resolved):
-                            to_visit.append(resolved)
+                            # Prioritize catalog pagination links so multiple pages of products/listings are indexed
+                            if pagination_pattern.search(resolved):
+                                to_visit.insert(0, resolved)
+                            else:
+                                to_visit.append(resolved)
         except Exception:
             continue
 
@@ -385,6 +440,7 @@ def parse_csv_catalog(file_bytes: bytes, filename: str) -> Dict[str, str]:
             stock = get_val(row, ["stock", "availability", "in_stock", "status"])
             desc = get_val(row, ["description", "details", "summary", "overview", "notes", "about"])
             url = get_val(row, ["url", "link", "product_url", "listing_url", "page_url"])
+            image = get_val(row, ["image", "image_url", "img", "photo", "thumbnail", "picture", "featured_image"])
 
             specs_list = []
             if beds: specs_list.append(f"{beds} Beds")
@@ -426,6 +482,7 @@ def parse_csv_catalog(file_bytes: bytes, filename: str) -> Dict[str, str]:
                 + (f"• Location / Neighborhood: {loc}\n" if loc else "")
                 + f"• Key Specs & Features: {specs_str}\n"
                 + (f"• Description: {desc}\n" if desc else "")
+                + (f"• Image URL: {image}\n" if image else "")
                 + (f"• Direct URL: {url}\n" if url else "")
                 + f"=================================================="
             )

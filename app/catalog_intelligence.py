@@ -361,6 +361,12 @@ def extract_catalog_items_from_chunk(
         if url_match:
             direct_url = url_match.group(1).strip()
 
+        # Image URL
+        image_url = ""
+        img_match = re.search(r'(?:•\s*)?(?:Image URL|Image|Photo|Thumbnail):\s*(https?://[^\s\n]+)', b, re.I)
+        if img_match:
+            image_url = img_match.group(1).strip()
+
         # Description snippet
         desc = ""
         desc_match = re.search(r'(?:•\s*)?Description:\s*([^\n]+)', b, re.I)
@@ -380,6 +386,7 @@ def extract_catalog_items_from_chunk(
             "specs": specs,
             "description": desc,
             "url": direct_url,
+            "image_url": image_url,
             "chunk_index": chunk_index,
             "title": title
         })
@@ -486,7 +493,8 @@ def format_catalog_recommendation_answer(
     matched_items: List[Dict[str, Any]],
     query_intent: Dict[str, Any],
     assistant_name: str = "Our Team",
-    allowed_urls: Optional[Set[str]] = None
+    allowed_urls: Optional[Set[str]] = None,
+    whatsapp_number: str = ""
 ) -> Dict[str, Any]:
     """
     Generates a clear, professional, structured answer for product/property queries.
@@ -528,9 +536,12 @@ def format_catalog_recommendation_answer(
             specs = it.get("specs") or ""
             loc = it.get("location") or ""
             url = it.get("url") or ""
+            img = it.get("image_url") or ""
             idx = it.get("chunk_index", 1)
 
             entry = f"• **{name}** — **{price}**"
+            if img and img.startswith("http"):
+                entry += f"\n  📸 ![{name}]({img})"
             details = []
             if loc:
                 details.append(f"📍 {loc}")
@@ -548,7 +559,16 @@ def format_catalog_recommendation_answer(
             entry += f" [{idx}]"
             lines.append(entry)
 
-        lines.append("\nWould you like more details on any of these options or to speak with our team?")
+        action_buttons = []
+        if whatsapp_number:
+            clean_wa = re.sub(r'[^0-9]', '', whatsapp_number)
+            if clean_wa:
+                wa_query = urllib.parse.quote(f"Hello {assistant_name}, I am interested in options around {budget_str if max_p else 'your catalog'}.")
+                action_buttons.append(f"🟢 [💬 Chat on WhatsApp with Specialist](https://wa.me/{clean_wa}?text={wa_query})")
+        if action_buttons:
+            lines.append(" • ".join(action_buttons))
+
+        lines.append("Would you like more details on any of these options or to speak with our team?")
     else:
         # We had items, but NONE were under the requested budget!
         # Provide transparent and helpful guidance with closest alternatives.
@@ -580,7 +600,8 @@ def build_real_estate_overview_answer(
     query_intent: Dict[str, Any],
     chunks: List[Dict[str, Any]],
     assistant_name: str = "Our Team",
-    allowed_urls: Optional[Set[str]] = None
+    allowed_urls: Optional[Set[str]] = None,
+    whatsapp_number: str = ""
 ) -> Dict[str, Any]:
     """
     Synthesizes a domain-aware, professional real-estate overview answer when
@@ -614,6 +635,14 @@ def build_real_estate_overview_answer(
     lines = []
     raw_q = query_intent.get("raw_query", "")
     is_arabic = any('\u0600' <= char <= '\u06FF' for char in raw_q)
+
+    wa_action_link = None
+    if whatsapp_number:
+        clean_wa = re.sub(r'[^0-9]', '', whatsapp_number)
+        if clean_wa:
+            wa_text = f"مرحبا {assistant_name}، أود الاستفسار عن العقارات في دبي" if is_arabic else f"Hello {assistant_name}, I would like to inquire about properties in Dubai."
+            encoded_wa = urllib.parse.quote(wa_text)
+            wa_action_link = f"🟢 [{'تواصل عبر واتساب' if is_arabic else '💬 Chat on WhatsApp'}](https://wa.me/{clean_wa}?text={encoded_wa})"
     
     # 1. Budget Rental Query (e.g., "rental properties under 500000" or "under 1000 aed or $")
     if max_p is not None and deal_type == "rent":
@@ -681,8 +710,13 @@ def build_real_estate_overview_answer(
                 "• **أبرز المواقع**: دبي مارينا، داون تاون دبي، نخلة جميرا، قرية جميرا الدائرية (JVC)، والمرابع العربية.\n"
                 "• **إجراءات تعاقد موثقة**: عقود معتمدة من ريرا (RERA)، تسجيل إيجاري (Ejari)، وتوصيل الخدمات (DEWA)."
             )
+            action_links = []
             if contact_link:
-                lines.append(f"🔗 [تواصل مع مستشاري التأجير]({contact_link})")
+                action_links.append(f"🔗 [تواصل مع مستشاري التأجير]({contact_link})")
+            if wa_action_link:
+                action_links.append(wa_action_link)
+            if action_links:
+                lines.append(" • ".join(action_links))
             lines.append("تفضل بمشاركة مواصفات العقار المطلوب أو ميزانيتك، وسيسعد فريقنا بتقديم أفضل العروض المتاحة!")
         else:
             lines.append(
@@ -693,8 +727,13 @@ def build_real_estate_overview_answer(
                 "• **Prime Locations**: Dubai Marina, Downtown Dubai, Palm Jumeirah, JVC (Jumeirah Village Circle), Business Bay, and Arabian Ranches.\n"
                 "• **End-to-End Tenancy Support**: RERA-compliant tenancy contracts, Ejari registration, DEWA connection assistance, and move-in coordination."
             )
+            action_links = []
             if contact_link:
-                lines.append(f"🔗 [Contact Our Leasing Specialists]({contact_link})")
+                action_links.append(f"🔗 [Contact Our Leasing Specialists]({contact_link})")
+            if wa_action_link:
+                action_links.append(wa_action_link)
+            if action_links:
+                lines.append(" • ".join(action_links))
             lines.append(
                 "Please feel free to share your preferred location, bedroom count, or budget below, and our leasing team will be glad to share tailored options!"
             )
@@ -722,6 +761,8 @@ def build_real_estate_overview_answer(
                 action_links.append(f"🔗 [اعرض عقارك للبيع وتقييم مجاني]({sell_link})")
             if contact_link:
                 action_links.append(f"🔗 [تواصل مع فريق المبيعات]({contact_link})")
+            if wa_action_link:
+                action_links.append(wa_action_link)
             if action_links:
                 lines.append(" • ".join(action_links))
             lines.append("هل ترغب في شراء عقار أو استكشاف مشاريع قيد الإنشاء أو بيع عقارك؟ دعنا نساعدك في تحقيق أهدافك العقارية!")
@@ -746,6 +787,8 @@ def build_real_estate_overview_answer(
                 action_links.append(f"🔗 [Sell Your Property & Free Valuation]({sell_link})")
             if contact_link:
                 action_links.append(f"🔗 [Contact Our Sales Team]({contact_link})")
+            if wa_action_link:
+                action_links.append(wa_action_link)
             if action_links:
                 lines.append(" • ".join(action_links))
             lines.append(
@@ -770,6 +813,8 @@ def build_real_estate_overview_answer(
                 action_links.append(f"🔗 [اعرض عقارك]({sell_link})")
             if contact_link:
                 action_links.append(f"🔗 [تواصل معنا]({contact_link})")
+            if wa_action_link:
+                action_links.append(wa_action_link)
             if action_links:
                 lines.append(" • ".join(action_links))
             lines.append("كيف يمكننا مساعدتك في بحثك العقاري اليوم؟ تفضل بمشاركة منطقتك المفضلة أو ميزانيتك!")
@@ -789,6 +834,8 @@ def build_real_estate_overview_answer(
                 action_links.append(f"🔗 [Sell Your Property]({sell_link})")
             if contact_link:
                 action_links.append(f"🔗 [Contact Team]({contact_link})")
+            if wa_action_link:
+                action_links.append(wa_action_link)
             if action_links:
                 lines.append(" • ".join(action_links))
             lines.append(
