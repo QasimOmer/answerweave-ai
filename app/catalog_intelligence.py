@@ -8,6 +8,7 @@ Specialized in:
 """
 
 import re
+import urllib.parse
 from typing import List, Dict, Any, Optional, Tuple, Set
 
 # Currency normalization helpers

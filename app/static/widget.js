@@ -418,25 +418,25 @@
         }
         .wf-status-pulse-ring {
             position: absolute !important;
-            width: 14px !important;
-            height: 14px !important;
+            width: 10px !important;
+            height: 10px !important;
             border-radius: 50% !important;
             background: #10b981 !important;
-            opacity: 0.5 !important;
-            animation: wfStatusHeartbeat 2.2s infinite ease-out !important;
+            opacity: 0.25 !important;
+            animation: wfStatusHeartbeat 3.2s infinite ease-out !important;
         }
         .wf-status-dot {
-            width: 7px !important;
-            height: 7px !important;
+            width: 6.5px !important;
+            height: 6.5px !important;
             border-radius: 50% !important;
             background: #10b981 !important;
-            box-shadow: 0 0 8px #10b981 !important;
+            box-shadow: 0 0 4px rgba(16, 185, 129, 0.45) !important;
             display: inline-block !important;
         }
         @keyframes wfStatusHeartbeat {
-            0% { transform: scale(0.6); opacity: 0.8; }
-            70% { transform: scale(1.6); opacity: 0; }
-            100% { transform: scale(1.6); opacity: 0; }
+            0% { transform: scale(0.9); opacity: 0.35; }
+            55% { transform: scale(1.3); opacity: 0; }
+            100% { transform: scale(1.3); opacity: 0; }
         }
 
         /* Top Header Action Buttons (Sleek Ghost Toolbar) */
