@@ -877,7 +877,7 @@
                                         </div>
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Corner Placement</label>
-                                            <select id="asstPosition" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <select id="asstPosition" onchange="onLivePositionChange(this.value)" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
                                                 <option value="bottom-right">Bottom-Right Corner</option>
                                                 <option value="bottom-left">Bottom-Left Corner</option>
                                             </select>
@@ -978,16 +978,16 @@
                                         <i data-lucide="lock" class="w-3 h-3 text-emerald-400"></i>
                                         <span id="previewDomainText">ecomalign.com</span>
                                     </div>
-                                    <span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">Interactive Sandbox</span>
+                                    <button type="button" onclick="toggleMockWindow()" class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/20 transition cursor-pointer" id="mockToggleStateBadge">Preview: Window Open</button>
                                 </div>
 
                                 <!-- Sandbox Canvas with Dotted Pattern -->
-                                <div class="bg-obsidian-950 h-[560px] rounded-[24px] p-4 flex flex-col justify-end items-end relative overflow-hidden">
+                                <div id="prevCanvasContainer" class="bg-obsidian-950 h-[560px] rounded-[24px] p-4 flex flex-col justify-end items-end relative overflow-hidden transition-all">
                                     <!-- Background Site Mockup -->
                                     <div class="absolute inset-0 p-6 flex flex-col justify-center items-center text-center text-slate-600 pointer-events-none">
                                         <i data-lucide="globe" class="w-10 h-10 opacity-20 mb-2"></i>
                                         <p class="text-xs font-semibold text-slate-500">Live Website Preview Canvas</p>
-                                        <p class="text-[11px] text-slate-600 max-w-xs mt-1">Tap any popular question below or type a query in the preview window to test in real time.</p>
+                                        <p class="text-[11px] text-slate-600 max-w-xs mt-1">Tap any popular question below or click the launcher to toggle open/closed preview.</p>
                                     </div>
 
                                     <!-- Interactive Widget Window inside Mockup -->
@@ -1008,12 +1008,20 @@
                                                 </div>
                                             </div>
                                             <!-- Action Icons in Header (Sound, Mail, Reset, Close) -->
-                                            <div class="flex items-center gap-1.5 text-slate-400">
-                                                <span id="prevSoundIndicator" class="p-1 hover:text-white cursor-pointer text-xs" title="Audio Chimes">🔔</span>
-                                                <span class="p-1 hover:text-white cursor-pointer text-xs" title="Contact Email">✉</span>
-                                                <span class="p-1 hover:text-white cursor-pointer text-xs" title="New Chat">✎</span>
+                                            <div class="flex items-center gap-1 text-white/75">
+                                                <button type="button" id="prevSoundIndicator" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Toggle audio chime">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                                                </button>
+                                                <button type="button" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Contact Email">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                                </button>
+                                                <button type="button" onclick="clearMockChat()" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Start New Conversation">
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                                </button>
                                                 <span class="w-[1px] h-3 bg-white/20 mx-0.5"></span>
-                                                <span class="p-1 hover:text-white cursor-pointer text-xs">✕</span>
+                                                <button type="button" onclick="toggleMockWindow()" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Close Preview Window">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                                </button>
                                             </div>
                                         </div>
 
@@ -1053,12 +1061,12 @@
                                     </div>
 
                                     <!-- Floating Teaser Bubble and Launcher -->
-                                    <div class="flex items-center gap-2 mt-3 mr-1 relative">
-                                        <div id="prevTeaserBubble" class="bg-white text-slate-800 px-3 py-1.5 rounded-2xl rounded-br-sm shadow-lg border border-slate-200 text-[11px] font-semibold flex items-center gap-1.5">
+                                    <div id="prevLauncherWrap" class="flex items-center gap-2 mt-3 mr-1 relative">
+                                        <div id="prevTeaserBubble" class="bg-white text-slate-800 px-3 py-1.5 rounded-2xl rounded-br-sm shadow-lg border border-slate-200 text-[11px] font-semibold flex items-center gap-1.5 hidden">
                                             <span id="prevTeaserText">👋 Hi! Need quick answers?</span>
                                         </div>
-                                        <div id="prevBubble" class="w-12 h-12 rounded-full bg-[#081726] text-white flex items-center justify-center text-xl shadow-xl transition-colors shrink-0">
-                                            ⚡
+                                        <div id="prevBubble" onclick="toggleMockWindow()" class="w-10 h-10 rounded-full bg-[#081726] text-white flex items-center justify-center shadow-xl transition-all cursor-pointer shrink-0" title="Click to toggle chat preview">
+                                            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                                         </div>
                                     </div>
                                 </div>
@@ -1820,8 +1828,18 @@
             onLivePlaceholderChange(asst.input_placeholder || 'Ask a question...');
             onLiveThemeModeChange(asst.theme_mode || 'light');
             onLiveRadiusChange(asst.border_radius || '22px');
-            onLiveLauncherStyleChange(asst.launcher_style || 'circle');
-            onLivePulseChange(asst.launcher_pulse !== 0);
+            onLivePositionChange(asst.position || 'bottom-right');
+            mockWindowOpen = true;
+            const win = document.getElementById('prevChatWindow');
+            const teaser = document.getElementById('prevTeaserBubble');
+            const bubble = document.getElementById('prevBubble');
+            if (win) win.classList.remove('hidden');
+            if (teaser) teaser.classList.add('hidden');
+            if (bubble) {
+                bubble.className = "w-10 h-10 rounded-full text-white flex items-center justify-center shadow-xl transition-all cursor-pointer shrink-0";
+                bubble.style.backgroundColor = color;
+                bubble.innerHTML = `<svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
+            }
             renderMockPopularCards(asst.suggested_questions);
         }
 
@@ -1843,10 +1861,14 @@
                     : "w-full bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl p-2.5 px-3 flex items-center justify-between text-left shadow-sm transition group cursor-pointer";
                 btn.innerHTML = `
                     <div class="flex items-center gap-2 flex-1">
-                        <span class="w-1.5 h-1.5 rounded-full ${isDark ? 'bg-slate-500' : 'bg-slate-400'} shrink-0"></span>
+                        <span class="w-5 h-5 rounded-md ${isDark ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-500/10 text-indigo-600'} flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>
+                            </svg>
+                        </span>
                         <span class="font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'} text-[11px] leading-tight">${escapeHtml(q)}</span>
                     </div>
-                    <span class="${isDark ? 'text-slate-500 group-hover:text-white' : 'text-slate-400 group-hover:text-slate-900'} group-hover:translate-x-0.5 transition text-xs font-bold">→</span>
+                    <svg class="${isDark ? 'text-slate-500 group-hover:text-white' : 'text-slate-400 group-hover:text-slate-900'} group-hover:translate-x-0.5 transition shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 `;
                 btn.onclick = () => {
                     document.getElementById('prevChatInput').value = q;
@@ -2047,13 +2069,111 @@
             renderMockPopularCards(document.getElementById('asstQuestions') ? document.getElementById('asstQuestions').value : '');
         }
 
-        function onLiveLauncherStyleChange(style) {
+        let mockWindowOpen = true;
+
+        function toggleMockWindow() {
+            mockWindowOpen = !mockWindowOpen;
+            const win = document.getElementById('prevChatWindow');
+            const teaser = document.getElementById('prevTeaserBubble');
+            const bubble = document.getElementById('prevBubble');
+            const badge = document.getElementById('mockToggleStateBadge');
+            const style = (document.getElementById('asstLauncherStyle') && document.getElementById('asstLauncherStyle').value) || 'circle';
+
+            if (mockWindowOpen) {
+                if (win) win.classList.remove('hidden');
+                if (teaser) teaser.classList.add('hidden');
+                if (badge) {
+                    badge.innerText = 'Preview: Window Open';
+                    badge.className = 'text-[10px] font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/20 transition cursor-pointer';
+                }
+                if (bubble) {
+                    bubble.className = "w-10 h-10 rounded-full text-white flex items-center justify-center shadow-xl transition-all cursor-pointer shrink-0";
+                    bubble.style.backgroundColor = (document.getElementById('asstColorText') && document.getElementById('asstColorText').value) || '#081726';
+                    bubble.innerHTML = `<svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
+                    bubble.title = "Click to close preview window";
+                }
+            } else {
+                if (win) win.classList.add('hidden');
+                const teaserText = document.getElementById('asstTeaser') ? document.getElementById('asstTeaser').value.trim() : '';
+                if (teaser && teaserText) {
+                    teaser.classList.remove('hidden');
+                    const teaserTextEl = document.getElementById('prevTeaserText');
+                    if (teaserTextEl) teaserTextEl.innerText = teaserText;
+                }
+                if (badge) {
+                    badge.innerText = 'Preview: Launcher Closed (Click to Open)';
+                    badge.className = 'text-[10px] font-bold text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-500/20 transition cursor-pointer';
+                }
+                onLiveLauncherStyleChange(style, true);
+                const pulse = document.getElementById('asstPulse') ? document.getElementById('asstPulse').value === '1' : true;
+                onLivePulseChange(pulse, true);
+            }
+        }
+
+        function clearMockChat() {
+            const body = document.getElementById('prevChatBody');
+            const welcome = (document.getElementById('asstWelcome') && document.getElementById('asstWelcome').value) || "Hi! How can I help you today?";
+            const questions = (document.getElementById('asstQuestions') && document.getElementById('asstQuestions').value) || "";
+            const isDark = document.getElementById('asstThemeMode') && document.getElementById('asstThemeMode').value === 'dark';
+
+            if (body) {
+                body.innerHTML = `
+                    <div id="prevWelcome" class="${isDark ? 'bg-slate-800 text-slate-100 border-slate-700' : 'bg-white text-slate-800 border-slate-200'} p-2.5 rounded-2xl rounded-bl-sm border shadow-sm text-[11.5px] leading-relaxed">
+                        ${escapeHtml(welcome)}
+                    </div>
+                    <div id="prevPopularSection" class="space-y-2 pt-1">
+                        <div class="flex items-start gap-2">
+                            <div id="prevPopularBar" class="w-1 h-5 rounded-full shrink-0 mt-0.5" style="background-color: ${document.getElementById('asstColorText').value || '#081726'};"></div>
+                            <div>
+                                <div class="font-bold text-xs ${isDark ? 'text-slate-100' : 'text-slate-900'} leading-none">Popular questions</div>
+                                <div class="text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'} mt-0.5">Tap one to get started, or type your own.</div>
+                            </div>
+                        </div>
+                        <div id="prevPopularCards" class="space-y-1.5"></div>
+                    </div>
+                `;
+                renderMockPopularCards(questions);
+            }
+        }
+
+        function onLivePositionChange(pos) {
+            const canvas = document.getElementById('prevCanvasContainer');
+            const wrap = document.getElementById('prevLauncherWrap');
+            if (!canvas) return;
+            if (pos === 'bottom-left') {
+                canvas.classList.remove('items-end');
+                canvas.classList.add('items-start');
+                if (wrap) {
+                    wrap.classList.remove('justify-end', 'mr-1');
+                    wrap.classList.add('justify-start', 'ml-1');
+                }
+            } else {
+                canvas.classList.remove('items-start');
+                canvas.classList.add('items-end');
+                if (wrap) {
+                    wrap.classList.remove('justify-start', 'ml-1');
+                    wrap.classList.add('justify-end', 'mr-1');
+                }
+            }
+        }
+
+        function onLiveLauncherStyleChange(style, forceClosed = false) {
             const bubble = document.getElementById('prevBubble');
             if (!bubble) return;
+
+            if (mockWindowOpen && !forceClosed) {
+                toggleMockWindow();
+                return;
+            }
+
             const text = (document.getElementById('asstLauncherText') && document.getElementById('asstLauncherText').value.trim()) || 'Chat with us';
             const avatarVal = (document.getElementById('asstAvatar') && document.getElementById('asstAvatar').value) || '⚡';
             const isImg = avatarVal.startsWith('data:image') || avatarVal.startsWith('http');
             const iconHtml = isImg ? `<img src="${avatarVal}" class="w-4 h-4 rounded-full object-cover shrink-0" alt="Icon" />` : `<span>${avatarVal}</span>`;
+            const color = (document.getElementById('asstColorText') && document.getElementById('asstColorText').value) || '#081726';
+
+            bubble.style.backgroundColor = color;
+            bubble.title = "Click to open chat preview";
 
             if (style === 'pill') {
                 bubble.className = "h-11 px-4 rounded-full text-white flex items-center justify-center gap-2 shadow-xl transition-all cursor-pointer font-bold text-xs shrink-0";
@@ -2071,9 +2191,15 @@
             }
         }
 
-        function onLivePulseChange(enabled) {
+        function onLivePulseChange(enabled, forceClosed = false) {
             const bubble = document.getElementById('prevBubble');
             if (!bubble) return;
+
+            if (mockWindowOpen && !forceClosed) {
+                toggleMockWindow();
+                return;
+            }
+
             if (enabled) {
                 bubble.classList.add('ring-4', 'ring-brand-400/50', 'animate-pulse');
             } else {
@@ -2084,7 +2210,9 @@
         function onLiveSoundChange(enabled) {
             const el = document.getElementById('prevSoundIndicator');
             if (el) {
-                el.innerText = enabled ? '🔔' : '🔕';
+                el.innerHTML = enabled
+                    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`
+                    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" x2="1" y1="1" y2="23"/></svg>`;
                 el.title = enabled ? 'Audio Chimes Enabled' : 'Audio Chimes Muted';
             }
         }

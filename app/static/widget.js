@@ -124,22 +124,22 @@
             --wf-bg: #0b0f17 !important;
             --wf-surface: #07090e !important;
             --wf-surface-hover: #141b2a !important;
-            --wf-card-bg: #111827 !important;
-            --wf-card-border: rgba(255, 255, 255, 0.09) !important;
-            --wf-card-border-hover: rgba(255, 255, 255, 0.2) !important;
+            --wf-card-bg: #0f1624 !important;
+            --wf-card-border: rgba(255, 255, 255, 0.08) !important;
+            --wf-card-border-hover: rgba(255, 255, 255, 0.18) !important;
             --wf-text: #f8fafc !important;
             --wf-text-muted: #94a3b8 !important;
             --wf-text-subtle: #64748b !important;
-            --wf-bot-bubble-bg: #111827 !important;
-            --wf-bot-bubble-border: rgba(255, 255, 255, 0.09) !important;
-            --wf-bot-bubble-text: #f3f4f6 !important;
-            --wf-bot-bubble-shadow: 0 4px 16px rgba(0, 0, 0, 0.45) !important;
+            --wf-bot-bubble-bg: #0f1624 !important;
+            --wf-bot-bubble-border: rgba(255, 255, 255, 0.08) !important;
+            --wf-bot-bubble-text: #f8fafc !important;
+            --wf-bot-bubble-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
             --wf-input-wrap-bg: #0b0f17 !important;
-            --wf-input-field-bg: #141b2a !important;
-            --wf-input-field-border: rgba(255, 255, 255, 0.12) !important;
+            --wf-input-field-bg: #111827 !important;
+            --wf-input-field-border: rgba(255, 255, 255, 0.09) !important;
             --wf-footer-bg: #0b0f17 !important;
-            --wf-window-shadow: 0 30px 80px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
-            --wf-window-border: rgba(255, 255, 255, 0.12) !important;
+            --wf-window-shadow: 0 25px 70px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            --wf-window-border: rgba(255, 255, 255, 0.1) !important;
         }
 
         *, *::before, *::after {
@@ -213,13 +213,13 @@
         /* Floating Launcher Button */
         button.wf-launcher {
             all: unset !important;
-            width: 60px !important;
-            height: 60px !important;
-            min-width: 60px !important;
-            min-height: 60px !important;
+            width: 56px !important;
+            height: 56px !important;
+            min-width: 56px !important;
+            min-height: 56px !important;
             border-radius: 50% !important;
             background: var(--wf-primary, #0f172a) !important;
-            box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.4), 0 4px 8px rgba(0,0,0,0.1) !important;
+            box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.45), 0 4px 10px rgba(0,0,0,0.15) !important;
             border: 1px solid rgba(255, 255, 255, 0.2) !important;
             cursor: pointer !important;
             display: inline-flex !important;
@@ -229,26 +229,48 @@
             padding: 0 !important;
             margin: 0 !important;
             box-sizing: border-box !important;
-            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease !important;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
             outline: none !important;
             pointer-events: auto !important;
             position: relative !important;
         }
         button.wf-launcher:hover {
-            transform: scale(1.08) translateY(-2px) !important;
-            box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.5), 0 6px 12px rgba(0,0,0,0.15) !important;
+            transform: scale(1.06) translateY(-2px) !important;
+            box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.5), 0 6px 12px rgba(0,0,0,0.2) !important;
         }
         button.wf-launcher.wf-launcher-pill {
             width: auto !important;
             min-width: unset !important;
-            height: 52px !important;
-            min-height: 52px !important;
-            padding: 0 20px !important;
+            height: 50px !important;
+            min-height: 50px !important;
+            padding: 0 18px !important;
             border-radius: 9999px !important;
-            gap: 10px !important;
+            gap: 9px !important;
             font-size: 13.5px !important;
             font-weight: 700 !important;
             letter-spacing: -0.01em !important;
+        }
+        .wf-is-open button.wf-launcher {
+            width: 48px !important;
+            min-width: 48px !important;
+            height: 48px !important;
+            min-height: 48px !important;
+            padding: 0 !important;
+            border-radius: 50% !important;
+            gap: 0 !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+        }
+        .wf-is-open button.wf-launcher:hover {
+            transform: scale(1.06) !important;
+        }
+        .wf-is-open button.wf-launcher #wf-btn-label {
+            display: none !important;
+        }
+        .wf-is-open .wf-has-pulse::before {
+            display: none !important;
+        }
+        .wf-is-open .wf-teaser-bubble {
+            display: none !important;
         }
         .wf-has-pulse::before {
             content: '' !important;
@@ -267,23 +289,24 @@
             100% { transform: scale(1.22); opacity: 0; }
         }
         button.wf-launcher svg {
-            width: 24px !important;
-            height: 24px !important;
+            width: 22px !important;
+            height: 22px !important;
             stroke: currentColor !important;
             fill: none !important;
             display: block !important;
             pointer-events: none !important;
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }
 
         /* Widget Container Window */
         .wf-window {
             position: fixed !important;
-            bottom: 96px !important;
+            bottom: 86px !important;
             right: 24px !important;
             width: 395px !important;
-            height: 630px !important;
+            height: 620px !important;
             max-width: calc(100vw - 36px) !important;
-            max-height: calc(100dvh - 120px) !important;
+            max-height: calc(100dvh - 110px) !important;
             background: var(--wf-bg, #ffffff) !important;
             border-radius: var(--wf-radius, 22px) !important;
             box-shadow: var(--wf-window-shadow) !important;
@@ -292,10 +315,11 @@
             overflow: hidden !important;
             opacity: 0 !important;
             pointer-events: none !important;
-            transform: translateY(20px) scale(0.96) !important;
-            transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.2s !important;
+            transform: translateY(16px) scale(0.97) !important;
+            transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.2s !important;
             z-index: 2147483647 !important;
             border: 1px solid var(--wf-window-border, rgba(226, 232, 240, 0.85)) !important;
+            backdrop-filter: blur(20px) !important;
         }
         .wf-position-left .wf-window {
             right: auto !important;
@@ -365,14 +389,15 @@
             display: inline-flex !important;
             align-items: center !important;
             gap: 3px !important;
-            background: rgba(255, 255, 255, 0.18) !important;
-            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            background: rgba(255, 255, 255, 0.14) !important;
+            border: 1px solid rgba(255, 255, 255, 0.22) !important;
             color: #ffffff !important;
             font-size: 10px !important;
             font-weight: 700 !important;
             padding: 1px 6px !important;
             border-radius: 9999px !important;
             letter-spacing: 0.02em !important;
+            backdrop-filter: blur(8px) !important;
         }
         .wf-status-row {
             display: flex !important;
@@ -414,27 +439,27 @@
             100% { transform: scale(1.6); opacity: 0; }
         }
 
-        /* Top Header Action Buttons */
+        /* Top Header Action Buttons (Sleek Ghost Toolbar) */
         .wf-header-actions {
             display: flex !important;
             align-items: center !important;
-            gap: 6px !important;
+            gap: 2px !important;
         }
         .wf-header-divider {
             width: 1px !important;
-            height: 20px !important;
-            background: rgba(255, 255, 255, 0.15) !important;
-            margin: 0 2px !important;
+            height: 16px !important;
+            background: rgba(255, 255, 255, 0.16) !important;
+            margin: 0 3px !important;
         }
         button.wf-icon-btn {
             all: unset !important;
-            background: rgba(255, 255, 255, 0.08) !important;
-            border: 1px solid rgba(255, 255, 255, 0.12) !important;
-            color: #cbd5e1 !important;
-            width: 32px !important;
-            height: 32px !important;
-            min-width: 32px !important;
-            min-height: 32px !important;
+            background: transparent !important;
+            border: none !important;
+            color: rgba(255, 255, 255, 0.72) !important;
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            min-height: 28px !important;
             border-radius: 8px !important;
             cursor: pointer !important;
             display: inline-flex !important;
@@ -448,17 +473,23 @@
         }
         button.wf-icon-btn:hover {
             color: #ffffff !important;
-            background: rgba(255, 255, 255, 0.22) !important;
-            border-color: rgba(255, 255, 255, 0.3) !important;
+            background: rgba(255, 255, 255, 0.15) !important;
         }
         button.wf-icon-btn svg {
-            width: 17px !important;
-            height: 17px !important;
+            width: 16px !important;
+            height: 16px !important;
             stroke: currentColor !important;
             fill: none !important;
             display: block !important;
             pointer-events: none !important;
             flex-shrink: 0 !important;
+        }
+        .wf-header-wa-btn {
+            color: #25D366 !important;
+        }
+        button.wf-header-wa-btn:hover {
+            color: #ffffff !important;
+            background: rgba(37, 211, 102, 0.25) !important;
         }
 
         /* Chat Body Canvas with Dotted Pattern */
@@ -467,12 +498,17 @@
             padding: 18px !important;
             overflow-y: auto !important;
             background-color: var(--wf-surface, #f8fafc) !important;
-            background-image: radial-gradient(var(--wf-card-border, #cbd5e1) 1.2px, transparent 1.2px) !important;
-            background-size: 16px 16px !important;
+            background-image: radial-gradient(var(--wf-card-border, #cbd5e1) 1px, transparent 1px) !important;
+            background-size: 18px 18px !important;
             display: flex !important;
             flex-direction: column !important;
             gap: 14px !important;
             scroll-behavior: smooth !important;
+        }
+        .wf-dark .wf-chat-body {
+            background-color: #07090e !important;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px) !important;
+            background-size: 18px 18px !important;
         }
 
         /* Message Bubbles */
@@ -531,18 +567,23 @@
             align-self: flex-start !important;
             background: var(--wf-bot-bubble-bg, #ffffff) !important;
             color: var(--wf-bot-bubble-text, #0f172a) !important;
-            padding: 13px 18px !important;
+            padding: 14px 18px !important;
             border-radius: 18px 18px 18px 6px !important;
             border: 1px solid var(--wf-bot-bubble-border, #e2e8f0) !important;
             box-shadow: var(--wf-bot-bubble-shadow) !important;
             font-size: 13.5px !important;
             font-weight: 500 !important;
-            line-height: 1.5 !important;
+            line-height: 1.55 !important;
+            letter-spacing: -0.01em !important;
+        }
+        .wf-dark .wf-welcome-bubble {
+            background: linear-gradient(145deg, #101726, #090e17) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
         }
 
         /* Popular Questions Section */
         .wf-popular-section {
-            margin-top: 6px !important;
+            margin-top: 4px !important;
             margin-bottom: 2px !important;
         }
         .wf-popular-head {
@@ -552,37 +593,40 @@
             margin-bottom: 12px !important;
         }
         .wf-popular-bar {
-            width: 3.5px !important;
-            height: 24px !important;
-            background: var(--wf-primary, #f59e0b) !important;
+            width: 3px !important;
+            height: 20px !important;
+            background: linear-gradient(180deg, var(--wf-primary, #6366f1), #818cf8) !important;
             border-radius: 4px !important;
             flex-shrink: 0 !important;
             margin-top: 1px !important;
         }
+        .wf-dark .wf-popular-bar {
+            background: linear-gradient(180deg, #818cf8, #c084fc) !important;
+        }
         .wf-popular-title {
-            font-size: 14.5px !important;
+            font-size: 13.5px !important;
             font-weight: 700 !important;
             color: var(--wf-text, #0f172a) !important;
             line-height: 1.2 !important;
             letter-spacing: -0.01em !important;
         }
         .wf-popular-sub {
-            font-size: 12px !important;
+            font-size: 11.5px !important;
             color: var(--wf-text-muted, #64748b) !important;
-            margin-top: 3px !important;
+            margin-top: 2px !important;
         }
 
         /* Popular Question Cards */
         .wf-popular-cards {
             display: flex !important;
             flex-direction: column !important;
-            gap: 9px !important;
+            gap: 8px !important;
         }
         button.wf-question-card {
             all: unset !important;
             background: var(--wf-card-bg, #ffffff) !important;
             border: 1px solid var(--wf-card-border, #e2e8f0) !important;
-            border-radius: 16px !important;
+            border-radius: 14px !important;
             padding: 12px 16px !important;
             display: flex !important;
             align-items: center !important;
@@ -590,17 +634,26 @@
             gap: 10px !important;
             cursor: pointer !important;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
             text-align: left !important;
             width: 100% !important;
             box-sizing: border-box !important;
             color: var(--wf-text, #0f172a) !important;
         }
+        .wf-dark button.wf-question-card {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.07) !important;
+            backdrop-filter: blur(8px) !important;
+        }
         button.wf-question-card:hover {
-            transform: translateY(-2px) !important;
-            border-color: var(--wf-primary, #f59e0b) !important;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+            transform: translateY(-2px) translateX(2px) !important;
+            border-color: var(--wf-primary, #6366f1) !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
             background: var(--wf-surface-hover, #f8fafc) !important;
+        }
+        .wf-dark button.wf-question-card:hover {
+            background: rgba(255, 255, 255, 0.07) !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
         }
         .wf-question-left {
             display: flex !important;
@@ -608,14 +661,31 @@
             gap: 10px !important;
             flex: 1 !important;
         }
-        .wf-question-dot {
-            width: 6px !important;
-            height: 6px !important;
-            min-width: 6px !important;
-            border-radius: 50% !important;
-            background: var(--wf-primary, #f59e0b) !important;
+        .wf-question-sparkle {
+            width: 20px !important;
+            height: 20px !important;
+            min-width: 20px !important;
+            border-radius: 6px !important;
+            background: rgba(99, 102, 241, 0.09) !important;
+            color: #6366f1 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             flex-shrink: 0 !important;
-            display: inline-block !important;
+            transition: all 0.2s ease !important;
+        }
+        .wf-dark .wf-question-sparkle {
+            background: rgba(129, 140, 248, 0.15) !important;
+            color: #a5b4fc !important;
+        }
+        button.wf-question-card:hover .wf-question-sparkle {
+            transform: scale(1.08) !important;
+            background: #6366f1 !important;
+            color: #ffffff !important;
+        }
+        .wf-dark button.wf-question-card:hover .wf-question-sparkle {
+            background: #818cf8 !important;
+            color: #0f172a !important;
         }
         .wf-question-text {
             font-size: 13px !important;
@@ -624,15 +694,14 @@
             line-height: 1.35 !important;
             flex: 1 !important;
         }
-        .wf-question-arrow {
+        .wf-question-arrow-icon {
             color: var(--wf-text-subtle, #94a3b8) !important;
-            font-size: 14px !important;
-            font-weight: 700 !important;
             flex-shrink: 0 !important;
-            transition: transform 0.15s ease, color 0.15s ease !important;
+            transition: transform 0.2s ease, color 0.2s ease !important;
+            display: block !important;
         }
-        button.wf-question-card:hover .wf-question-arrow {
-            color: var(--wf-primary, #d97706) !important;
+        button.wf-question-card:hover .wf-question-arrow-icon {
+            color: var(--wf-primary, #818cf8) !important;
             transform: translateX(3px) !important;
         }
 
@@ -937,13 +1006,22 @@
             display: flex !important;
             align-items: center !important;
             padding: 3px 6px 3px 14px !important;
-            transition: all 0.2s !important;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
             box-sizing: border-box !important;
+        }
+        .wf-dark .wf-field-container {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border: 1px solid rgba(255, 255, 255, 0.09) !important;
         }
         .wf-field-container:focus-within {
             background: var(--wf-card-bg, #ffffff) !important;
-            border-color: var(--wf-primary, #cbd5e1) !important;
-            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08) !important;
+            border-color: var(--wf-primary, #6366f1) !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+        }
+        .wf-dark .wf-field-container:focus-within {
+            background: rgba(255, 255, 255, 0.07) !important;
+            border-color: var(--wf-primary, #818cf8) !important;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25) !important;
         }
         input.wf-field {
             all: unset !important;
@@ -982,6 +1060,10 @@
             color: var(--wf-text, #0f172a) !important;
             background: rgba(0, 0, 0, 0.05) !important;
         }
+        .wf-dark button.wf-mic-btn:hover {
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+        }
         button.wf-mic-btn svg {
             width: 17px !important;
             height: 17px !important;
@@ -1019,6 +1101,11 @@
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
             flex-shrink: 0 !important;
         }
+        .wf-dark button.wf-send-btn {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            color: rgba(255, 255, 255, 0.45) !important;
+        }
         button.wf-send-btn svg {
             width: 16px !important;
             height: 16px !important;
@@ -1030,7 +1117,7 @@
             background: var(--wf-primary, #0f172a) !important;
             border-color: var(--wf-primary, #0f172a) !important;
             color: #ffffff !important;
-            box-shadow: 0 3px 10px rgba(15, 23, 42, 0.25) !important;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25) !important;
         }
         button.wf-send-btn.wf-send-active:hover {
             transform: scale(1.06) !important;
@@ -1189,8 +1276,8 @@
                         <div class="wf-title-row">
                             <span class="wf-header-title" id="wf-header-name">${botConfig.name}</span>
                             <span class="wf-verified-badge" title="Official Verified AI Assistant">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"/>
                                 </svg>
                                 <span>AI</span>
                             </span>
@@ -1548,7 +1635,7 @@
             triggerBtn.classList.add('wf-launcher-pill');
             if (btnLabel) {
                 btnLabel.innerText = botConfig.launcher_text || "Chat with us";
-                btnLabel.style.display = 'inline';
+                btnLabel.style.display = isOpen ? 'none' : 'inline';
             }
         } else {
             triggerBtn.classList.remove('wf-launcher-pill');
@@ -1647,10 +1734,16 @@
             card.className = 'wf-question-card';
             card.innerHTML = `
                 <div class="wf-question-left">
-                    <span class="wf-question-dot"></span>
+                    <span class="wf-question-sparkle">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/>
+                        </svg>
+                    </span>
                     <span class="wf-question-text">${escapeHtml(q)}</span>
                 </div>
-                <span class="wf-question-arrow">→</span>
+                <svg class="wf-question-arrow-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                </svg>
             `;
             card.onclick = () => {
                 inputEl.value = q;
@@ -1663,9 +1756,11 @@
 
     function toggleChat() {
         isOpen = !isOpen;
+        const btnLabel = $('wf-btn-label');
         if (isOpen) {
             win.classList.add('wf-open');
             root.classList.add('wf-is-open');
+            if (btnLabel) btnLabel.style.display = 'none';
             if (window.innerWidth <= 640) {
                 hostContainer.style.width = '100vw';
                 hostContainer.style.height = '100vh';
@@ -1675,7 +1770,7 @@
             const iconEl = $('wf-btn-icon');
             if (iconEl) {
                 iconEl.innerHTML = `
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
                     </svg>
                 `;
@@ -1687,10 +1782,13 @@
             hostContainer.style.width = '0';
             hostContainer.style.height = '0';
             hostContainer.style.pointerEvents = 'none';
+            if (btnLabel && botConfig.launcher_style === 'pill') {
+                btnLabel.style.display = 'inline';
+            }
             const iconEl = $('wf-btn-icon');
             if (iconEl) {
                 iconEl.innerHTML = `
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
                     </svg>
                 `;
