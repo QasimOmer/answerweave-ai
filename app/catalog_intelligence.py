@@ -37,6 +37,36 @@ CURRENCY_MAP = {
     "rupees": "INR"
 }
 
+def is_business_info_query(query: str) -> bool:
+    """
+    Detects if a visitor is asking common business information questions:
+    Services, Leadership, Contact, Address, Hours, Policies, Pricing plans, Company overview.
+    These must NEVER be hijacked by e-commerce or real-estate item recommendation engines.
+    """
+    q = query.strip().lower()
+    info_patterns = [
+        r'\b(?:who\s+(?:is|was|are)|whom)\b',
+        r'\b(?:founder|co-founder|owner|ceo|chairman|leadership|director|executive|head\s+of)\b',
+        r'\b(?:services?|what\s+do\s+you\s+do|what\s+can\s+you\s+do|what\s+we\s+do|offerings?|solutions?|what\s+you\s+offer|type\s+of\s+projects?|projects?\s+(?:u|you)\s+do)\b',
+        r'\b(?:contact|phone|telephone|call|whatsapp|email|reach|speak\s+to|talk\s+to|get\s+in\s+touch|touch\s+base|discuss\s+renewal|renewal)\b',
+        r'\b(?:office|address|location|where\s+are\s+you|where\s+located|headquarters|branch|branches|based\s+in)\b',
+        r'\b(?:timing|timings|hours|open|opening\s+hours|working\s+hours|business\s+hours)\b',
+        r'\b(?:refund|return|policies|policy|guarantee|warranty|cancel|cancellation|terms\s+of\s+service)\b',
+        r'\b(?:tell\s+me\s+about|about\s+us|about\s+the\s+company|who\s+is\s+[a-z0-9_-]+|what\s+is\s+[a-z0-9_-]+)\b',
+        r'\b(?:how\s+to\s+get\s+started|how\s+does\s+it\s+work|getting\s+started|how\s+it\s+works|process|onboarding)\b',
+        r'\b(?:consultation|book\s+a\s+call|schedule\s+a\s+call|strategy\s+call|discovery\s+call)\b',
+        r'\b(?:how\s+much\s+does\s+it\s+cost|how\s+much\s+is|what\s+is\s+your\s+pricing|pricing\s+plans?|membership\s+fee)\b'
+    ]
+    # Check if this is an explicit property/product catalog search with budget (e.g. "apartment for rent under 50k", "shoes under $100")
+    has_budget_number = bool(re.search(r'\b(?:under|below|less\s+than|within|max)\s*[\$€£]?\s*[0-9]+', q))
+    has_explicit_listing = bool(re.search(r'\b(?:for\s+rent|to\s+rent|for\s+sale|to\s+buy|rental\s+properties|property\s+listings?|apartments?\s+for|villas?\s+for|products?\s+under)\b', q))
+    if has_budget_number or has_explicit_listing:
+        # If user explicitly asks for listings/rentals under budget, allow catalog processing unless asking for founder, phone, email, etc.
+        if not any(re.search(r'\b' + kw + r'\b', q) for kw in ['founder', 'owner', 'ceo', 'phone', 'email', 'address', 'office', 'timings', 'hours', 'renewal']):
+            return False
+
+    return any(bool(re.search(pat, q)) for pat in info_patterns)
+
 def parse_user_query_intent(query: str) -> Dict[str, Any]:
     """
     Parses a user query to detect:
@@ -50,22 +80,36 @@ def parse_user_query_intent(query: str) -> Dict[str, Any]:
     - keywords: extracted attribute/location/category tokens
     """
     q = query.strip().lower()
-    
+
+    if is_business_info_query(query):
+        return {
+            "is_catalog_query": False,
+            "entity_type": "any",
+            "deal_type": "any",
+            "max_price": None,
+            "min_price": None,
+            "currency": "ANY",
+            "bedrooms": None,
+            "locations": [],
+            "keywords": [],
+            "raw_query": query
+        }
+
     # Check if query is asking for catalog, inventory, recommendations, or budget items
     catalog_keywords = [
-        "product", "products", "item", "items", "goods", "shop", "buy", "purchase",
-        "property", "properties", "apartment", "apartments", "flat", "flats",
-        "villa", "villas", "house", "houses", "home", "homes", "studio", "studios",
-        "condo", "condos", "penthouse", "penthouses", "townhouse", "townhouses",
-        "rent", "rental", "rentals", "leasing", "lease", "to rent", "for rent",
-        "under", "below", "less than", "within", "max", "maximum", "budget",
-        "price", "cost", "cheap", "cheapest", "affordable", "available", "suggest", "recommend",
+        r'\bproducts?\b', r'\bitems?\b', r'\bgoods\b', r'\bmerchandise\b', r'\bshop\b', r'\bbuy\b', r'\bpurchase\b',
+        r'\bpropert(?:y|ies)\b', r'\bapartments?\b', r'\bflats?\b',
+        r'\bvillas?\b', r'\bhouses?\b', r'\bhomes?\b', r'\bstudios?\b',
+        r'\bcondos?\b', r'\bpenthouses?\b', r'\btownhouses?\b',
+        r'\brentals?\b', r'\bleasing\b', r'\bto\s+rent\b', r'\bfor\s+rent\b',
+        r'\bunder\b', r'\bbelow\b', r'\bless\s+than\b', r'\bwithin\b', r'\bmax\b', r'\bmaximum\b', r'\bbudget\b',
+        r'\bcheap\b', r'\bcheapest\b', r'\baffordable\b', r'\bsuggest\b', r'\brecommend\b',
         # Arabic catalog / real estate indicators
         "عقار", "عقارات", "شقة", "شقق", "فيلا", "فلل", "استوديو", "ايجار", "إيجار", "للايجار", "للإيجار",
         "بيع", "للبيع", "شراء", "اسعار", "أسعار", "سعر", "ميزانية", "دبي"
     ]
-    
-    is_catalog_query = any(k in q for k in catalog_keywords)
+
+    is_catalog_query = any(bool(re.search(k, q)) if '\\' in k else (k in q) for k in catalog_keywords)
     
     # Entity Type: product vs property vs any
     property_indicators = [
@@ -632,6 +676,16 @@ def build_real_estate_overview_answer(
     sell_link = find_best_link("sell", "https://idealhomes.ae/sell")
     contact_link = find_best_link("contact", "https://idealhomes.ae/contact")
     list_link = find_best_link("list-your-property", "https://idealhomes.ae/list-your-property")
+
+    is_real_estate_asst = (
+        any("idealhomes" in u for u in norm_allowed.values())
+        or any(w in assistant_name.lower() for w in ["ideal homes", "realty", "real estate"])
+    )
+    if not is_real_estate_asst:
+        return {
+            "answer": "",
+            "lead_prompted": False
+        }
 
     lines = []
     raw_q = query_intent.get("raw_query", "")

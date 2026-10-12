@@ -5,7 +5,11 @@ Embedding generation and vector similarity search supporting multi-assistant par
 import math
 import re
 import hashlib
-import numpy as np
+try:
+    import numpy as np
+except Exception:
+    np = None
+
 from typing import List, Dict, Any, Optional
 from google import genai
 from google.genai import types
@@ -118,13 +122,24 @@ def _pseudo_embedding(text: str, dim: int = 256) -> List[float]:
 def cosine_similarity(v1: List[float], v2: List[float]) -> float:
     if not v1 or not v2 or len(v1) != len(v2):
         return 0.0
-    a = np.array(v1, dtype=np.float32)
-    b = np.array(v2, dtype=np.float32)
-    norm_a = np.linalg.norm(a)
-    norm_b = np.linalg.norm(b)
-    if norm_a == 0 or norm_b == 0:
+    if np is not None:
+        try:
+            a = np.array(v1, dtype=np.float32)
+            b = np.array(v2, dtype=np.float32)
+            norm_a = np.linalg.norm(a)
+            norm_b = np.linalg.norm(b)
+            if norm_a == 0 or norm_b == 0:
+                return 0.0
+            return float(np.dot(a, b) / (norm_a * norm_b))
+        except Exception:
+            pass
+    # Pure Python fallback
+    dot = sum(x * y for x, y in zip(v1, v2))
+    norm_a = math.sqrt(sum(x * x for x in v1))
+    norm_b = math.sqrt(sum(y * y for y in v2))
+    if norm_a == 0.0 or norm_b == 0.0:
         return 0.0
-    return float(np.dot(a, b) / (norm_a * norm_b))
+    return float(dot / (norm_a * norm_b))
 
 def search_relevant_chunks(
     query: str,

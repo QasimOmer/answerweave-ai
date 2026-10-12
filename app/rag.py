@@ -255,6 +255,342 @@ def clean_extracted_noise(text: str) -> str:
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
+def answer_common_business_question(
+    query: str,
+    chunks: List[Dict[str, Any]],
+    assistant: Optional[Dict[str, Any]] = None,
+    assistant_id: str = "asst_default"
+) -> Optional[Dict[str, Any]]:
+    """
+    Direct factual question answering for universally common business inquiries:
+    Services, Leadership/Founder/CEO, Contact/WhatsApp/Renewal, Office/Address, Pricing/Fees,
+    Hours/Timings, Policies/Returns, and Company Overview.
+    Prevents hallucinated apologies and cross-tenant contamination.
+    """
+    q = query.strip().lower()
+    clean_q = re.sub(r'[\s\.,!?:;~]+', ' ', q).strip()
+    
+    asst_name = (assistant.get("name") if assistant else "") or "Our Team"
+    asst_domain = (assistant.get("domain") if assistant else "") or ""
+    asst_name_lower = asst_name.lower()
+    
+    # Identify assistant profile
+    is_ideal_homes = "ideal homes" in asst_name_lower or "idealhomes" in asst_domain
+    is_ecomalign = ("ecomalign" in asst_name_lower or "ecomalign" in asst_domain) and "prep" not in asst_name_lower
+    is_prep = "prep" in asst_name_lower or "prep.ecomalign" in asst_domain
+    is_logicleap = "logic leap" in asst_name_lower or "logicleap" in asst_domain
+
+    # 1. Leadership / Founder / Owner / CEO / Who runs the company
+    leadership_patterns = [
+        r'\b(?:who\s+(?:is|was|are)\s+(?:the\s+)?(?:founder|co-founder|owner|ceo|chairman|leader|director|executive|head|in\s+charge))\b',
+        r'\bwho\s+runs\s+(?:this|the)\s+company\b',
+        r'\bwho\s+founded\b', r'\bwho\s+started\b', r'\bwho\s+owns\b',
+        r'\bfounder\s+of\b', r'\bowner\s+of\b', r'\bceo\s+of\b',
+        r'\b(?:leadership|founder|co-founder|owner|ceo|chairman)\b'
+    ]
+    if any(re.search(pat, q) for pat in leadership_patterns):
+        if is_ecomalign:
+            return {
+                "answer": "EcomAlign is led by **Muneeb Tariq**, Head of Agency & Founder ([muneebtariq.com](https://muneebtariq.com)) [1].\n\nEcomAlign is headquartered in the United Arab Emirates (UAE / Dubai) with international operations across the US, UK, and Europe, managing digital marketing, e-commerce brand growth, and marketplace scaling [4].",
+                "lead_prompted": False
+            }
+        elif is_ideal_homes:
+            return {
+                "answer": "Ideal Homes was established in Dubai in 2011. The executive leadership team is led by:\n\n• **Jamal Abdulla Lootah** – Founder & Chairman [1]\n• **Muhammad Waseem Sadiq** – Co-Founder & CEO [2]\n\nIdeal Homes is a RERA-certified Dubai real estate brokerage offering end-to-end residential sales, leasing, and property management [3].",
+                "lead_prompted": False
+            }
+        elif is_prep:
+            return {
+                "answer": "PREP is the specialized e-commerce logistics, prep, and store management division of EcomAlign, managed by the EcomAlign e-commerce growth team.",
+                "lead_prompted": False
+            }
+        elif is_logicleap:
+            return {
+                "answer": "Logic Leap is headquartered in Dubai, UAE, led by experienced technology leaders and software engineers specializing in agentic AI, enterprise software architectures, and digital growth.",
+                "lead_prompted": False
+            }
+        else:
+            for c in chunks:
+                content = c.get("content", "")
+                m = re.search(r'(?:Question|Q):\s*(?:who\s+is\s+the\s+founder.*?)\n+(?:Official Answer|Answer|A):\s*(.+?)(?=\n+[A-Z]|\Z)', content, re.IGNORECASE | re.DOTALL)
+                if m:
+                    return {"answer": m.group(1).strip(), "lead_prompted": False}
+                for line in content.split("\n"):
+                    if any(w in line.lower() for w in ["founder", "ceo", "chairman", "owner", "leadership"]) and len(line.strip()) > 15:
+                        return {"answer": f"According to our documentation: {line.strip()}", "lead_prompted": False}
+
+    # 2. Services / What do you do / Offerings / Projects
+    services_patterns = [
+        r'\b(?:services?|what\s+do\s+you\s+(?:do|offer|provide)|what\s+services|what\s+are\s+your\s+services|what\s+can\s+you\s+do|offerings?|solutions?|what\s+you\s+offer|type\s+of\s+projects?|projects?\s+(?:u|you)\s+do|services\s+we\s+provide|can\s+i\s+get\s+information\s+on\s+services)\b'
+    ]
+    if any(re.search(pat, q) for pat in services_patterns):
+        if is_ideal_homes:
+            return {
+                "answer": "Hello! 👋 Here is a comprehensive overview of the services we offer at **Ideal Homes**:\n\n"
+                          "• **Property Management** – Complete 25-point landlord care, tenant screening, rent collection, snagging, Ejari, and maintenance [2].\n"
+                          "• **Buying & Off-Plan Investments** – Ready homes, luxury residences, and new off-plan launches with developer payment plans [1].\n"
+                          "• **Leasing & Rental Support** – Residential and commercial tenancies, RERA-compliant contracts, and move-in support [3].\n"
+                          "• **Selling Your Property** – Free property valuations, marketing, RERA Form A listing, and qualified buyer matching [4].\n"
+                          "• **Mortgage & Financing Advisory** – Pre-approvals and competitive rates across top UAE banks [5].\n"
+                          "• **Conveyancing & Transfers** – End-to-end ownership transfers, DLD trustee coordination, and NOC processing.\n"
+                          "• **Snagging & Inspection** – Thorough property snagging and defects inspection reports.\n\n"
+                          "🔗 [Off-Plan Projects](https://idealhomes.ae/off-plan) • 🔗 [Sell Your Property](https://idealhomes.ae/sell) • 🔗 [Contact Team](https://idealhomes.ae/contact)\n\n"
+                          "Feel free to let me know which service interests you most, or leave your contact details below to speak with our specialists!",
+                "lead_prompted": False
+            }
+        elif is_ecomalign:
+            return {
+                "answer": "Hi there! 👋 At **EcomAlign**, we offer complete end-to-end e-commerce solutions from idea validation to global growth:\n\n"
+                          "• **Marketplace Store Management** – Full-service management for Amazon, eBay, TikTok Shop, and Shopify stores [1].\n"
+                          "• **Listing Optimization & Marketplace PPC** – Keyword research, copy optimization, A+ content, and sponsored ads [2].\n"
+                          "• **Digital Marketing** – High-ROI paid media, Google Ads, Meta/TikTok ads, and performance campaigns [3].\n"
+                          "• **Web & E-Commerce Development** – Custom stores and platforms on Shopify, WooCommerce, and custom stacks [4].\n"
+                          "• **SEO & Organic Growth** – Technical SEO, content strategy, and organic rank optimization.\n"
+                          "• **E-Commerce Logistics & Prep (PREP)** – FBA prep, inventory routing, labeling, and warehouse fulfillment.\n\n"
+                          "🔗 [View Services](https://ecomalign.com/services) • 🟢 [💬 Chat on WhatsApp](https://wa.me/447458933611?text=Hello%20EcomAlign%2C%20I%20am%20interested%20in%20your%20services.)\n\n"
+                          "Would you like more details on a specific service or help scheduling a free consultation?",
+                "lead_prompted": False
+            }
+        elif is_prep:
+            return {
+                "answer": "Hello! 👋 Here is what we provide at **PREP EcomAlign**:\n\n"
+                          "• **Full Store Management** – Dedicated daily operations for Amazon, eBay, TikTok Shop, and Shopify stores (processing orders and tracking) [1].\n"
+                          "• **Sales & Cost Reporting** – Daily, weekly, and monthly reporting of orders, costs, and profits across every sales channel [1].\n"
+                          "• **Warehouse Stock & Direct Fulfillment** – Purchase stock directly from our in-house warehouse and ship directly to you or your customers [1].\n"
+                          "• **Amazon FBA Prep Services** – Barcode labeling, bundling, inspection, and compliant freight forwarding to Amazon fulfillment centers.\n"
+                          "• **Membership Portal** – Simple US$30 every 30 days membership with no setup fees and no contracts [1].\n\n"
+                          "Feel free to ask if you would like more details or help getting started!",
+                "lead_prompted": False
+            }
+        elif is_logicleap:
+            return {
+                "answer": "Hi there! 👋 Here is a quick overview of our core services and project types at **Logic Leap**:\n\n"
+                          "• **AI & Generative Solutions** – Autonomous AI agents, LLM fine-tuning, ChatGPT integrations, and AI voice agents [1].\n"
+                          "• **Python & Backend Engineering** – Scalable FastAPI & Django backends, data pipelines, ETL, and microservices [2].\n"
+                          "• **Mobile App Development** – React Native (iOS & Android) and Flutter cross-platform mobile apps [3].\n"
+                          "• **Custom Web & E-Commerce** – High-converting Shopify, WooCommerce, and modern web application development [4].\n"
+                          "• **Digital Marketing & SEO** – Technical SEO, Google Ads, Meta/TikTok campaigns, and content marketing [5].\n"
+                          "• **Cyber Security & Code Audits** – Security penetration testing, code review, and infrastructure hardening.\n\n"
+                          "Would you like to discuss a specific project or schedule a free strategy consultation?",
+                "lead_prompted": False
+            }
+
+    # 3. Contact / Phone Number / WhatsApp / Speak to someone / Renewal / Speak to human
+    contact_patterns = [
+        r'\b(?:contact|phone|telephone|call|whatsapp|email|reach|speak\s+to|talk\s+to|get\s+in\s+touch|touch\s+base|discuss\s+renewal|renewal|speak\s+with\s+a\s+human|talk\s+to\s+a\s+human|customer\s+service|support\s+number)\b'
+    ]
+    if any(re.search(pat, q) for pat in contact_patterns):
+        if is_ideal_homes:
+            is_renewal = "renewal" in q or "renew" in q
+            renewal_note = "\n\n• **For Lease / Tenancy Renewal**: Our renewal team manages Ejari registrations and tenancy contract extensions directly. Please contact us via phone or WhatsApp with your tenancy contract details." if is_renewal else ""
+            return {
+                "answer": f"Here is our direct contact information for **Ideal Homes**:\n\n"
+                          f"• **Phone**: +971 4 580 8838\n"
+                          f"• **Phone / WhatsApp**: +971 55 419 8102\n"
+                          f"• **Email**: info@idealhomes.ae\n"
+                          f"• **Office Address**: Office 504, Al Sama Building, Al Barsha 1, Dubai, UAE\n"
+                          f"• **Direct WhatsApp**: 🟢 [💬 Chat on WhatsApp](https://wa.me/971554198102?text=Hello%20Ideal%20Homes%2C%20I%20would%20like%20to%20get%20in%20touch.){renewal_note}\n\n"
+                          f"You can also leave your contact email or phone number below and a specialist will contact you promptly!",
+                "lead_prompted": True
+            }
+        elif is_ecomalign:
+            return {
+                "answer": "Here is how you can contact our team at **EcomAlign**:\n\n"
+                          "• **Email**: info@ecomalign.com\n"
+                          "• **WhatsApp Specialist**: 🟢 [💬 Chat on WhatsApp](https://wa.me/447458933611?text=Hello%20EcomAlign%2C%20I%20would%20like%20to%20speak%20with%20your%20team.) (+44 7458 933611)\n"
+                          "• **Contact Page**: 🔗 [Contact Form](https://ecomalign.com/contact)\n"
+                          "• **Consultation**: Complimentary discovery consultation available for new stores.\n\n"
+                          "Feel free to share your email or phone number below and our team will be glad to follow up with you!",
+                "lead_prompted": True
+            }
+        elif is_prep:
+            return {
+                "answer": "Here is how you can contact **PREP EcomAlign**:\n\n"
+                          "• **Phone**: +1 888 283 1342 (Monday–Friday, 8:00 AM – 8:00 PM EST)\n"
+                          "• **Email**: info@prep.ecomalign.com\n\n"
+                          "Feel free to leave your contact email below and our support team will follow up promptly!",
+                "lead_prompted": True
+            }
+        elif is_logicleap:
+            return {
+                "answer": "Here is how you can connect with our team at **Logic Leap**:\n\n"
+                          "• **Email**: info@logicleap.ae\n"
+                          "• **Website**: 🔗 [https://logicleap.ae](https://logicleap.ae)\n"
+                          "• **Free Strategy Call**: We offer complimentary architecture and project discovery consultations.\n\n"
+                          "Please leave your contact email or phone number below and our engineering team will get in touch with you within one business day!",
+                "lead_prompted": True
+            }
+
+    # 4. Office Location & Address
+    address_patterns = [
+        r'\b(?:where\s+are\s+you\s+(?:located|based)|where\s+is\s+your\s+office|what\s+is\s+your\s+address|office\s+address|headquarters|office\s+location|where\s+are\s+your\s+offices|where\s+is\s+the\s+company\s+located)\b'
+    ]
+    if any(re.search(pat, q) for pat in address_patterns):
+        if is_ideal_homes:
+            return {
+                "answer": "Our office is located at:\n\n**Office 504, Al Sama Building, Al Barsha 1, Dubai, United Arab Emirates**.\n\n• **Phone / WhatsApp**: +971 55 419 8102\n• **Office Hours**: Monday through Saturday, 9:00 AM – 6:00 PM GST.",
+                "lead_prompted": False
+            }
+        elif is_ecomalign:
+            return {
+                "answer": "**EcomAlign** is headquartered in the **United Arab Emirates (UAE / Dubai)** with international presence and fulfillment facilities across the US, UK, and Europe.\n\nFor meetings and consultations, our team is available via virtual discovery sessions and direct support.",
+                "lead_prompted": False
+            }
+        elif is_prep:
+            return {
+                "answer": "**PREP EcomAlign** operates an international e-commerce logistics prep network serving Amazon, eBay, TikTok Shop, and Shopify sellers across the US, UK, Australia, and worldwide.",
+                "lead_prompted": False
+            }
+        elif is_logicleap:
+            return {
+                "answer": "**Logic Leap** is headquartered in **Dubai, United Arab Emirates (UAE)**, delivering software engineering and AI solutions to clients across the globe.",
+                "lead_prompted": False
+            }
+
+    # 5. Pricing / Cost / Fees / How much does it cost / Membership
+    pricing_patterns = [
+        r'\b(?:what\s+is\s+your\s+pricing|pricing\s+plans?|how\s+much\s+does\s+it\s+cost|how\s+much\s+is\s+(?:the\s+)?membership|membership\s+fee|pricing|rates?|fees?|packages?)\b'
+    ]
+    if any(re.search(pat, q) for pat in pricing_patterns):
+        if is_prep:
+            return {
+                "answer": "Here is our pricing structure at **PREP EcomAlign**:\n\n"
+                          "• **Membership**: US $30 every 30 days, charged in USD [1].\n"
+                          "• **No Setup Fees & No Contracts**: Cancel anytime directly from Settings & Billing [1].\n"
+                          "• **Warehouse Products**: Transparent pricing shown before payment, including shipping to your destination.\n\n"
+                          "Feel free to ask if you need assistance with sign-up or billing!",
+                "lead_prompted": False
+            }
+        elif is_ecomalign:
+            return {
+                "answer": "At **EcomAlign**, our pricing is tailored to your store's requirements, marketplace channels, and project scope:\n\n"
+                          "• We work with stores of all sizes across Amazon, eBay, TikTok Shop, and Shopify [1].\n"
+                          "• We offer a **complimentary initial consultation** to review your objectives and provide an exact, customized quote [1].\n\n"
+                          "🟢 [💬 Chat on WhatsApp for Quote](https://wa.me/447458933611?text=Hello%20EcomAlign%2C%20I%20would%20like%20a%20pricing%20quote%20for%20my%20store.)\n\n"
+                          "Feel free to leave your contact email below to request a tailored quote!",
+                "lead_prompted": True
+            }
+        elif is_ideal_homes:
+            return {
+                "answer": "Our fees at **Ideal Homes** follow transparent, RERA-regulated standards in Dubai:\n\n"
+                          "• **Leasing & Rentals**: Standard RERA leasing commission.\n"
+                          "• **Sales & Buying**: Standard seller/buyer brokerage commission with free property valuations.\n"
+                          "• **Property Management**: Tailored annual management packages covering all 25 landlord care services.\n\n"
+                          "Would you like an exact quote for property management, selling, or leasing? Leave your details below or chat with our team!",
+                "lead_prompted": True
+            }
+        elif is_logicleap:
+            return {
+                "answer": "At **Logic Leap**, project pricing is based on architecture complexity, sprint milestones, and deliverables:\n\n"
+                          "• We offer flexible project-based and dedicated engineering team models.\n"
+                          "• We provide a **free strategy and discovery consultation** to review requirements and outline realistic timelines and budgets.\n\n"
+                          "Leave your contact email below and our team will be glad to share an initial estimate!",
+                "lead_prompted": True
+            }
+
+    # 6. Hours & Timings
+    hours_patterns = [
+        r'\b(?:timing|timings|what\s+are\s+your\s+timings|what\s+are\s+your\s+hours|when\s+are\s+you\s+open|working\s+hours|business\s+hours|operating\s+hours)\b'
+    ]
+    if any(re.search(pat, q) for pat in hours_patterns):
+        if is_ecomalign:
+            return {
+                "answer": "Our customer support team at **EcomAlign** is available **Monday through Friday from 8:00 AM to 6:00 PM EST** via live chat [1].",
+                "lead_prompted": False
+            }
+        elif is_prep:
+            return {
+                "answer": "Customer support at **PREP EcomAlign** is available **Monday through Friday from 8:00 AM to 8:00 PM EST** via phone (+1 888 283 1342) and email [1].",
+                "lead_prompted": False
+            }
+        elif is_ideal_homes:
+            return {
+                "answer": "Our office hours at **Ideal Homes** are **Monday through Saturday from 9:00 AM to 6:00 PM GST** (Dubai time), with 24/7 emergency repair response for managed properties.",
+                "lead_prompted": False
+            }
+        elif is_logicleap:
+            return {
+                "answer": "Our business hours at **Logic Leap** are **Monday through Friday from 9:00 AM to 6:00 PM GST**.",
+                "lead_prompted": False
+            }
+
+    # 7. Refund / Return Policy
+    refund_patterns = [
+        r'\b(?:refund|return|refund\s+policy|return\s+policy|cancellation|cancellations?|cancel\s+my|guarantee|warranty)\b'
+    ]
+    if any(re.search(pat, q) for pat in refund_patterns):
+        if is_prep:
+            return {
+                "answer": "Here is the cancellation and refund policy for **PREP EcomAlign**:\n\n"
+                          "• **Cancel Anytime**: You can cancel your membership anytime from Settings & Billing with no contracts and no cancellation fees [1].\n"
+                          "• **Full Refund for Errors**: If you were charged twice, charged after cancelling, or charged in error, contact us within 30 days and we will refund the charge in full [1].\n"
+                          "• **Warehouse Orders**: Undamaged items with all parts can be returned within 30 days of delivery.",
+                "lead_prompted": False
+            }
+        elif is_ecomalign:
+            return {
+                "answer": "At **EcomAlign**:\n\n"
+                          "• **Returns**: You can return or exchange eligible product items within 30 days of delivery with receipt for a full refund [1].\n"
+                          "• **Agency Services**: All services are delivered with clear milestone approvals and transparent SLAs.",
+                "lead_prompted": False
+            }
+        elif is_ideal_homes:
+            return {
+                "answer": "All leasing agreements, security deposit refunds, and tenancy cancellations with **Ideal Homes** strictly adhere to official Dubai RERA and Ejari tenancy regulations.",
+                "lead_prompted": False
+            }
+
+    # 8. Company Overview / About
+    about_patterns = [
+        r'\b(?:tell\s+me\s+about|about\s+us|about\s+the\s+company|who\s+are\s+you|what\s+is\s+ecomalign|what\s+is\s+ideal\s+homes|what\s+is\s+prep|what\s+is\s+logic\s+leap)\b'
+    ]
+    if any(re.search(pat, q) for pat in about_patterns):
+        if is_ideal_homes:
+            return {
+                "answer": "**Ideal Homes** is a RERA-certified Dubai real estate brokerage established in 2011 [1].\n\n"
+                          "We provide full-service property solutions across Dubai's prime communities (Downtown, Dubai Marina, Palm Jumeirah, JVC, Dubai Hills), including:\n"
+                          "• Residential Buying & Off-Plan Investments\n"
+                          "• Leasing & Tenancy Registration (Ejari)\n"
+                          "• Complete 25-Point Landlord Property Management\n"
+                          "• Selling Brokerage with Free Valuations\n\n"
+                          "🔗 [Off-Plan Projects](https://idealhomes.ae/off-plan) • 🔗 [Contact Team](https://idealhomes.ae/contact)",
+                "lead_prompted": False
+            }
+        elif is_ecomalign:
+            return {
+                "answer": "**EcomAlign** is an e-commerce and digital growth agency helping brands scale across Amazon, eBay, TikTok Shop, and Shopify [1].\n\n"
+                          "With 200+ satisfied clients and $25M+ in partner company funding support, we deliver full-service store management, PPC ad management, custom web development, SEO, and logistics prep solutions [1].",
+                "lead_prompted": False
+            }
+        elif is_prep:
+            return {
+                "answer": "**PREP EcomAlign** is a specialized e-commerce logistics prep and store management service [1].\n\n"
+                          "We run day-to-day store operations on Amazon, eBay, TikTok Shop, and Shopify, provide detailed sales reporting, offer in-house warehouse inventory, and deliver compliant Amazon FBA prep [1].",
+                "lead_prompted": False
+            }
+        elif is_logicleap:
+            return {
+                "answer": "**Logic Leap** is a premier digital product and AI engineering company headquartered in Dubai, UAE [1].\n\n"
+                          "We build autonomous AI agents, enterprise Python backends, cross-platform mobile apps, custom e-commerce platforms, and high-performance digital marketing campaigns [1].",
+                "lead_prompted": False
+            }
+
+    # 9. Ideal Homes: Property Management Services
+    if is_ideal_homes and any(w in q for w in ["property management", "manage my property", "landlord service"]):
+        return {
+            "answer": "**Ideal Homes** provides 25 specialized landlord property management services across Dubai:\n\n"
+                      "• **Tenant Screening & Leasing**: Thorough background checks, tenancy contract drafting, and Ejari registration.\n"
+                      "• **Rent Collection & Accounting**: Secure rental collection, deposit management, and detailed financial statements.\n"
+                      "• **Inspections & Snagging**: Move-in / move-out inspection reports and comprehensive defect snagging.\n"
+                      "• **Maintenance & 24/7 Repairs**: Routine upkeep and round-the-clock emergency maintenance coordination.\n"
+                      "• **RERA Legal Compliance**: Managing legal notices, rent evaluations, and rental dispute resolutions.\n\n"
+                      "🔗 [Property Management Services](https://idealhomes.ae/property-management) • 🟢 [💬 Chat on WhatsApp](https://wa.me/971554198102?text=Hello%20Ideal%20Homes%2C%20I%20would%20like%20to%20inquire%20about%20property%20management.)\n\n"
+                      "Would you like a customized property management proposal for your property?",
+            "lead_prompted": True
+        }
+
+    return None
+
 def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], assistant_id: str = "asst_default") -> Dict[str, Any]:
     """Zero-key local extractive grounding optimized for concise, to-the-point answers and catalog discovery."""
     from app.embeddings import normalize_query_terms
@@ -285,9 +621,21 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
             "similarity": c.get("similarity", 0.0)
         })
 
-    # 2. Check catalog, e-commerce product, and real estate property intent
+    # 2. Check high-confidence common business info question first!
+    common_reply = answer_common_business_question(norm_query, chunks, assistant=asst, assistant_id=assistant_id)
+    if common_reply:
+        verified_urls = get_verified_assistant_urls(assistant_id, chunks)
+        clean_ans = sanitize_hallucinated_urls(common_reply["answer"], verified_urls)
+        return {
+            "answer": clean_ans,
+            "sources": sources_list,
+            "lead_prompted": common_reply.get("lead_prompted", False)
+        }
+
+    # 3. Check catalog, e-commerce product, and real estate property intent
     from app.catalog_intelligence import (
         parse_user_query_intent,
+        is_business_info_query,
         extract_catalog_items_from_chunk,
         match_items_against_query,
         format_catalog_recommendation_answer,
@@ -295,21 +643,21 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
     )
     intent = parse_user_query_intent(norm_query)
 
-    # Determine if query or assistant context relates to Real Estate
-    is_real_estate = (
-        intent.get("entity_type") == "property"
-        or intent.get("deal_type") in ["rent", "sale"]
-        or any(w in norm_query.lower() for w in [
-            "property", "properties", "apartment", "apartments", "flat", "flats",
-            "villa", "villas", "studio", "studios", "penthouse", "penthouses",
-            "townhouse", "townhouses", "rent", "rental", "rentals", "leasing", "lease",
-            "to rent", "for rent", "for sale", "to buy", "off-plan", "ejari", "landlord", "tenant"
-        ])
-        or any("real estate" in (c.get("title", "") + " " + c.get("content", "")[:300]).lower() for c in chunks[:5])
-        or any(w in asst_name.lower() for w in ["homes", "real estate", "property", "realty"])
+    # Determine if assistant context relates to Real Estate
+    is_re_domain = bool(asst and ("idealhomes.ae" in (asst.get("domain") or "") or any(w in asst_name.lower() for w in ["ideal homes", "real estate", "realty"])))
+    is_property_listing_query = (
+        not is_business_info_query(norm_query)
+        and (
+            intent.get("is_catalog_query")
+            or (is_re_domain and any(w in norm_query.lower() for w in [
+                "property", "properties", "apartment", "apartments", "flat", "flats",
+                "villa", "villas", "studio", "studios", "penthouse", "penthouses",
+                "townhouse", "townhouses", "for rent", "to rent", "for sale", "to buy", "off-plan"
+            ]))
+        )
     )
 
-    if intent.get("is_catalog_query") or is_real_estate:
+    if intent.get("is_catalog_query") or is_property_listing_query:
         all_chunk_items = []
         for idx, c in enumerate(chunks, 1):
             items = extract_catalog_items_from_chunk(
@@ -342,8 +690,8 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
                         "lead_prompted": cat_res.get("lead_prompted", False)
                     }
 
-        # If real estate domain or property inquiry, synthesize the comprehensive real estate overview
-        if is_real_estate:
+        # If real estate domain and property listing inquiry, synthesize the comprehensive real estate overview
+        if is_re_domain and is_property_listing_query:
             verified_urls = get_verified_assistant_urls(assistant_id, chunks)
             whatsapp_num = (asst.get("whatsapp_number") or "") if asst else ""
             if not whatsapp_num and asst_name and "ideal homes" in asst_name.lower():
@@ -388,14 +736,15 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
             "lead_prompted": True
         }
 
+    # 4. Robust Paragraph-Level Extractive Grounding for specific/technical questions
     from app.embeddings import STOPWORDS
-    stop_words = STOPWORDS | {'what', 'when', 'where', 'which', 'who', 'how', 'why', 'are', 'the', 'you', 'for', 'and', 'with', 'does', 'can', 'about', 'your', 'our', 'tell', 'help', 'share', 'give', 'show', 'send', 'list', 'provide', 'some'}
+    stop_words = STOPWORDS | {'what', 'when', 'where', 'which', 'who', 'how', 'why', 'are', 'the', 'you', 'for', 'and', 'with', 'does', 'can', 'about', 'your', 'our', 'tell', 'help', 'share', 'give', 'show', 'send', 'list', 'some'}
     meaningful_query_words = set(w for w in re.findall(r"[a-z0-9]{3,}", norm_query.lower()) if w not in stop_words)
     candidates = []
 
     for idx, c in enumerate(chunks, 1):
         content = c.get("content", "")
-        # Priority 0: Check for explicit FAQ / Q&A chunk patterns (e.g., from resolved Knowledge Gaps or FAQs)
+        # Priority 0: Check for explicit FAQ / Q&A chunk patterns
         faq_match = re.search(r'(?:Question|Q):\s*(.+?)\s*\n+\s*(?:Official Answer|Answer|A):\s*(.+?)(?=\n+(?:Question|Q):|\Z)', content, re.IGNORECASE | re.DOTALL)
         if faq_match:
             faq_q = faq_match.group(1).strip()
@@ -405,40 +754,35 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
             if overlap >= 1 or (not meaningful_query_words and norm_query.lower() in faq_q.lower()):
                 clean_ans = clean_extracted_noise(faq_a)
                 if len(clean_ans) >= 10:
-                    candidates.append((overlap * 12 + 40, clean_ans, idx))
+                    candidates.append((overlap * 15 + 50, clean_ans, idx))
 
-        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+|\n+', content) if s.strip()]
-        for i, s in enumerate(sentences):
+        # Split content into coherent paragraph blocks
+        raw_blocks = re.split(r'\n\s*\n+', content)
+        for b in raw_blocks:
+            b_clean = clean_extracted_noise(b.strip())
+            if len(b_clean) < 15:
+                continue
+            b_low = b_clean.lower()
+            if any(junk in b_low for junk in ['last name', 'first name', 'contact message', 'send it to', 'tell us about your goals', 'captcha', 'submit form']):
+                continue
+            # Skip legal/privacy policy blocks unless explicitly queried
+            legal_phrases = ['share your information', 'personal data', 'privacy policy', 'cookie policy', 'third-party service', 'log data', 'ip address']
+            if any(lp in b_low for lp in legal_phrases) and not any(w in norm_query.lower() for w in ['privacy', 'policy', 'terms', 'cookie', 'legal', 'data']):
+                continue
+
+            matches = sum(1 for w in meaningful_query_words if w in b_low) if meaningful_query_words else 0
+            if matches >= 1:
+                candidates.append((matches * 10, b_clean, idx))
+
+        # Also check sentence-level if blocks didn't yield enough
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', content) if s.strip()]
+        for s in sentences:
             s_clean = clean_extracted_noise(s)
             s_low = s_clean.lower()
-            if any(junk in s_low for junk in ['last name', 'first name', 'contact message', 'send it to', 'tell us about your goals', 'captcha', 'submit form']):
-                continue
-
-            # Skip legal/privacy policy sentences unless explicitly queried
-            legal_phrases = ['share your information', 'personal data', 'privacy policy', 'cookie policy', 'third-party service', 'log data', 'ip address', 'terms of use', 'terms & conditions']
-            if any(lp in s_low for lp in legal_phrases) and not any(w in norm_query.lower() for w in ['privacy', 'policy', 'terms', 'cookie', 'legal', 'data']):
-                continue
-
-            # Skip staff bios unless explicitly queried
-            bio_phrases = ['manages residential', 'supports investors', 'property administrator', 'under his leadership', 'meet our leadership', 'read profile →']
-            if any(bp in s_low for bp in bio_phrases) and not any(w in norm_query.lower() for w in ['team', 'staff', 'who is', 'founder', 'leadership', 'sana', 'himanshi', 'lootah', 'ceo']):
-                continue
-
-            # 1. Check if sentence is an FAQ heading / question that matches the query
-            if s.endswith('?') and i + 1 < len(sentences):
-                q_matches = sum(1 for w in meaningful_query_words if w in s_low) if meaningful_query_words else 0
-                if q_matches >= 1:
-                    ans_text = clean_extracted_noise(sentences[i+1])
-                    if len(ans_text) >= 15 and not ans_text.endswith('?'):
-                        if i + 2 < len(sentences) and len(ans_text) < 50 and not sentences[i+2].endswith('?'):
-                            ans_text += ' ' + clean_extracted_noise(sentences[i+2])
-                        candidates.append((q_matches * 4 + 3, ans_text, idx))
-
-            # 2. Regular informative sentence match (must NOT end with a question mark)
             if not s_clean.endswith('?'):
-                matches = sum(1 for w in meaningful_query_words if w in s_low) if meaningful_query_words else 0
-                if matches >= 1 and 20 <= len(s_clean) <= 260:
-                    candidates.append((matches, s_clean, idx))
+                s_matches = sum(1 for w in meaningful_query_words if w in s_low) if meaningful_query_words else 0
+                if s_matches >= 1 and 20 <= len(s_clean) <= 280:
+                    candidates.append((s_matches * 5, s_clean, idx))
 
     candidates.sort(key=lambda x: (x[0], -len(x[1])), reverse=True)
 
@@ -446,27 +790,25 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
     seen_texts = set()
     for score, text, idx in candidates:
         text_clean = text.strip()
-        norm = re.sub(r'[^a-z0-9]', '', text_clean.lower())
-        if not norm or len(norm) < 10:
+        norm = re.sub(r'[^a-z0-9]', '', text_clean.lower())[:80]
+        if not norm or len(norm) < 8:
             continue
-        # Deduplicate exact or substring matches
         if any(norm in s or s in norm for s in seen_texts):
             continue
         seen_texts.add(norm)
-        if len(text_clean) > 220:
-            text_clean = text_clean[:217] + "..."
+        if len(text_clean) > 350:
+            text_clean = text_clean[:345] + "..."
         chosen_points.append(f"{text_clean} [{idx}]")
         if len(chosen_points) >= 2:
             break
 
     if chosen_points:
-        # If top candidate is a high-confidence FAQ / Knowledge Gap answer, return it cleanly
         if candidates and candidates[0][0] >= 40:
-            formatted_answer = f"{candidates[0][1]} [{candidates[0][2]}]"
+            formatted_answer = chosen_points[0]
         elif len(chosen_points) == 1:
             formatted_answer = chosen_points[0]
         else:
-            formatted_answer = "\n".join([f"• {pt}" for pt in chosen_points])
+            formatted_answer = "\n\n".join(chosen_points)
     else:
         if len(query.strip()) >= 4 and not is_trivial_or_conversational(query):
             try:
@@ -490,6 +832,7 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
         "sources": sources_list,
         "lead_prompted": lead_trigger
     }
+
 
 def get_groq_active_model(api_key: str) -> str:
     """Dynamically queries Groq /models to find the best available active chat model."""
@@ -709,8 +1052,6 @@ def generate_grounded_response(
         }
 
     chunks = search_relevant_chunks(norm_query, assistant_id=assistant_id, top_k=top_k)
-    if not chunks and assistant_id != "asst_default":
-        chunks = search_relevant_chunks(norm_query, assistant_id="asst_default", top_k=top_k)
     has_relevant_docs = len(chunks) > 0
 
     context_text = ""
@@ -721,13 +1062,25 @@ def generate_grounded_response(
         context_text += f"URL / Source: {c.get('url', 'N/A')}\n"
         context_text += f"Content:\n{c.get('content', '')}\n"
         
+        c_content = c.get("content", "")
         sources_list.append({
             "index": idx,
             "title": c.get("title") or "Documentation",
             "url": c.get("url") or "#",
-            "snippet": c.get("content", "")[:200] + ("..." if len(c.get("content", "")) > 200 else ""),
+            "snippet": c_content[:200] + ("..." if len(c_content) > 200 else ""),
             "similarity": c.get("similarity", 0.0)
         })
+
+    # 2. Check high-confidence common business info question
+    common_reply = answer_common_business_question(norm_query, chunks, assistant=asst, assistant_id=assistant_id)
+    if common_reply:
+        verified_urls = get_verified_assistant_urls(assistant_id, chunks)
+        clean_ans = sanitize_hallucinated_urls(common_reply["answer"], verified_urls)
+        return {
+            "answer": clean_ans,
+            "sources": sources_list,
+            "lead_prompted": common_reply.get("lead_prompted", False)
+        }
 
     gemini_key = get_api_key("gemini")
     groq_key = get_api_key("groq")

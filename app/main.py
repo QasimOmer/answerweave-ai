@@ -50,7 +50,12 @@ from app.db import (
     get_assistant_analytics,
     create_user,
     authenticate_user,
-    get_user_by_email
+    get_user_by_email,
+    get_user_by_id,
+    list_users,
+    update_user,
+    delete_user,
+    list_assistants_for_user
 )
 from app.config import (
     get_bot_settings,
@@ -102,6 +107,19 @@ class AuthSignupRequest(BaseModel):
 class AuthLoginRequest(BaseModel):
     email: str
     password: str
+
+class CreateUserRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: str = "client"
+    assigned_assistant_ids: List[str] = []
+
+class UpdateUserRequest(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    password: Optional[str] = None
+    assigned_assistant_ids: Optional[List[str]] = None
 
 class CreateAssistantRequest(BaseModel):
     name: str
@@ -242,10 +260,50 @@ def api_get_me(email: Optional[str] = None):
     u_dict.pop("password_hash", None)
     return u_dict
 
+# ----------------- User & Client Management Endpoints -----------------
+@app.get("/api/users")
+def api_list_users():
+    return list_users()
+
+@app.post("/api/users")
+def api_create_user(req: CreateUserRequest):
+    if len(req.password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters.")
+    user = create_user(
+        email=req.email,
+        password=req.password,
+        name=req.name,
+        role=req.role,
+        assigned_assistant_ids=req.assigned_assistant_ids
+    )
+    if not user:
+        raise HTTPException(status_code=400, detail="User with this email already exists.")
+    return {"status": "success", "user": user}
+
+@app.put("/api/users/{user_id}")
+def api_update_user(user_id: str, req: UpdateUserRequest):
+    user = update_user(
+        user_id=user_id,
+        name=req.name,
+        role=req.role,
+        password=req.password,
+        assigned_assistant_ids=req.assigned_assistant_ids
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return {"status": "success", "user": user}
+
+@app.delete("/api/users/{user_id}")
+def api_delete_user(user_id: str):
+    success = delete_user(user_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Cannot delete default admin or user not found.")
+    return {"status": "success"}
+
 # ----------------- Multi-Assistant SaaS Endpoints -----------------
 @app.get("/api/assistants")
-def api_list_assistants():
-    return list_assistants()
+def api_list_assistants(user_id: Optional[str] = None):
+    return list_assistants_for_user(user_id)
 
 @app.post("/api/assistants")
 def api_create_assistant(req: CreateAssistantRequest):

@@ -352,6 +352,13 @@ def init_db():
             role TEXT DEFAULT 'admin',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS user_assistants (
+            user_id TEXT NOT NULL,
+            assistant_id TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id, assistant_id)
+        );
         """)
         try:
             cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS whatsapp_number TEXT DEFAULT '';")
@@ -552,6 +559,13 @@ def init_db():
         role TEXT DEFAULT 'admin',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS user_assistants (
+        user_id TEXT NOT NULL,
+        assistant_id TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, assistant_id)
+    );
     """)
 
     # Migrations
@@ -632,7 +646,29 @@ def verify_password(password: str, stored_hash: str) -> bool:
     except Exception:
         return False
 
-def create_user(email: str, password: str, name: str, role: str = "admin") -> Optional[Dict[str, Any]]:
+def set_user_assistants(user_id: str, assistant_ids: List[str]):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM user_assistants WHERE user_id = ?", (user_id,))
+    for asst_id in assistant_ids:
+        if asst_id and str(asst_id).strip():
+            cursor.execute("""
+                INSERT INTO user_assistants (user_id, assistant_id)
+                VALUES (?, ?)
+                ON CONFLICT DO NOTHING;
+            """, (user_id, str(asst_id).strip()))
+    conn.commit()
+    conn.close()
+
+def get_user_assigned_assistants(user_id: str) -> List[str]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT assistant_id FROM user_assistants WHERE user_id = ?", (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [r["assistant_id"] for r in rows]
+
+def create_user(email: str, password: str, name: str, role: str = "admin", assigned_assistant_ids: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
     conn = get_db()
     cursor = conn.cursor()
     user_id = f"user_{uuid.uuid4().hex[:8]}"
@@ -641,13 +677,77 @@ def create_user(email: str, password: str, name: str, role: str = "admin") -> Op
         cursor.execute("""
             INSERT INTO users (id, email, password_hash, name, role)
             VALUES (?, ?, ?, ?, ?)
-        """, (user_id, email.strip().lower(), pwd_hash, name.strip(), role))
+        """, (user_id, email.strip().lower(), pwd_hash, name.strip(), role.strip().lower()))
         conn.commit()
         conn.close()
+        if assigned_assistant_ids:
+            set_user_assistants(user_id, assigned_assistant_ids)
         return get_user_by_id(user_id)
     except Exception:
         conn.close()
         return None
+
+def update_user(user_id: str, name: Optional[str] = None, role: Optional[str] = None, password: Optional[str] = None, assigned_assistant_ids: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    updates = []
+    params = []
+    if name is not None and name.strip():
+        updates.append("name = ?")
+        params.append(name.strip())
+    if role is not None and role.strip():
+        updates.append("role = ?")
+        params.append(role.strip().lower())
+    if password and password.strip():
+        updates.append("password_hash = ?")
+        params.append(hash_password(password.strip()))
+    if updates:
+        params.append(user_id)
+        cursor.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = ?;", params)
+        conn.commit()
+    conn.close()
+
+    if assigned_assistant_ids is not None:
+        set_user_assistants(user_id, assigned_assistant_ids)
+
+    return get_user_by_id(user_id)
+
+def delete_user(user_id: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT email, role FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    if not row or row["email"] == "admin@answerweave.ai":
+        conn.close()
+        return False
+    cursor.execute("DELETE FROM user_assistants WHERE user_id = ?", (user_id,))
+    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+def list_users() -> List[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, email, name, role, created_at FROM users ORDER BY created_at ASC;")
+    rows = cursor.fetchall()
+    users = []
+    for r in rows:
+        u = dict(r)
+        u_id = u["id"]
+        cursor.execute("""
+            SELECT a.id, a.name, a.domain
+            FROM assistants a
+            JOIN user_assistants ua ON ua.assistant_id = a.id
+            WHERE ua.user_id = ?
+            ORDER BY a.name ASC
+        """, (u_id,))
+        assts = cursor.fetchall()
+        u["assigned_assistants"] = [dict(a) for a in assts]
+        u["assigned_assistant_ids"] = [a["id"] for a in assts]
+        users.append(u)
+    conn.close()
+    return users
 
 def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
     user = get_user_by_email(email)
@@ -664,16 +764,69 @@ def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
     cursor = conn.cursor()
     cursor.execute("SELECT id, email, name, role, created_at FROM users WHERE id = ?", (user_id,))
     row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+    u = dict(row)
+    cursor.execute("""
+        SELECT a.id, a.name, a.domain
+        FROM assistants a
+        JOIN user_assistants ua ON ua.assistant_id = a.id
+        WHERE ua.user_id = ?
+        ORDER BY a.name ASC
+    """, (user_id,))
+    assts = cursor.fetchall()
     conn.close()
-    return dict(row) if row else None
+    u["assigned_assistants"] = [dict(a) for a in assts]
+    u["assigned_assistant_ids"] = [a["id"] for a in assts]
+    return u
 
 def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE email = ?", (email.strip().lower(),))
     row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+    u = dict(row)
+    user_id = u["id"]
+    cursor.execute("""
+        SELECT a.id, a.name, a.domain
+        FROM assistants a
+        JOIN user_assistants ua ON ua.assistant_id = a.id
+        WHERE ua.user_id = ?
+        ORDER BY a.name ASC
+    """, (user_id,))
+    assts = cursor.fetchall()
     conn.close()
-    return dict(row) if row else None
+    u["assigned_assistants"] = [dict(a) for a in assts]
+    u["assigned_assistant_ids"] = [a["id"] for a in assts]
+    return u
+
+def list_assistants_for_user(user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    if not user_id:
+        return list_assistants()
+    user = get_user_by_id(user_id)
+    if not user or user.get("role") == "admin":
+        return list_assistants()
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT a.*,
+            (SELECT COUNT(*) FROM sources s WHERE s.assistant_id = a.id) as total_sources,
+            (SELECT COUNT(*) FROM chunks c WHERE c.assistant_id = a.id) as total_chunks,
+            (SELECT COUNT(*) FROM leads l WHERE l.assistant_id = a.id) as total_leads,
+            (SELECT COUNT(*) FROM messages m WHERE m.assistant_id = a.id AND m.role = 'user') as total_messages
+        FROM assistants a
+        JOIN user_assistants ua ON ua.assistant_id = a.id
+        WHERE ua.user_id = ?
+        ORDER BY a.created_at ASC
+    """, (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 # ----------------- Assistant CRUD -----------------
 def create_assistant(name: str, domain: str = "*", primary_color: str = "#0f172a", welcome_message: str = "", suggested_questions: str = "", bot_avatar: str = "⚡", widget_subtitle: str = "Online • AI Assistant", teaser_message: str = "👋 Hi! Need quick answers?") -> str:
