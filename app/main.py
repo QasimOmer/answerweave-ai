@@ -55,7 +55,11 @@ from app.db import (
     list_users,
     update_user,
     delete_user,
-    list_assistants_for_user
+    list_assistants_for_user,
+    get_conversation,
+    set_conversation_status,
+    add_operator_message,
+    clear_unread_operator_messages
 )
 from app.config import (
     get_bot_settings,
@@ -201,6 +205,14 @@ class LeadRequest(BaseModel):
 
 class UpdateLeadStatusRequest(BaseModel):
     status: str
+
+class TakeoverRequest(BaseModel):
+    operator_name: Optional[str] = "Support Operator"
+
+class OperatorMessageRequest(BaseModel):
+    message: str
+    operator_name: Optional[str] = "Support Operator"
+    assistant_id: Optional[str] = ""
 
 class GlobalSettingsRequest(BaseModel):
     llm_provider: Optional[str] = None
@@ -423,6 +435,37 @@ def verify_assistant_domain_access(asst: Dict[str, Any], request: Request):
             status_code=403, 
             detail=f"Access denied: Website domain '{host or 'unknown'}' is not authorized to use assistant '{asst.get('name')}'. Allowed domain whitelist: '{allowed}'."
         )
+
+# ----------------- Rate Limiting (Token Bucket / Sliding Window) -----------------
+_RATE_LIMIT_BUCKETS: Dict[str, List[float]] = {}
+RATE_LIMIT_MAX_REQUESTS = 60  # max 60 chat requests per minute per IP
+RATE_LIMIT_WINDOW_SECONDS = 60.0
+
+def check_rate_limit(request: Request, limit: int = RATE_LIMIT_MAX_REQUESTS, window: float = RATE_LIMIT_WINDOW_SECONDS):
+    """
+    Enforces sliding-window rate limiting per client IP.
+    Returns HTTP 429 Too Many Requests if rate is exceeded.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+    # Whitelist localhost for dev and automated QA test runs
+    if client_ip in ["127.0.0.1", "localhost", "testclient"]:
+        limit = 400
+
+    now = time.time()
+    timestamps = _RATE_LIMIT_BUCKETS.get(client_ip, [])
+    cutoff = now - window
+    timestamps = [t for t in timestamps if t > cutoff]
+    
+    if len(timestamps) >= limit:
+        retry_after = int(window - (now - timestamps[0])) + 1
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded. Please wait {retry_after}s before sending another message.",
+            headers={"Retry-After": str(max(1, retry_after))}
+        )
+    
+    timestamps.append(now)
+    _RATE_LIMIT_BUCKETS[client_ip] = timestamps
 
 @app.get("/api/assistants/{asst_id}")
 def api_get_assistant(asst_id: str, request: Request):
@@ -691,7 +734,72 @@ def api_list_conversations(asst_id: str):
 def api_get_conversation_transcript(conv_id: str):
     """Fetches full back-and-forth transcript for a specific conversation."""
     history = get_conversation_history(conv_id, limit=50)
-    return {"conversation_id": conv_id, "messages": history}
+    conv = get_conversation(conv_id)
+    return {
+        "conversation_id": conv_id,
+        "messages": history,
+        "status": conv.get("status", "bot") if conv else "bot",
+        "operator_name": conv.get("operator_name", "") if conv else "",
+        "unread_operator_msgs": conv.get("unread_operator_msgs", 0) if conv else 0
+    }
+
+@app.get("/api/conversations/{conv_id}/status")
+def api_get_conversation_status(conv_id: str):
+    """Returns conversation takeover status, operator name, and unread counts."""
+    conv = get_conversation(conv_id)
+    if not conv:
+        return {"status": "bot", "operator_name": "", "unread_operator_msgs": 0}
+    return {
+        "conversation_id": conv_id,
+        "status": conv.get("status", "bot"),
+        "operator_name": conv.get("operator_name", ""),
+        "unread_operator_msgs": conv.get("unread_operator_msgs", 0)
+    }
+
+@app.post("/api/conversations/{conv_id}/takeover")
+def api_takeover_conversation(conv_id: str, req: TakeoverRequest):
+    """Transfers a conversation from automated AI to a live human operator."""
+    operator = req.operator_name or "Support Operator"
+    set_conversation_status(conv_id, status="human", operator_name=operator)
+    return {
+        "status": "success",
+        "conversation_id": conv_id,
+        "conversation_status": "human",
+        "operator_name": operator,
+        "message": f"Operator '{operator}' has taken over the conversation."
+    }
+
+@app.post("/api/conversations/{conv_id}/release")
+def api_release_conversation(conv_id: str):
+    """Returns a conversation back to the automated AI assistant."""
+    set_conversation_status(conv_id, status="bot", operator_name="")
+    return {
+        "status": "success",
+        "conversation_id": conv_id,
+        "conversation_status": "bot",
+        "message": "Conversation returned to AI bot."
+    }
+
+@app.post("/api/conversations/{conv_id}/operator-message")
+def api_send_operator_message(conv_id: str, req: OperatorMessageRequest):
+    """Allows an operator to send a live message to the visitor."""
+    msg = req.message.strip()
+    if not msg:
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+    operator = req.operator_name or "Support Operator"
+    add_operator_message(conv_id, msg, operator_name=operator, assistant_id=req.assistant_id or "")
+    return {
+        "status": "success",
+        "conversation_id": conv_id,
+        "operator_name": operator,
+        "message": msg
+    }
+
+@app.post("/api/conversations/{conv_id}/clear-unread")
+def api_clear_conversation_unread(conv_id: str):
+    """Clears unread operator notifications for the visitor."""
+    clear_unread_operator_messages(conv_id)
+    return {"status": "success", "conversation_id": conv_id}
 
 # ----------------- Knowledge Gaps & Unanswered Questions -----------------
 @app.get("/api/assistants/{asst_id}/gaps")
@@ -774,6 +882,7 @@ def api_dismiss_gap(asst_id: str, gap_id: int):
 # ----------------- Chat Endpoint -----------------
 @app.post("/api/chat")
 def api_chat(req: ChatRequest, request: Request):
+    check_rate_limit(request)
     asst_id = req.assistant_id
     if not asst_id:
         raise HTTPException(status_code=400, detail="Field 'assistant_id' is required.")
@@ -783,6 +892,22 @@ def api_chat(req: ChatRequest, request: Request):
     verify_assistant_domain_access(asst, request)
 
     conv_id = req.conversation_id or str(uuid.uuid4())
+
+    # Check if a human operator is currently assigned to this conversation
+    conv = get_conversation(conv_id)
+    if conv and conv.get("status") == "human":
+        add_message(conv_id, "user", req.message, assistant_id=asst_id)
+        op_name = conv.get("operator_name") or "Support Specialist"
+        notice = f"Your message was received by {op_name}. They are actively on the chat and will reply directly in a moment."
+        return {
+            "conversation_id": conv_id,
+            "assistant_id": asst_id,
+            "answer": notice,
+            "sources": [],
+            "lead_prompted": False,
+            "operator_active": True,
+            "operator_name": op_name
+        }
 
     history = get_conversation_history(conv_id, limit=6)
     add_message(conv_id, "user", req.message, assistant_id=asst_id)
@@ -807,12 +932,14 @@ def api_chat(req: ChatRequest, request: Request):
         "assistant_id": asst_id,
         "answer": result["answer"],
         "sources": result["sources"],
-        "lead_prompted": result["lead_prompted"]
+        "lead_prompted": result["lead_prompted"],
+        "operator_active": False
     }
 
 @app.post("/api/chat/stream")
 def api_chat_stream(req: ChatRequest, request: Request):
     """Real-time SSE token streaming for instantaneous, typing-effect chat responses."""
+    check_rate_limit(request)
     asst_id = req.assistant_id
     if not asst_id:
         raise HTTPException(status_code=400, detail="Field 'assistant_id' is required.")
@@ -822,6 +949,33 @@ def api_chat_stream(req: ChatRequest, request: Request):
     verify_assistant_domain_access(asst, request)
 
     conv_id = req.conversation_id or str(uuid.uuid4())
+
+    # Check if a human operator is currently assigned to this conversation
+    conv = get_conversation(conv_id)
+    if conv and conv.get("status") == "human":
+        add_message(conv_id, "user", req.message, assistant_id=asst_id)
+        op_name = conv.get("operator_name") or "Support Specialist"
+        notice = f"Your message was received by {op_name}. They are actively on the chat and will reply directly in a moment."
+        
+        def operator_stream():
+            yield f"data: {json.dumps({'type': 'start', 'conversation_id': conv_id, 'assistant_id': asst_id, 'operator_active': True})}\n\n"
+            tokens = re.split(r'(\s+)', notice)
+            for t in tokens:
+                if t:
+                    yield f"data: {json.dumps({'type': 'token', 'token': t})}\n\n"
+                    time.sleep(0.010)
+            yield f"data: {json.dumps({'type': 'done', 'answer': notice, 'sources': [], 'lead_prompted': False, 'conversation_id': conv_id, 'operator_active': True, 'operator_name': op_name})}\n\n"
+
+        return StreamingResponse(
+            operator_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+        )
+
     history = get_conversation_history(conv_id, limit=6)
     add_message(conv_id, "user", req.message, assistant_id=asst_id)
 
@@ -864,6 +1018,7 @@ def api_chat_stream(req: ChatRequest, request: Request):
 @app.post("/api/leads")
 @app.post("/api/lead")
 def api_capture_lead(req: LeadRequest, request: Request):
+    check_rate_limit(request)
     if not req.email:
         raise HTTPException(status_code=400, detail="Email is required.")
 

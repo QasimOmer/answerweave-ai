@@ -70,6 +70,32 @@ PRIMARY DIRECTIVES:
    - Invite the visitor to share their preferred community, bedroom count, or budget to connect directly with the team.
 """
 
+PROMPT_INJECTION_PATTERNS = [
+    r'\bignore\s+(?:all\s+)?(?:previous|prior|above)\s+instructions\b',
+    r'\bdisregard\s+(?:all\s+)?(?:previous|prior|above)\s+instructions\b',
+    r'\breveal\s+(?:your\s+)?(?:system\s+prompt|instructions|initial\s+prompt)\b',
+    r'\bprint\s+(?:your\s+)?(?:system\s+prompt|instructions|initial\s+prompt)\b',
+    r'\bwhat\s+(?:is|are)\s+your\s+(?:system\s+prompt|secret\s+instructions)\b',
+    r'\byou\s+are\s+now\s+(?:dan|developer\s+mode|unfiltered|jailbroken)\b',
+    r'\bjailbreak\b',
+    r'\boverride\s+all\s+rules\b',
+    r'\bbypass\s+all\s+restrictions\b'
+]
+
+def detect_prompt_injection(query: str, asst_name: str = "Our Team") -> Optional[str]:
+    """
+    Scans incoming visitor queries for prompt injection, jailbreaking, or system prompt exfiltration.
+    Deflects cleanly if an attack pattern is identified.
+    """
+    q_low = query.lower()
+    for pat in PROMPT_INJECTION_PATTERNS:
+        if re.search(pat, q_low):
+            return (
+                f"I am an AI assistant here to assist you with inquiries about {asst_name}, our products, and services. "
+                "I cannot modify my instructions or reveal internal system configurations. How can I assist you with our services today?"
+            )
+    return None
+
 def detect_conversational_intent(query: str, asst_name: str = "Our Team", welcome_msg: str = "") -> Optional[str]:
     """
     Detects purely conversational messages (greetings, pleasantries, identity queries, thanks, farewells)
@@ -596,10 +622,19 @@ def generate_local_extractive_answer(query: str, chunks: List[Dict[str, Any]], a
     from app.embeddings import normalize_query_terms
     norm_query = normalize_query_terms(query)
 
-    # 1. Check conversational intent first
+    # 1. Check prompt injection & conversational intent first
     asst = get_assistant(assistant_id) if assistant_id else None
     asst_name = asst.get("name") if asst else "Our Team"
     welcome_msg = asst.get("welcome_message") if asst else ""
+
+    injection_reply = detect_prompt_injection(norm_query, asst_name=asst_name)
+    if injection_reply:
+        return {
+            "answer": injection_reply,
+            "sources": [],
+            "lead_prompted": False
+        }
+
     conv_reply = detect_conversational_intent(norm_query, asst_name=asst_name, welcome_msg=welcome_msg)
     if conv_reply:
         return {
@@ -1038,10 +1073,18 @@ def generate_grounded_response(
     from app.embeddings import normalize_query_terms
     norm_query = normalize_query_terms(query)
 
-    # 1. First, check if this is a conversational greeting, pleasantry, identity query, or farewell
+    # 1. First, check prompt injection and conversational intents
     asst = get_assistant(assistant_id) if assistant_id else None
     asst_name = asst.get("name") if asst else "Our Team"
     welcome_msg = asst.get("welcome_message") if asst else ""
+
+    injection_reply = detect_prompt_injection(norm_query, asst_name=asst_name)
+    if injection_reply:
+        return {
+            "answer": injection_reply,
+            "sources": [],
+            "lead_prompted": False
+        }
     
     conversational_reply = detect_conversational_intent(norm_query, asst_name=asst_name, welcome_msg=welcome_msg)
     if conversational_reply:

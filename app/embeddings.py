@@ -141,13 +141,53 @@ def cosine_similarity(v1: List[float], v2: List[float]) -> float:
         return 0.0
     return float(dot / (norm_a * norm_b))
 
+def compute_bm25_scores(query_tokens: List[str], chunk_token_lists: List[List[str]], k1: float = 1.5, b: float = 0.75) -> List[float]:
+    """
+    Industrial BM25 lexical ranking algorithm with Robertson-Spärck Jones IDF.
+    """
+    N = len(chunk_token_lists)
+    if N == 0 or not query_tokens:
+        return [0.0] * N
+    
+    doc_lengths = [len(tokens) for tokens in chunk_token_lists]
+    avgdl = (sum(doc_lengths) / N) if N > 0 else 1.0
+    
+    # Document frequencies (df)
+    df = {}
+    for term in query_tokens:
+        df[term] = sum(1 for tokens in chunk_token_lists if term in tokens)
+        
+    scores = []
+    for i, tokens in enumerate(chunk_token_lists):
+        doc_len = doc_lengths[i]
+        tf_dict = {}
+        for t in tokens:
+            tf_dict[t] = tf_dict.get(t, 0) + 1
+            
+        score = 0.0
+        for term in query_tokens:
+            if term not in tf_dict:
+                continue
+            tf = tf_dict[term]
+            term_df = df.get(term, 0)
+            idf = math.log((N - term_df + 0.5) / (term_df + 0.5) + 1.0)
+            denom = tf + k1 * (1.0 - b + b * (doc_len / (avgdl or 1.0)))
+            score += idf * (tf * (k1 + 1.0) / (denom or 1.0))
+        scores.append(score)
+    return scores
+
 def search_relevant_chunks(
     query: str,
     assistant_id: str = "asst_default",
     top_k: int = 5,
-    min_similarity: float = 0.12
+    min_similarity: float = 0.10
 ) -> List[Dict[str, Any]]:
-    """Retrieves top_k most relevant chunks for a user query isolated to specific assistant with budget awareness."""
+    """
+    Enterprise Hybrid Search combining:
+    - BM25 Sparse Lexical Matching (exact alphanumeric SKUs, names, phone numbers)
+    - Dense Vector Cosine Similarity (semantic understanding)
+    - Reciprocal Rank Fusion (RRF) with Catalog & Budget Intelligence Boosts.
+    """
     from app.catalog_intelligence import parse_user_query_intent, extract_catalog_items_from_chunk, match_items_against_query
 
     norm_query = normalize_query_terms(query)
@@ -164,30 +204,56 @@ def search_relevant_chunks(
     is_catalog_query = intent.get("is_catalog_query", False)
     effective_top_k = max(top_k, 8) if is_catalog_query else top_k
 
-    # Extract query words including numbers, price symbols, and specs (e.g. 2, 50, 500k, 2bhk)
+    # Extract query words including numbers, price symbols, and specs
     query_lower = norm_query.lower()
-    meaningful_query_words = set(
+    meaningful_query_words = [
         w for w in re.findall(r"[a-z0-9]+", query_lower)
         if w not in STOPWORDS and (len(w) >= 3 or w.isdigit() or any(c.isdigit() for c in w))
-    )
+    ]
 
-    scored_chunks = []
+    # Pre-filter candidate chunks (filter out legal/policy unless explicitly queried)
+    user_wants_legal = any(w in query_lower for w in ["privacy", "policy", "terms", "cookie", "gdpr", "legal", "data protection"])
+    valid_chunks = []
+    chunk_tokens_list = []
+    
     for c in chunks:
-        # Filter out privacy policy, terms of service, and cookie policy pages unless explicitly queried
         is_legal_chunk = any(t in (c.get("title", "") + " " + c.get("url", "")).lower() for t in [
             "privacy policy", "terms of service", "terms & conditions", "privacy-policy",
             "terms-of", "cookie policy", "disclaimer"
         ])
-        user_wants_legal = any(w in query_lower for w in ["privacy", "policy", "terms", "cookie", "gdpr", "legal", "data protection"])
         if is_legal_chunk and not user_wants_legal:
             continue
+        valid_chunks.append(c)
+        chunk_tokens_list.append(re.findall(r"[a-z0-9]+", c["content"].lower()))
 
-        sim = cosine_similarity(query_emb, c["embedding"])
-        content_lower = c["content"].lower()
+    if not valid_chunks:
+        return []
+
+    # 1. Compute BM25 lexical scores
+    bm25_scores = compute_bm25_scores(meaningful_query_words, chunk_tokens_list)
+    bm25_indexed = sorted(range(len(valid_chunks)), key=lambda i: bm25_scores[i], reverse=True)
+    bm25_ranks = {orig_idx: rank + 1 for rank, orig_idx in enumerate(bm25_indexed)}
+
+    # 2. Compute Dense vector cosine similarities
+    dense_sims = [cosine_similarity(query_emb, c["embedding"]) for c in valid_chunks]
+    dense_indexed = sorted(range(len(valid_chunks)), key=lambda i: dense_sims[i], reverse=True)
+    dense_ranks = {orig_idx: rank + 1 for rank, orig_idx in enumerate(dense_indexed)}
+
+    # 3. Fuse via Reciprocal Rank Fusion (RRF) with constant k=60
+    scored_chunks = []
+    for i, c in enumerate(valid_chunks):
+        r_bm25 = bm25_ranks[i]
+        r_dense = dense_ranks[i]
+        bm25_val = bm25_scores[i]
+        dense_val = dense_sims[i]
+
+        # RRF formula
+        rrf = (1.0 / (60.0 + r_bm25)) + (1.0 / (60.0 + r_dense))
         
-        # Keyword boost: calculate overlap of words
+        # Base effective similarity scaled from RRF + dense baseline
+        content_lower = c["content"].lower()
         keyword_hits = sum(1 for w in meaningful_query_words if w in content_lower) if meaningful_query_words else 0
-        effective_sim = sim + (keyword_hits * 0.18)
+        effective_sim = dense_val + (rrf * 12.0) + (keyword_hits * 0.15)
 
         # Catalog & Budget Intelligence Boost
         if is_catalog_query:
@@ -228,7 +294,7 @@ def search_relevant_chunks(
 
         # Grounding condition: require at least 1 keyword hit if using fallback pseudo-embedding
         client = get_genai_client()
-        if not client and meaningful_query_words and keyword_hits == 0 and not (is_catalog_query and any(p in c["content"] for p in ["• Price:", "Price:", "AED", "$"])):
+        if not client and meaningful_query_words and keyword_hits == 0 and bm25_val == 0.0 and not (is_catalog_query and any(p in c["content"] for p in ["• Price:", "Price:", "AED", "$"])):
             continue
 
         if effective_sim >= min_similarity:
@@ -240,9 +306,11 @@ def search_relevant_chunks(
                 "title": c["title"],
                 "url": c["url"],
                 "content": c["content"],
-                "similarity": round(effective_sim, 4)
+                "similarity": round(effective_sim, 4),
+                "bm25_score": round(bm25_val, 4)
             })
             
     scored_chunks.sort(key=lambda x: x["similarity"], reverse=True)
     return scored_chunks[:effective_top_k]
+
 

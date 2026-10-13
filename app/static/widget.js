@@ -1258,6 +1258,29 @@
                 padding: 10px 12px !important;
             }
         }
+
+        /* RTL & Arabic Localization */
+        .wf-rtl {
+            direction: rtl !important;
+            text-align: right !important;
+        }
+        .wf-rtl .wf-header-title {
+            text-align: right !important;
+        }
+        .wf-rtl .wf-question-arrow-icon {
+            transform: rotate(180deg) !important;
+        }
+        .wf-rtl .wf-send-btn svg {
+            transform: scaleX(-1) !important;
+        }
+        .wf-rtl .wf-welcome-bubble {
+            border-bottom-left-radius: 18px !important;
+            border-bottom-right-radius: 4px !important;
+            text-align: right !important;
+        }
+        .wf-pulse-once {
+            animation: wf-pulse 0.8s ease 2 !important;
+        }
     `;
     shadow.appendChild(style);
 
@@ -1719,7 +1742,101 @@
         const welcomeEl = $('wf-welcome-msg');
         if (welcomeEl) welcomeEl.innerText = botConfig.welcome_message || "Hi! How can I help you today?";
         renderPopularCards();
+        applyLocalization();
+        initProactiveTriggers();
     }
+
+    function applyLocalization() {
+        const isArabicBrowser = (navigator.language && navigator.language.startsWith('ar')) ||
+                                (navigator.languages && navigator.languages.some(l => l.startsWith('ar')));
+        const hasArabicText = /[\u0600-\u06FF]/.test(botConfig.welcome_message || '') ||
+                              /[\u0600-\u06FF]/.test(botConfig.name || '');
+
+        if (isArabicBrowser || hasArabicText) {
+            root.setAttribute('dir', 'rtl');
+            root.classList.add('wf-rtl');
+            if (inputEl) inputEl.setAttribute('dir', 'rtl');
+        }
+    }
+
+    let exitIntentTriggered = false;
+    let timeTriggerFired = false;
+
+    function initProactiveTriggers() {
+        // 1. Time-on-page trigger (12 seconds)
+        setTimeout(() => {
+            if (!isOpen && !timeTriggerFired && !sessionStorage.getItem(`wf_teaser_dismissed_${ASSISTANT_ID}`)) {
+                timeTriggerFired = true;
+                if (teaserBubble) {
+                    teaserBubble.style.display = 'block';
+                    triggerBtn.classList.add('wf-pulse-once');
+                }
+            }
+        }, 12000);
+
+        // 2. Desktop Exit Intent trigger
+        document.addEventListener('mouseleave', (e) => {
+            if (e.clientY <= 10 && !isOpen && !exitIntentTriggered && !sessionStorage.getItem(`wf_teaser_dismissed_${ASSISTANT_ID}`)) {
+                exitIntentTriggered = true;
+                if (teaserBubble) {
+                    const teaserText = $('wf-teaser-text');
+                    if (teaserText && !botConfig.teaser_message) {
+                        teaserText.innerText = "Have a quick question before you go?";
+                    }
+                    teaserBubble.style.display = 'block';
+                    triggerBtn.classList.add('wf-pulse-once');
+                }
+            }
+        });
+    }
+
+    // Live Operator Polling
+    let knownMessageCount = 0;
+    async function checkOperatorMessages() {
+        if (!isOpen) return;
+        try {
+            const res = await fetch(`${API_BASE}/api/conversations/${conversationId}/transcript`, {
+                headers: { 'X-Host-Domain': currentHost }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            const msgs = data.messages || [];
+
+            // Update operator live badge
+            const statusEl = $('wf-header-status');
+            if (data.status === 'human') {
+                if (statusEl) {
+                    statusEl.innerText = `${data.operator_name || 'Agent'} (Live)`;
+                    statusEl.style.color = '#10b981';
+                }
+            } else if (statusEl && statusEl.innerText.includes('(Live)')) {
+                statusEl.innerText = botConfig.widget_subtitle || 'Online';
+                statusEl.style.color = '';
+            }
+
+            // Sync new operator messages into the chat
+            if (knownMessageCount > 0 && msgs.length > knownMessageCount) {
+                const newMsgs = msgs.slice(knownMessageCount);
+                for (const m of newMsgs) {
+                    if (m.role === 'assistant') {
+                        const existing = Array.from(bodyEl.querySelectorAll('.wf-bubble-assistant'));
+                        const alreadyThere = existing.some(b => b.innerText.trim() === m.content.trim());
+                        if (!alreadyThere) {
+                            renderMessage('assistant', m.content, m.sources || []);
+                            playChime();
+                        }
+                    }
+                }
+            }
+            knownMessageCount = msgs.length;
+        } catch (e) {}
+    }
+
+    setInterval(() => {
+        if (isOpen) {
+            checkOperatorMessages();
+        }
+    }, 4000);
 
     function renderPopularCards() {
         if (!popularCardsEl) return;

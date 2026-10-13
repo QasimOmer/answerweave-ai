@@ -365,6 +365,9 @@ def init_db():
             cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS input_placeholder TEXT DEFAULT 'Ask a question...';")
             cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS launcher_pulse INTEGER DEFAULT 1;")
             cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS border_radius TEXT DEFAULT '22px';")
+            cursor.execute("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'bot';")
+            cursor.execute("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS operator_name TEXT DEFAULT '';")
+            cursor.execute("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS unread_operator_msgs INTEGER DEFAULT 0;")
         except Exception:
             pass
         conn.commit();
@@ -589,7 +592,10 @@ def init_db():
         ("assistants", "whatsapp_number", "TEXT DEFAULT ''"),
         ("assistants", "input_placeholder", "TEXT DEFAULT 'Ask a question...'"),
         ("assistants", "launcher_pulse", "INTEGER DEFAULT 1"),
-        ("assistants", "border_radius", "TEXT DEFAULT '22px'")
+        ("assistants", "border_radius", "TEXT DEFAULT '22px'"),
+        ("conversations", "status", "TEXT DEFAULT 'bot'"),
+        ("conversations", "operator_name", "TEXT DEFAULT ''"),
+        ("conversations", "unread_operator_msgs", "INTEGER DEFAULT 0")
     ]
     for tbl, col, col_def in tables_to_migrate:
         try:
@@ -1172,12 +1178,72 @@ def get_conversation_history(conversation_id: str, limit: int = 10) -> List[Dict
         msgs.append(item)
     return msgs
 
+def get_conversation(conversation_id: str) -> Optional[Dict[str, Any]]:
+    """Fetches a conversation by ID with status and metadata."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM conversations WHERE id = ?", (conversation_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    if hasattr(d.get("created_at"), "isoformat"):
+        d["created_at"] = d["created_at"].isoformat()
+    if hasattr(d.get("updated_at"), "isoformat"):
+        d["updated_at"] = d["updated_at"].isoformat()
+    if "status" not in d or not d["status"]:
+        d["status"] = "bot"
+    return d
+
+def set_conversation_status(conversation_id: str, status: str = "bot", operator_name: str = "", assistant_id: str = "asst_default"):
+    """Updates the takeover state of a conversation, creating row if needed."""
+    ensure_conversation(conversation_id, assistant_id)
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE conversations 
+        SET status = ?, operator_name = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+    """, (status, operator_name, conversation_id))
+    conn.commit()
+    conn.close()
+
+def add_operator_message(conversation_id: str, content: str, operator_name: str = "Operator", assistant_id: str = "") -> Dict[str, Any]:
+    """Adds a human operator message to the conversation and increments unread count."""
+    add_message(conversation_id, "assistant", content, assistant_id=assistant_id)
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE conversations 
+        SET unread_operator_msgs = COALESCE(unread_operator_msgs, 0) + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (conversation_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "content": content, "operator_name": operator_name}
+
+def clear_unread_operator_messages(conversation_id: str):
+    """Resets the unread operator message counter."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE conversations 
+        SET unread_operator_msgs = 0 
+        WHERE id = ?
+    """, (conversation_id,))
+    conn.commit()
+    conn.close()
+
 def list_conversations_with_metadata(assistant_id: str) -> List[Dict[str, Any]]:
     """Lists visitor conversations for the admin inbox."""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT c.id, c.assistant_id, c.created_at, c.updated_at,
+            COALESCE(c.status, 'bot') as status,
+            COALESCE(c.operator_name, '') as operator_name,
             (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) as message_count,
             (SELECT content FROM messages m WHERE m.conversation_id = c.id AND m.role = 'user' ORDER BY id ASC LIMIT 1) as first_query,
             (SELECT content FROM messages m WHERE m.conversation_id = c.id ORDER BY id DESC LIMIT 1) as last_message,
