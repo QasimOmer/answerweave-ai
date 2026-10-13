@@ -1104,6 +1104,84 @@ def api_export_leads_csv(asst_id: str):
         headers={"Content-Disposition": f"attachment; filename=leads_{asst_id}.csv"}
     )
 
+@app.get("/api/assistants/{asst_id}/conversations/export")
+def api_export_conversations_csv(asst_id: str):
+    """Exports conversation inbox sessions as a CSV file."""
+    asst = get_assistant(asst_id)
+    name = asst.get("name", "Assistant") if asst else "Assistant"
+    convs = list_conversations_with_metadata(assistant_id=asst_id)
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Conversation ID",
+        "Status",
+        "Operator",
+        "First User Query",
+        "Last Message",
+        "Message Count",
+        "Lead Email",
+        "Created At",
+        "Updated At"
+    ])
+
+    for c in convs:
+        writer.writerow([
+            c.get("id"),
+            c.get("status", "bot"),
+            c.get("operator_name", ""),
+            c.get("first_query", ""),
+            c.get("last_message", ""),
+            c.get("message_count", 0),
+            c.get("lead_email", ""),
+            c.get("created_at", ""),
+            c.get("updated_at", "")
+        ])
+
+    output.seek(0)
+    safe_name = "".join(ch for ch in name if ch.isalnum() or ch in (' ', '_', '-')).strip().replace(' ', '_')
+    filename = f"{safe_name}_conversations_{int(time.time())}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+@app.post("/api/assistants/{asst_id}/webhook/test")
+def api_test_assistant_webhook(asst_id: str):
+    """Dispatches a test payload to verify webhook URL connectivity."""
+    asst = get_assistant(asst_id)
+    if not asst:
+        raise HTTPException(status_code=404, detail="Assistant not found")
+    url = asst.get("webhook_url")
+    if not url:
+        raise HTTPException(status_code=400, detail="No webhook URL configured for this assistant. Enter a URL first.")
+
+    payload = {
+        "event": "webhook_test",
+        "assistant_id": asst_id,
+        "assistant_name": asst.get("name"),
+        "timestamp": time.time(),
+        "test_data": {
+            "message": "WeaveFlow AI Webhook Test Successful!",
+            "lead_sample": {
+                "name": "Jane Doe",
+                "email": "jane@example.com",
+                "phone": "+1 555 123 4567"
+            }
+        }
+    }
+    try:
+        resp = requests.post(url, json=payload, timeout=8)
+        return {
+            "status": "success",
+            "status_code": resp.status_code,
+            "message": f"Webhook ping succeeded with HTTP {resp.status_code}!",
+            "response_preview": resp.text[:200]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to reach webhook URL: {str(e)}")
+
 # ----------------- Subscription & Tier Plans -----------------
 @app.get("/api/subscription")
 def api_get_subscription():
