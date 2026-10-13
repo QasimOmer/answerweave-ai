@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WeaveFlow AI — Grounded Chatbot & Lead Intelligence SaaS</title>
-    <!-- Tailwind CSS -->
+    <title>AnswerWeave AI — Minimalist Grounded AI Platform & Live Operator Suite</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
+    <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -35,107 +36,111 @@
                             900: '#312e81',
                         },
                         obsidian: {
-                            950: '#07090e',
-                            900: '#0b0f17',
-                            850: '#0f141f',
-                            800: '#141b2a',
-                            750: '#1a2236',
-                            700: '#222d46',
+                            950: '#06070a',
+                            900: '#0a0d14',
+                            850: '#0f131d',
+                            800: '#151a27',
+                            750: '#1b2233',
+                            700: '#232c42',
                         }
                     }
                 }
             }
         }
     </script>
+
     <style>
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        :root {
+            --bg-base: #06070a;
+        }
+        body {
+            background-color: var(--bg-base);
+            color: #f1f5f9;
+            overflow-x: hidden;
+            font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+        }
+        
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 9999px; }
         ::-webkit-scrollbar-thumb:hover { background: #334155; }
-        
-        .glass-panel {
-            background: rgba(15, 20, 31, 0.7);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-        }
-        .glass-panel-elevated {
-            background: rgba(18, 24, 38, 0.85);
+
+        /* Linear/Raycast Grid & Glass */
+        .raycast-panel {
+            background: rgba(15, 19, 29, 0.7);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .raycast-panel:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        .raycast-panel-elevated {
+            background: rgba(18, 24, 38, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .glass-input {
-            background: rgba(11, 15, 23, 0.8);
+        .raycast-input {
+            background: rgba(10, 13, 20, 0.85);
             border: 1px solid rgba(255, 255, 255, 0.08);
             color: #f1f5f9;
+            transition: all 0.2s ease;
         }
-        .glass-input:focus {
+        .raycast-input:focus {
             border-color: #6366f1;
-            box-shadow: 0 0 0 1px #6366f1, 0 0 16px rgba(99, 102, 241, 0.25);
+            box-shadow: 0 0 0 1px #6366f1, 0 0 16px rgba(99, 102, 241, 0.2);
+            outline: none;
         }
-        .gradient-border {
-            position: relative;
-        }
-        .gradient-border::before {
-            content: '';
-            position: absolute;
-            inset: -1px;
-            border-radius: inherit;
-            padding: 1px;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(168, 85, 247, 0.2), rgba(255, 255, 255, 0.05));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-        }
+
         @keyframes pulseGlow {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 0.8; }
+            0%, 100% { opacity: 0.35; }
+            50% { opacity: 0.7; }
         }
         .animate-pulse-glow {
-            animation: pulseGlow 3s ease-in-out infinite;
+            animation: pulseGlow 4s ease-in-out infinite;
         }
     </style>
 </head>
 <body class="bg-obsidian-950 text-slate-200 font-sans antialiased h-screen flex overflow-hidden selection:bg-brand-500 selection:text-white">
 
-    <!-- Ambient Mesh Glow Background -->
+    <!-- Ambient Ambient Mesh Spotlight -->
     <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div class="absolute -top-[20%] left-[15%] w-[650px] h-[650px] bg-brand-600/10 rounded-full blur-[140px] animate-pulse-glow"></div>
-        <div class="absolute top-[40%] right-[10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[140px] animate-pulse-glow" style="animation-delay: 1.5s;"></div>
+        <div class="absolute top-[40%] right-[10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[140px] animate-pulse-glow" style="animation-delay: 2s;"></div>
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-4 py-3 rounded-2xl glass-panel-elevated text-slate-100 text-xs font-semibold shadow-2xl border border-white/10">
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-100px] opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-4 py-3 rounded-2xl raycast-panel-elevated text-slate-100 text-xs font-semibold shadow-2xl border border-white/10">
         <div id="toastIcon" class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0">
             <i data-lucide="check" class="w-3.5 h-3.5"></i>
         </div>
         <span id="toastMessage">Action completed successfully</span>
     </div>
 
-    <!-- LEFT SIDEBAR -->
+    <!-- ================= LEFT SIDEBAR (LINEAR STYLE) ================= -->
     <aside class="w-64 bg-obsidian-900 border-r border-white/5 flex flex-col justify-between shrink-0 select-none z-10 relative">
         <div class="flex flex-col h-full">
             <!-- Brand Header -->
             <div class="h-16 px-5 border-b border-white/5 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                <a href="/" class="flex items-center gap-2.5 group">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/30 group-hover:scale-105 transition">
                         <i data-lucide="zap" class="w-4 h-4 fill-white"></i>
                     </div>
                     <div>
                         <div class="font-extrabold text-sm text-white tracking-tight leading-none flex items-center gap-1">
-                            WeaveFlow<span class="text-brand-400">.ai</span>
+                            AnswerWeave<span class="text-brand-400">.ai</span>
                         </div>
-                        <div class="text-[10px] font-medium text-slate-400 mt-1 uppercase tracking-wider">Enterprise Suite</div>
+                        <div class="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-wider">Enterprise 2.0</div>
                     </div>
-                </div>
+                </a>
                 <div class="w-2 h-2 rounded-full bg-emerald-400 animate-ping" title="System Live"></div>
             </div>
 
             <!-- Workspace / Assistant Switcher Card -->
             <div class="p-3">
-                <div class="glass-panel rounded-2xl p-3 border border-white/5 hover:border-white/10 transition">
+                <div class="raycast-panel rounded-2xl p-3 border border-white/5 hover:border-white/10 transition">
                     <div class="flex items-center justify-between text-[11px] font-semibold text-slate-400 mb-1.5 px-1">
                         <span class="flex items-center gap-1.5">
                             <i data-lucide="globe" class="w-3 h-3 text-brand-400"></i>
@@ -152,12 +157,12 @@
                             <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
                         </div>
                     </div>
-                    <div class="mt-2.5 flex items-center justify-between px-1 text-[10px] text-slate-400">
+                    <div class="mt-2.5 flex items-center justify-between px-1 text-[10px] text-slate-400 font-mono">
                         <span class="flex items-center gap-1.5">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                             <span>Grounded RAG</span>
                         </span>
-                        <span class="font-mono text-slate-500 truncate max-w-[100px]" id="sidebarDomainPreview">*</span>
+                        <span class="truncate max-w-[100px] text-slate-500" id="sidebarDomainPreview">*</span>
                     </div>
                 </div>
             </div>
@@ -169,27 +174,27 @@
                     <span>Overview &amp; Metrics</span>
                 </button>
 
-                <button onclick="switchTab('knowledge')" id="nav-knowledge" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
-                    <i data-lucide="database" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
-                    <span>Knowledge Vault</span>
-                </button>
-
                 <button onclick="switchTab('inbox')" id="nav-inbox" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
                     <i data-lucide="message-square" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
-                    <span>Visitor Inbox</span>
+                    <span>Live Takeover Inbox</span>
                     <span id="navInboxBadge" class="ml-auto text-[10px] font-mono font-bold bg-white/10 text-slate-300 px-1.5 py-0.5 rounded-md">0</span>
                 </button>
 
-                <button onclick="switchTab('gaps')" id="nav-gaps" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
-                    <i data-lucide="help-circle" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
-                    <span>Knowledge Gaps</span>
-                    <span id="navGapsBadge" class="ml-auto text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-md">0</span>
+                <button onclick="switchTab('knowledge')" id="nav-knowledge" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
+                    <i data-lucide="database" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
+                    <span>Knowledge Vault</span>
                 </button>
 
                 <button onclick="switchTab('leads')" id="nav-leads" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
                     <i data-lucide="users" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
                     <span>Leads &amp; Call-Prep</span>
                     <span id="navLeadsBadge" class="ml-auto text-[10px] font-mono font-bold bg-brand-500/20 text-brand-300 px-1.5 py-0.5 rounded-md">0</span>
+                </button>
+
+                <button onclick="switchTab('gaps')" id="nav-gaps" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
+                    <i data-lucide="help-circle" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
+                    <span>Knowledge Gaps</span>
+                    <span id="navGapsBadge" class="ml-auto text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-md">0</span>
                 </button>
 
                 <button onclick="switchTab('widget')" id="nav-widget" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
@@ -204,13 +209,13 @@
 
                 <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-100 hover:bg-white/5 transition group text-left">
                     <i data-lucide="cpu" class="w-4 h-4 text-slate-400 group-hover:text-brand-400 transition"></i>
-                    <span>AI Engines &amp; Hooks</span>
+                    <span>AI Engines &amp; Keys</span>
                 </button>
             </nav>
 
             <!-- Bottom Tier Status & Simulator Link -->
             <div class="p-3 border-t border-white/5 mt-auto">
-                <div class="glass-panel rounded-2xl p-3 border border-white/5">
+                <div class="raycast-panel rounded-2xl p-3 border border-white/5">
                     <div class="flex items-center justify-between text-[11px] font-bold text-slate-300 mb-1.5">
                         <span id="sidebarPlanName">Starter Plan</span>
                         <span class="text-brand-400 font-mono" id="sidebarQuotaText">0%</span>
@@ -224,7 +229,7 @@
                             <i data-lucide="arrow-right" class="w-3 h-3"></i>
                         </button>
                         <a href="/demo" target="_blank" class="text-slate-400 hover:text-slate-200 flex items-center gap-1 font-medium transition">
-                            <span>Live Demo</span>
+                            <span>Simulator</span>
                             <i data-lucide="external-link" class="w-3 h-3"></i>
                         </a>
                     </div>
@@ -233,7 +238,7 @@
         </div>
     </aside>
 
-    <!-- MAIN APP CANVAS -->
+    <!-- ================= MAIN APP CANVAS ================= -->
     <div class="flex-1 flex flex-col bg-obsidian-950 overflow-hidden relative z-10">
 
         <!-- TOP BAR -->
@@ -247,14 +252,14 @@
                         <h1 class="text-sm font-extrabold text-white tracking-tight leading-none" id="topAsstName">Active Assistant</h1>
                         <button onclick="confirmDeleteCurrentProject()" class="text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold px-2.5 py-1 rounded-lg flex items-center gap-1 border border-red-500/20 transition" title="Delete this project">
                             <i data-lucide="trash-2" class="w-3 h-3"></i>
-                            <span>Delete Project</span>
+                            <span>Delete</span>
                         </button>
                     </div>
                     <div class="flex items-center gap-2 mt-1">
                         <span class="text-[11px] text-slate-400 font-mono" id="topAsstId">asst_default</span>
                         <span class="text-slate-600">&bull;</span>
                         <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Vector Store Active
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Vector RRF Active
                         </span>
                     </div>
                 </div>
@@ -262,19 +267,19 @@
 
             <!-- Top Actions -->
             <div class="flex items-center gap-3">
-                <div id="engineStatusPill" class="text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-2 bg-brand-500/10 text-brand-300 border border-brand-500/20">
+                <div id="engineStatusPill" class="text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-2 bg-brand-500/10 text-brand-300 border border-brand-500/20 font-mono">
                     <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
                     <span id="engineStatusText">Zero-Key Grounded RAG</span>
                 </div>
 
-                <button onclick="toggleBotTester()" class="text-xs bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold px-3.5 py-1.5 rounded-xl flex items-center gap-2 border border-white/10 shadow-lg shadow-brand-500/25 transition cursor-pointer" title="Test hello, customer queries and trained knowledge in real-time">
+                <button onclick="toggleBotTester()" class="text-xs bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold px-3.5 py-1.5 rounded-xl flex items-center gap-2 border border-white/10 shadow-lg shadow-brand-500/25 transition cursor-pointer">
                     <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
                     <span>Test Bot Live</span>
                 </button>
 
                 <a href="/demo" target="_blank" class="text-xs bg-white/10 hover:bg-white/15 text-white font-semibold px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 border border-white/10 transition shadow-sm">
                     <i data-lucide="eye" class="w-3.5 h-3.5 text-slate-300"></i>
-                    <span>Live Simulator</span>
+                    <span>Simulator</span>
                 </a>
 
                 <!-- Admin Profile Badge & Logout -->
@@ -298,7 +303,7 @@
                 <section id="tab-analytics" class="tab-pane space-y-6">
                     <!-- Metric Cards -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="glass-panel p-5 rounded-2xl border border-white/5 hover:border-white/10 transition group">
+                        <div class="raycast-panel p-5 rounded-2xl border border-white/5 hover:border-brand-500/30 transition group">
                             <div class="flex items-center justify-between">
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Conversations</span>
                                 <div class="w-8 h-8 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400">
@@ -312,7 +317,7 @@
                             </div>
                         </div>
 
-                        <div class="glass-panel p-5 rounded-2xl border border-white/5 hover:border-white/10 transition group">
+                        <div class="raycast-panel p-5 rounded-2xl border border-white/5 hover:border-brand-500/30 transition group">
                             <div class="flex items-center justify-between">
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Captured Leads</span>
                                 <div class="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
@@ -322,13 +327,13 @@
                             <div class="text-2xl font-black text-purple-400 mt-2 font-mono tracking-tight" id="kpiLeads">0</div>
                             <div class="mt-2 text-[11px] text-purple-300 font-semibold flex items-center gap-1.5">
                                 <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                                <span>AI Call-Prep Dossiers Generated</span>
+                                <span>AI Call Dossiers Ready</span>
                             </div>
                         </div>
 
-                        <div class="glass-panel p-5 rounded-2xl border border-white/5 hover:border-white/10 transition group">
+                        <div class="raycast-panel p-5 rounded-2xl border border-white/5 hover:border-brand-500/30 transition group">
                             <div class="flex items-center justify-between">
-                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Lead Conversion Rate</span>
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Conversion Rate</span>
                                 <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
                                     <i data-lucide="trending-up" class="w-4 h-4"></i>
                                 </div>
@@ -337,7 +342,7 @@
                             <div class="mt-2 text-[11px] text-slate-400 font-medium">Inquiries converted to contacts</div>
                         </div>
 
-                        <div class="glass-panel p-5 rounded-2xl border border-white/5 hover:border-white/10 transition group">
+                        <div class="raycast-panel p-5 rounded-2xl border border-white/5 hover:border-brand-500/30 transition group">
                             <div class="flex items-center justify-between">
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Knowledge Gaps</span>
                                 <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
@@ -350,7 +355,7 @@
                     </div>
 
                     <!-- Hero Feature Banner -->
-                    <div class="glass-panel-elevated rounded-3xl p-7 text-white shadow-2xl relative overflow-hidden gradient-border">
+                    <div class="raycast-panel-elevated rounded-3xl p-7 text-white shadow-2xl relative overflow-hidden border border-brand-500/30">
                         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div class="space-y-2">
                                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-[11px] font-semibold text-brand-300">
@@ -359,7 +364,7 @@
                                 </div>
                                 <h2 class="text-2xl font-extrabold tracking-tight text-white" id="bannerAsstTitle">EcomAlign Assistant</h2>
                                 <p class="text-xs text-slate-300 max-w-xl leading-relaxed">
-                                    Embed on any website with 1 line of code. Visitors ask questions via text or voice, receive strictly grounded answers with source citations, and high-intent visitors are automatically summarized into sales call briefs.
+                                    Embed on any website with 1 line of code. Visitors ask questions, receive strictly grounded answers with citations, and high-intent visitors are automatically summarized into sales call briefs.
                                 </p>
                             </div>
                             <div class="flex flex-col sm:flex-row gap-3 shrink-0">
@@ -375,12 +380,11 @@
                         </div>
                     </div>
                 </section>
-
-                <!-- ================= TAB 2: KNOWLEDGE VAULT ================= -->
+<!-- ================= TAB 2: KNOWLEDGE VAULT ================= -->
                 <section id="tab-knowledge" class="tab-pane hidden space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <!-- Card 1: PDF & Documents Drag-and-Drop -->
-                        <div class="glass-panel rounded-2xl p-6 border border-white/5 flex flex-col justify-between">
+                        <div class="raycast-panel rounded-2xl p-6 border border-white/5 flex flex-col justify-between">
                             <div>
                                 <div class="flex items-center gap-2.5 mb-2">
                                     <div class="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center">
@@ -409,7 +413,7 @@
                         </div>
 
                         <!-- Card 2: URL & Sitemap Crawler -->
-                        <div class="glass-panel rounded-2xl p-6 border border-white/5 flex flex-col justify-between">
+                        <div class="raycast-panel rounded-2xl p-6 border border-white/5 flex flex-col justify-between">
                             <div>
                                 <div class="flex items-center gap-2.5 mb-2">
                                     <div class="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
@@ -422,12 +426,12 @@
                                 <form id="urlForm" class="space-y-4">
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-300 mb-1.5">Target Website or Sitemap URL</label>
-                                        <input type="url" id="urlInput" required placeholder="https://docs.mycompany.com" class="glass-input w-full text-xs font-mono rounded-xl px-3.5 py-2.5 outline-none" />
+                                        <input type="url" id="urlInput" required placeholder="https://docs.mycompany.com" class="raycast-input w-full text-xs font-mono rounded-xl px-3.5 py-2.5 outline-none" />
                                     </div>
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1.5">Crawl Coverage</label>
-                                            <select id="crawlDepth" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2.5 outline-none cursor-pointer">
+                                            <select id="crawlDepth" class="raycast-input w-full text-xs font-semibold rounded-xl px-3 py-2.5 outline-none cursor-pointer">
                                                 <option value="50" selected>Deep Crawl Whole Site (Up to 50 pages)</option>
                                                 <option value="100">Extensive Whole Site (Up to 100 pages)</option>
                                                 <option value="1">Single Page Only</option>
@@ -446,7 +450,7 @@
                         </div>
 
                         <!-- Card 3: Direct FAQ & Policy Ingestion -->
-                        <div class="glass-panel rounded-2xl p-6 border border-white/5 flex flex-col justify-between">
+                        <div class="raycast-panel rounded-2xl p-6 border border-white/5 flex flex-col justify-between">
                             <div>
                                 <div class="flex items-center gap-2.5 mb-2">
                                     <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -459,11 +463,11 @@
                                 <form id="textForm" class="space-y-3">
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-300 mb-1">Document Title</label>
-                                        <input type="text" id="textTitle" required placeholder="e.g. Return Policy" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                        <input type="text" id="textTitle" required placeholder="e.g. Return Policy" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
                                     </div>
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-300 mb-1">Content Text</label>
-                                        <textarea id="textContent" rows="3" required placeholder="Paste knowledge text or FAQ pairs..." class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none"></textarea>
+                                        <textarea id="textContent" rows="3" required placeholder="Paste knowledge text or FAQ pairs..." class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none"></textarea>
                                     </div>
                                     <button type="submit" class="w-full text-xs bg-white/10 hover:bg-white/15 text-white font-bold py-2.5 rounded-xl border border-white/10 transition flex items-center justify-center gap-1.5">
                                         <i data-lucide="plus" class="w-3.5 h-3.5"></i>
@@ -476,7 +480,7 @@
                     </div>
 
                     <!-- Sources Table -->
-                    <div class="glass-panel rounded-2xl border border-white/5 overflow-hidden">
+                    <div class="raycast-panel rounded-2xl border border-white/5 overflow-hidden">
                         <div class="px-6 py-4 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
                             <div>
                                 <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -486,7 +490,7 @@
                                 <p class="text-xs text-slate-400 mt-0.5">Every response is strictly grounded in these verified sources.</p>
                             </div>
                             <div class="flex items-center gap-2.5">
-                                <input type="text" id="sourceSearchInput" oninput="filterSourcesTable()" placeholder="Search indexed sources..." class="glass-input text-xs rounded-xl px-3 py-1.5 outline-none w-44 sm:w-56" />
+                                <input type="text" id="sourceSearchInput" oninput="filterSourcesTable()" placeholder="Search indexed sources..." class="raycast-input text-xs rounded-xl px-3 py-1.5 outline-none w-44 sm:w-56" />
                                 <button id="syncKnowledgeBtn" onclick="syncAssistantKnowledge()" class="bg-brand-600/20 hover:bg-brand-600 text-brand-300 hover:text-white border border-brand-500/30 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer">
                                     <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
                                     <span>Sync &amp; Re-crawl</span>
@@ -519,7 +523,7 @@
                 <section id="tab-inbox" class="tab-pane hidden space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[680px]">
                         <!-- Left Session Master List (5 cols) -->
-                        <div class="lg:col-span-5 glass-panel rounded-2xl border border-white/5 flex flex-col overflow-hidden">
+                        <div class="lg:col-span-5 raycast-panel rounded-2xl border border-white/5 flex flex-col overflow-hidden">
                             <div class="p-4 border-b border-white/5 flex items-center justify-between">
                                 <div>
                                     <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -545,7 +549,7 @@
                         </div>
 
                         <!-- Right Detail Transcript Pane (7 cols) -->
-                        <div class="lg:col-span-7 glass-panel rounded-2xl border border-white/5 flex flex-col overflow-hidden">
+                        <div class="lg:col-span-7 raycast-panel rounded-2xl border border-white/5 flex flex-col overflow-hidden">
                             <div class="p-4 border-b border-white/5 flex items-center justify-between bg-obsidian-900/60">
                                 <div>
                                     <h4 class="text-xs font-bold text-white flex items-center gap-2" id="detailTranscriptTitle">
@@ -598,7 +602,7 @@
                 <section id="tab-gaps" class="tab-pane hidden space-y-6">
                     <!-- Knowledge Gaps KPI Metrics -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="glass-panel p-4 rounded-2xl border border-white/5 hover:border-white/10 transition">
+                        <div class="raycast-panel p-4 rounded-2xl border border-white/5 hover:border-white/10 transition">
                             <div class="flex items-center justify-between">
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Inquiries</span>
                                 <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center border border-brand-500/20">
@@ -609,7 +613,7 @@
                             <div class="text-[10px] text-slate-400 mt-1">Queries logged from chat widget</div>
                         </div>
 
-                        <div class="glass-panel p-4 rounded-2xl border border-amber-500/10 hover:border-amber-500/20 transition bg-amber-500/[0.02]">
+                        <div class="raycast-panel p-4 rounded-2xl border border-amber-500/10 hover:border-amber-500/20 transition bg-amber-500/[0.02]">
                             <div class="flex items-center justify-between">
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400">Needs Training</span>
                                 <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
@@ -623,7 +627,7 @@
                             </div>
                         </div>
 
-                        <div class="glass-panel p-4 rounded-2xl border border-emerald-500/10 hover:border-emerald-500/20 transition bg-emerald-500/[0.02]">
+                        <div class="raycast-panel p-4 rounded-2xl border border-emerald-500/10 hover:border-emerald-500/20 transition bg-emerald-500/[0.02]">
                             <div class="flex items-center justify-between">
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Trained &amp; Active</span>
                                 <div class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
@@ -636,7 +640,7 @@
                             </div>
                         </div>
 
-                        <div class="glass-panel p-4 rounded-2xl border border-purple-500/10 hover:border-purple-500/20 transition bg-purple-500/[0.02]">
+                        <div class="raycast-panel p-4 rounded-2xl border border-purple-500/10 hover:border-purple-500/20 transition bg-purple-500/[0.02]">
                             <div class="flex items-center justify-between">
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-purple-400">AI Knowledge Coverage</span>
                                 <div class="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20">
@@ -649,7 +653,7 @@
                     </div>
 
                     <!-- Knowledge Gaps Queue Card -->
-                    <div class="glass-panel rounded-2xl border border-white/5 overflow-hidden shadow-2xl">
+                    <div class="raycast-panel rounded-2xl border border-white/5 overflow-hidden shadow-2xl">
                         <!-- Top Header & Filter Bar -->
                         <div class="p-6 border-b border-white/5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                             <div>
@@ -691,7 +695,7 @@
                         <div class="px-6 py-3 bg-obsidian-950/40 border-b border-white/5 flex items-center gap-3">
                             <div class="relative flex-1">
                                 <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-                                <input type="text" id="gapsSearchInput" oninput="filterGaps()" placeholder="Type to filter visitor questions or verified answers in real-time..." class="glass-input w-full text-xs rounded-xl pl-9 pr-4 py-2 outline-none">
+                                <input type="text" id="gapsSearchInput" oninput="filterGaps()" placeholder="Type to filter visitor questions or verified answers in real-time..." class="raycast-input w-full text-xs rounded-xl pl-9 pr-4 py-2 outline-none">
                             </div>
                             <span class="text-[11px] text-slate-500 font-mono" id="gapsFilteredCounter">Showing all</span>
                         </div>
@@ -718,7 +722,7 @@
 
                 <!-- ================= TAB 5: LEADS & CALL-PREP ================= -->
                 <section id="tab-leads" class="tab-pane hidden space-y-6">
-                    <div class="glass-panel rounded-2xl border border-white/5 overflow-hidden">
+                    <div class="raycast-panel rounded-2xl border border-white/5 overflow-hidden">
                         <div class="px-6 py-4 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
                                 <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -760,7 +764,7 @@
                 <section id="tab-widget" class="tab-pane hidden space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
                         <!-- Customization Controls (5 cols) -->
-                        <div class="lg:col-span-5 glass-panel rounded-2xl p-6 border border-white/5 space-y-5">
+                        <div class="lg:col-span-5 raycast-panel rounded-2xl p-6 border border-white/5 space-y-5">
                             <div>
                                 <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                                     <i data-lucide="palette" class="w-4 h-4 text-brand-400"></i>
@@ -779,11 +783,11 @@
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Bot Name</label>
-                                            <input type="text" id="asstName" oninput="onLiveNameChange(this.value)" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2 outline-none" />
+                                            <input type="text" id="asstName" oninput="onLiveNameChange(this.value)" class="raycast-input w-full text-xs font-semibold rounded-xl px-3 py-2 outline-none" />
                                         </div>
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Status / Subtitle</label>
-                                            <input type="text" id="asstSubtitle" oninput="onLiveSubtitleChange(this.value)" placeholder="Online" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                            <input type="text" id="asstSubtitle" oninput="onLiveSubtitleChange(this.value)" placeholder="Online" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
                                         </div>
                                     </div>
 
@@ -804,7 +808,7 @@
                                                         Reset
                                                     </button>
                                                 </div>
-                                                <input type="text" id="asstAvatar" oninput="onLiveAvatarChange(this.value)" placeholder="Image URL, data URL or emoji" class="glass-input w-full text-[11px] font-mono rounded-lg px-2.5 py-1 outline-none text-slate-300" />
+                                                <input type="text" id="asstAvatar" oninput="onLiveAvatarChange(this.value)" placeholder="Image URL, data URL or emoji" class="raycast-input w-full text-[11px] font-mono rounded-lg px-2.5 py-1 outline-none text-slate-300" />
                                             </div>
                                         </div>
                                     </div>
@@ -814,12 +818,12 @@
                                             <label class="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
                                                 <span class="text-emerald-400">💬</span> WhatsApp Number
                                             </label>
-                                            <input type="text" id="asstWhatsapp" placeholder="+971505594888" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none font-mono" />
+                                            <input type="text" id="asstWhatsapp" placeholder="+971505594888" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none font-mono" />
                                         </div>
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">White-Label Footer</label>
-                                            <select id="asstShowBranding" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
-                                                <option value="true">Show "Powered by WeaveFlow"</option>
+                                            <select id="asstShowBranding" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="true">Show "Powered by AnswerWeave"</option>
                                                 <option value="false">Hidden (White-Label)</option>
                                             </select>
                                         </div>
@@ -836,7 +840,7 @@
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Theme Mode</label>
-                                            <select id="asstThemeMode" onchange="onLiveThemeModeChange(this.value)" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <select id="asstThemeMode" onchange="onLiveThemeModeChange(this.value)" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
                                                 <option value="light">Light Mode (Crisp Clean)</option>
                                                 <option value="dark">Dark Mode (Obsidian Midnight)</option>
                                                 <option value="auto">Auto (Match Visitor OS Preference)</option>
@@ -844,7 +848,7 @@
                                         </div>
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Widget Corner Radius</label>
-                                            <select id="asstRadius" onchange="onLiveRadiusChange(this.value)" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <select id="asstRadius" onchange="onLiveRadiusChange(this.value)" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
                                                 <option value="22px">Modern Curved (22px)</option>
                                                 <option value="14px">Sharp Minimal (14px)</option>
                                                 <option value="28px">Soft Pill (28px)</option>
@@ -869,7 +873,7 @@
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <input type="color" id="asstColorPicker" oninput="onLiveColorChange(this.value)" class="w-9 h-9 rounded-lg border border-white/10 bg-transparent cursor-pointer shrink-0" />
-                                            <input type="text" id="asstColorText" oninput="onLiveColorChange(this.value)" class="glass-input w-full text-xs font-mono rounded-lg px-2.5 py-2 outline-none" />
+                                            <input type="text" id="asstColorText" oninput="onLiveColorChange(this.value)" class="raycast-input w-full text-xs font-mono rounded-lg px-2.5 py-2 outline-none" />
                                         </div>
                                     </div>
                                 </div>
@@ -883,14 +887,14 @@
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Launcher Style</label>
-                                            <select id="asstLauncherStyle" onchange="onLiveLauncherStyleChange(this.value)" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <select id="asstLauncherStyle" onchange="onLiveLauncherStyleChange(this.value)" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
                                                 <option value="circle">Floating Circle Icon</option>
                                                 <option value="pill">Floating Pill with Label Text</option>
                                             </select>
                                         </div>
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Attention Pulse Ring</label>
-                                            <select id="asstLauncherPulse" onchange="onLivePulseChange(this.value === 'true')" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <select id="asstLauncherPulse" onchange="onLivePulseChange(this.value === 'true')" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
                                                 <option value="true">Enabled (Breathing Pulse Glow)</option>
                                                 <option value="false">Disabled (Static)</option>
                                             </select>
@@ -900,11 +904,11 @@
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Pill Label Text</label>
-                                            <input type="text" id="asstLauncherText" oninput="onLiveLauncherTextChange(this.value)" placeholder="Chat with us" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                            <input type="text" id="asstLauncherText" oninput="onLiveLauncherTextChange(this.value)" placeholder="Chat with us" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
                                         </div>
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Corner Placement</label>
-                                            <select id="asstPosition" onchange="onLivePositionChange(this.value)" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <select id="asstPosition" onchange="onLivePositionChange(this.value)" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
                                                 <option value="bottom-right">Bottom-Right Corner</option>
                                                 <option value="bottom-left">Bottom-Left Corner</option>
                                             </select>
@@ -921,7 +925,7 @@
 
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-300 mb-1">Welcome Message</label>
-                                        <textarea id="asstWelcome" oninput="onLiveWelcomeChange(this.value)" rows="2" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none"></textarea>
+                                        <textarea id="asstWelcome" oninput="onLiveWelcomeChange(this.value)" rows="2" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none"></textarea>
                                     </div>
 
                                     <div>
@@ -929,31 +933,31 @@
                                             <label class="block text-xs font-semibold text-slate-300">Popular Questions (Cards with Arrow)</label>
                                             <span class="text-[10px] text-slate-500">One per line</span>
                                         </div>
-                                        <textarea id="asstQuestions" oninput="onLiveQuestionsChange(this.value)" rows="3" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none leading-relaxed" placeholder="What services do you offer?&#10;How does pricing work?&#10;Can I speak with a specialist?"></textarea>
+                                        <textarea id="asstQuestions" oninput="onLiveQuestionsChange(this.value)" rows="3" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none leading-relaxed" placeholder="What services do you offer?&#10;How does pricing work?&#10;Can I speak with a specialist?"></textarea>
                                     </div>
 
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Proactive Teaser Popup</label>
-                                            <input type="text" id="asstTeaser" oninput="onLiveTeaserChange(this.value)" placeholder="👋 Hi! Need quick answers?" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                            <input type="text" id="asstTeaser" oninput="onLiveTeaserChange(this.value)" placeholder="👋 Hi! Need quick answers?" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
                                         </div>
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Input Placeholder</label>
-                                            <input type="text" id="asstPlaceholder" oninput="onLivePlaceholderChange(this.value)" placeholder="Ask a question..." class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                            <input type="text" id="asstPlaceholder" oninput="onLivePlaceholderChange(this.value)" placeholder="Ask a question..." class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
                                         </div>
                                     </div>
 
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Voice Input (Mic 🎤)</label>
-                                            <select id="asstVoice" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <select id="asstVoice" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
                                                 <option value="true">Enabled (Speech-to-Text)</option>
                                                 <option value="false">Disabled</option>
                                             </select>
                                         </div>
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">Audio Chime (Sound)</label>
-                                            <select id="asstSound" onchange="onLiveSoundChange(this.value === 'true')" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <select id="asstSound" onchange="onLiveSoundChange(this.value === 'true')" class="raycast-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
                                                 <option value="true">Enabled (Pleasant Chime)</option>
                                                 <option value="false">Disabled (Silent)</option>
                                             </select>
@@ -1107,7 +1111,7 @@
 
                 <!-- ================= TAB 7: PLANS & BILLING ================= -->
                 <section id="tab-billing" class="tab-pane hidden space-y-6">
-                    <div class="glass-panel rounded-2xl p-6 border border-white/5">
+                    <div class="raycast-panel rounded-2xl p-6 border border-white/5">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                             <div>
                                 <h3 class="text-base font-bold text-white flex items-center gap-2">
@@ -1126,7 +1130,7 @@
                         <!-- 5 Plans Grid -->
                         <div class="grid grid-cols-1 md:grid-cols-5 gap-4 pt-2">
                             <!-- Free -->
-                            <div class="glass-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
+                            <div class="raycast-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
                                 <div>
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Free</h4>
                                     <div class="text-2xl font-black text-white mt-1">$0<span class="text-xs text-slate-500 font-normal">/mo</span></div>
@@ -1140,7 +1144,7 @@
                             </div>
 
                             <!-- Starter -->
-                            <div class="glass-panel-elevated rounded-2xl p-4 flex flex-col justify-between border-brand-500 relative shadow-xl gradient-border">
+                            <div class="raycast-panel-elevated rounded-2xl p-4 flex flex-col justify-between border-brand-500 relative shadow-xl gradient-border">
                                 <div class="absolute -top-2.5 right-3 bg-brand-600 text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow">Popular</div>
                                 <div>
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-brand-400">Starter</h4>
@@ -1156,7 +1160,7 @@
                             </div>
 
                             <!-- Pro -->
-                            <div class="glass-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
+                            <div class="raycast-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
                                 <div>
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Pro</h4>
                                     <div class="text-2xl font-black text-white mt-1">$49<span class="text-xs text-slate-500 font-normal">/mo</span></div>
@@ -1171,7 +1175,7 @@
                             </div>
 
                             <!-- Growth -->
-                            <div class="glass-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
+                            <div class="raycast-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
                                 <div>
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Growth</h4>
                                     <div class="text-2xl font-black text-white mt-1">$89<span class="text-xs text-slate-500 font-normal">/mo</span></div>
@@ -1186,7 +1190,7 @@
                             </div>
 
                             <!-- Agency -->
-                            <div class="glass-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
+                            <div class="raycast-panel rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition">
                                 <div>
                                     <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Agency</h4>
                                     <div class="text-2xl font-black text-white mt-1">$249<span class="text-xs text-slate-500 font-normal">/mo</span></div>
@@ -1205,7 +1209,7 @@
 
                 <!-- ================= TAB 8: AI ENGINES & SETTINGS ================= -->
                 <section id="tab-settings" class="tab-pane hidden max-w-3xl space-y-6">
-                    <div class="glass-panel rounded-2xl p-6 border border-white/5 space-y-4">
+                    <div class="raycast-panel rounded-2xl p-6 border border-white/5 space-y-4">
                         <div class="flex items-center gap-2.5">
                             <div class="w-8 h-8 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center">
                                 <i data-lucide="shield" class="w-4 h-4"></i>
@@ -1217,12 +1221,12 @@
                         <form id="assistantSecurityForm" class="space-y-4">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-300 mb-1">Allowed Domains (Domain Whitelist)</label>
-                                <input type="text" id="asstDomain" placeholder="acme.com, *.acme.com or *" class="glass-input w-full text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                <input type="text" id="asstDomain" placeholder="acme.com, *.acme.com or *" class="raycast-input w-full text-xs font-mono rounded-xl px-3 py-2 outline-none" />
                                 <p class="text-[11px] text-slate-500 mt-1">Prevents unauthorized embedding on third-party sites. Use * to allow anywhere.</p>
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold text-slate-300 mb-1">Outbound Lead Webhook URL</label>
-                                <input type="url" id="asstWebhook" placeholder="https://hooks.zapier.com/hooks/catch/..." class="glass-input w-full text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                <input type="url" id="asstWebhook" placeholder="https://hooks.zapier.com/hooks/catch/..." class="raycast-input w-full text-xs font-mono rounded-xl px-3 py-2 outline-none" />
                                 <p class="text-[11px] text-slate-500 mt-1">Sends immediate JSON payloads with visitor contacts and the AI Call-Prep Brief.</p>
                             </div>
                             <div class="flex items-center gap-2">
@@ -1238,7 +1242,7 @@
                         </form>
                     </div>
 
-                    <div class="glass-panel rounded-2xl p-6 border border-white/5 space-y-5">
+                    <div class="raycast-panel rounded-2xl p-6 border border-white/5 space-y-5">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2.5">
                                 <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -1258,7 +1262,7 @@
                         <form id="globalAiForm" class="space-y-4">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-300 mb-1">Active Model / Engine</label>
-                                <select id="cfgProvider" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2.5 outline-none cursor-pointer">
+                                <select id="cfgProvider" class="raycast-input w-full text-xs font-semibold rounded-xl px-3 py-2.5 outline-none cursor-pointer">
                                     <option value="auto">Auto (Auto-detect highest priority configured engine)</option>
                                     <option value="openrouter">🌐 OpenRouter (Free DeepSeek-R1 &amp; Qwen 2.5 - No Phone Required)</option>
                                     <option value="groq">⚡ Groq (100% Free &amp; Ultra-Fast Llama 3.3)</option>
@@ -1286,7 +1290,7 @@
                                 </div>
                                 <p class="text-[11px] text-slate-400">Global API gateway with completely free access to <strong>DeepSeek-R1:Free</strong> and <strong>Qwen-2.5:Free</strong>. Instant login with Google or GitHub, no phone number required!</p>
                                 <div class="flex gap-2">
-                                    <input type="password" id="cfgOpenRouterKey" placeholder="sk-or-v1-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <input type="password" id="cfgOpenRouterKey" placeholder="sk-or-v1-..." class="raycast-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
                                     <button type="button" onclick="testProviderKey('openrouter')" class="px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
                                         <i data-lucide="zap" class="w-3.5 h-3.5"></i>
                                         <span>Test</span>
@@ -1310,7 +1314,7 @@
                                 </div>
                                 <p class="text-[11px] text-slate-400">High-speed inference platform for <strong>DeepSeek-V3</strong>, <strong>DeepSeek-R1</strong>, and <strong>Qwen-2.5-7B</strong>. Grants free usage credits upon registration.</p>
                                 <div class="flex gap-2">
-                                    <input type="password" id="cfgSiliconFlowKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <input type="password" id="cfgSiliconFlowKey" placeholder="sk-..." class="raycast-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
                                     <button type="button" onclick="testProviderKey('siliconflow')" class="px-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
                                         <i data-lucide="zap" class="w-3.5 h-3.5"></i>
                                         <span>Test</span>
@@ -1333,7 +1337,7 @@
                                     </a>
                                 </div>
                                 <div class="flex gap-2">
-                                    <input type="password" id="cfgDeepSeekKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <input type="password" id="cfgDeepSeekKey" placeholder="sk-..." class="raycast-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
                                     <button type="button" onclick="testProviderKey('deepseek')" class="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
                                         <i data-lucide="zap" class="w-3.5 h-3.5"></i>
                                         <span>Test</span>
@@ -1355,7 +1359,7 @@
                                     </a>
                                 </div>
                                 <div class="flex gap-2">
-                                    <input type="password" id="cfgQwenKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <input type="password" id="cfgQwenKey" placeholder="sk-..." class="raycast-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
                                     <button type="button" onclick="testProviderKey('qwen')" class="px-3 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
                                         <i data-lucide="zap" class="w-3.5 h-3.5"></i>
                                         <span>Test</span>
@@ -1376,7 +1380,7 @@
                                     </a>
                                 </div>
                                 <div class="flex gap-2">
-                                    <input type="password" id="cfgGroqKey" placeholder="gsk_..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <input type="password" id="cfgGroqKey" placeholder="gsk_..." class="raycast-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
                                     <button type="button" onclick="testProviderKey('groq')" class="px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
                                         <i data-lucide="zap" class="w-3.5 h-3.5"></i>
                                         <span>Test</span>
@@ -1397,7 +1401,7 @@
                                     </a>
                                 </div>
                                 <div class="flex gap-2">
-                                    <input type="password" id="cfgGeminiKey" placeholder="AIzaSy..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <input type="password" id="cfgGeminiKey" placeholder="AIzaSy..." class="raycast-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
                                     <button type="button" onclick="testProviderKey('gemini')" class="px-3 py-2 bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 border border-brand-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
                                         <i data-lucide="zap" class="w-3.5 h-3.5"></i>
                                         <span>Test</span>
@@ -1412,7 +1416,7 @@
                                     <label class="block text-xs font-bold text-slate-300">OpenAI API Key (Optional GPT-4o-mini)</label>
                                 </div>
                                 <div class="flex gap-2">
-                                    <input type="password" id="cfgOpenAIKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                    <input type="password" id="cfgOpenAIKey" placeholder="sk-..." class="raycast-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
                                     <button type="button" onclick="testProviderKey('openai')" class="px-3 py-2 bg-white/10 hover:bg-white/20 text-slate-300 border border-white/10 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
                                         <i data-lucide="zap" class="w-3.5 h-3.5"></i>
                                         <span>Test</span>
@@ -1437,7 +1441,7 @@
 
     <!-- Modal: Resolve Knowledge Gap -->
     <div id="resolveGapModal" class="fixed inset-0 bg-obsidian-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel-elevated rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-white/10 gradient-border animate-in fade-in zoom-in-95 duration-200">
+        <div class="raycast-panel-elevated rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-white/10 gradient-border animate-in fade-in zoom-in-95 duration-200">
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-base font-extrabold text-white flex items-center gap-2">
                     <span class="w-7 h-7 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center">
@@ -1468,7 +1472,7 @@
                         </label>
                         <span class="text-[10px] text-slate-500 font-mono" id="gapAnswerCharCount">0 chars</span>
                     </div>
-                    <textarea id="gapModalAnswer" rows="5" required placeholder="Type the verified answer that the AI assistant should provide to visitors..." oninput="document.getElementById('gapAnswerCharCount').innerText = this.value.length + ' chars'" class="glass-input w-full text-xs rounded-xl p-3 outline-none leading-relaxed focus:border-brand-500"></textarea>
+                    <textarea id="gapModalAnswer" rows="5" required placeholder="Type the verified answer that the AI assistant should provide to visitors..." oninput="document.getElementById('gapAnswerCharCount').innerText = this.value.length + ' chars'" class="raycast-input w-full text-xs rounded-xl p-3 outline-none leading-relaxed focus:border-brand-500"></textarea>
                 </div>
 
                 <div class="p-3 rounded-xl bg-brand-500/5 border border-brand-500/15 text-[11px] text-brand-300/90 flex items-start gap-2.5">
@@ -1489,7 +1493,7 @@
 
     <!-- Modal: Teach Custom Q&A -->
     <div id="addCustomQAModal" class="fixed inset-0 bg-obsidian-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel-elevated rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-white/10 gradient-border animate-in fade-in zoom-in-95 duration-200">
+        <div class="raycast-panel-elevated rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-white/10 gradient-border animate-in fade-in zoom-in-95 duration-200">
             <div class="flex items-center justify-between mb-2">
                 <h3 class="text-base font-extrabold text-white flex items-center gap-2">
                     <span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -1506,11 +1510,11 @@
             <form id="addCustomQAForm" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-300 mb-1">Question Visitors Might Ask</label>
-                    <input type="text" id="customQAModalQuestion" required placeholder="e.g. Do you ship internationally?" class="glass-input w-full text-xs rounded-xl px-3 py-2.5 outline-none font-semibold text-white" />
+                    <input type="text" id="customQAModalQuestion" required placeholder="e.g. Do you ship internationally?" class="raycast-input w-full text-xs rounded-xl px-3 py-2.5 outline-none font-semibold text-white" />
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-300 mb-1">Verified Official Answer</label>
-                    <textarea id="customQAModalAnswer" rows="4" required placeholder="e.g. Yes! We ship to over 150 countries worldwide. International delivery typically takes 5 to 7 business days." class="glass-input w-full text-xs rounded-xl p-3 outline-none leading-relaxed"></textarea>
+                    <textarea id="customQAModalAnswer" rows="4" required placeholder="e.g. Yes! We ship to over 150 countries worldwide. International delivery typically takes 5 to 7 business days." class="raycast-input w-full text-xs rounded-xl p-3 outline-none leading-relaxed"></textarea>
                 </div>
                 <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
                     <button type="button" onclick="closeAddCustomQAModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition">Cancel</button>
@@ -1563,7 +1567,7 @@
         <div id="testerMessagesContainer" class="flex-1 p-4 overflow-y-auto space-y-3.5 text-xs bg-obsidian-950/30">
             <div class="flex items-start gap-2.5">
                 <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 text-xs font-bold">⚡</div>
-                <div class="glass-panel p-3 rounded-2xl rounded-tl-sm text-slate-200 border border-white/10 max-w-[85%] leading-relaxed">
+                <div class="raycast-panel p-3 rounded-2xl rounded-tl-sm text-slate-200 border border-white/10 max-w-[85%] leading-relaxed">
                     Hello! I'm your website AI assistant. You can test greetings, questions, or your newly trained knowledge gaps right here in real-time!
                 </div>
             </div>
@@ -1572,7 +1576,7 @@
         <!-- Chat Input Footer -->
         <div class="p-3 border-t border-white/10 bg-obsidian-950/80">
             <form id="testerChatForm" onsubmit="handleTesterSubmit(event)" class="flex items-center gap-2">
-                <input type="text" id="testerInput" placeholder="Ask a question or test 'Hello'..." autocomplete="off" class="glass-input flex-1 text-xs rounded-xl px-3.5 py-2.5 outline-none text-white focus:border-brand-500" />
+                <input type="text" id="testerInput" placeholder="Ask a question or test 'Hello'..." autocomplete="off" class="raycast-input flex-1 text-xs rounded-xl px-3.5 py-2.5 outline-none text-white focus:border-brand-500" />
                 <button type="submit" id="testerSendBtn" class="w-9 h-9 rounded-xl bg-brand-600 hover:bg-brand-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-brand-500/20 transition cursor-pointer">
                     <i data-lucide="send" class="w-4 h-4"></i>
                 </button>
@@ -1586,7 +1590,7 @@
 
     <!-- Modal: Create New Project / Assistant -->
     <div id="newAsstModal" class="fixed inset-0 bg-obsidian-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel-elevated rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/10 gradient-border">
+        <div class="raycast-panel-elevated rounded-3xl max-w-md w-full p-6 shadow-2xl border border-white/10 gradient-border">
             <h3 class="text-base font-extrabold text-white mb-1 flex items-center gap-2">
                 <i data-lucide="plus-circle" class="w-4 h-4 text-brand-400"></i>
                 Create Website Project
@@ -1596,15 +1600,15 @@
             <form id="createAssistantForm" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-300 mb-1">Project / Assistant Name</label>
-                    <input type="text" id="newAsstName" required placeholder="e.g. My Website Concierge" class="glass-input w-full text-xs font-semibold rounded-xl px-3 py-2.5 outline-none" />
+                    <input type="text" id="newAsstName" required placeholder="e.g. My Website Concierge" class="raycast-input w-full text-xs font-semibold rounded-xl px-3 py-2.5 outline-none" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-300 mb-1">Website URL (Deep Crawl)</label>
-                    <input type="url" id="newAsstUrl" oninput="autoSuggestDomain(this.value)" placeholder="https://example.com" class="glass-input w-full text-xs font-mono rounded-xl px-3 py-2.5 outline-none" />
+                    <input type="url" id="newAsstUrl" oninput="autoSuggestDomain(this.value)" placeholder="https://example.com" class="raycast-input w-full text-xs font-mono rounded-xl px-3 py-2.5 outline-none" />
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-300 mb-1">Allowed Domain (Domain Whitelist)</label>
-                    <input type="text" id="newAsstDomain" oninput="this.dataset.manual='true'" placeholder="e.g. example.com or *.example.com" class="glass-input w-full text-xs font-mono rounded-xl px-3 py-2 outline-none text-slate-200" />
+                    <input type="text" id="newAsstDomain" oninput="this.dataset.manual='true'" placeholder="e.g. example.com or *.example.com" class="raycast-input w-full text-xs font-mono rounded-xl px-3 py-2 outline-none text-slate-200" />
                     <p class="text-[10.5px] text-slate-500 mt-1">Locks this chatbot strictly to this domain. Prevents it from displaying on other sites.</p>
                 </div>
                 <div class="flex items-center gap-2 pt-1">
@@ -1630,7 +1634,7 @@
                                     <span>Upload Logo</span>
                                 </label>
                                 <input type="file" id="newAsstAvatarFileInput" accept="image/*" class="hidden" onchange="handleBrandIconUpload(this, 'newAsstAvatar')" />
-                                <input type="text" id="newAsstAvatar" placeholder="URL or emoji" class="glass-input w-full text-[10px] font-mono rounded-lg px-2 py-0.5 outline-none text-slate-300" value="⚡" />
+                                <input type="text" id="newAsstAvatar" placeholder="URL or emoji" class="raycast-input w-full text-[10px] font-mono rounded-lg px-2 py-0.5 outline-none text-slate-300" value="⚡" />
                             </div>
                         </div>
                     </div>
@@ -1645,7 +1649,7 @@
 
     <!-- Modal: Delete Project Confirmation -->
     <div id="deleteAsstModal" class="fixed inset-0 bg-obsidian-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel-elevated rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-red-500/20 gradient-border">
+        <div class="raycast-panel-elevated rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-red-500/20 gradient-border">
             <h3 class="text-base font-extrabold text-white mb-2 flex items-center gap-2">
                 <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i>
                 Delete Project?
@@ -1662,7 +1666,7 @@
 
     <!-- Modal: AI Call-Prep Intelligence Dossier -->
     <div id="briefModal" class="fixed inset-0 bg-obsidian-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-panel-elevated rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-white/10 flex flex-col max-h-[85vh] gradient-border">
+        <div class="raycast-panel-elevated rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-white/10 flex flex-col max-h-[85vh] gradient-border">
             <div class="flex items-center justify-between pb-4 border-b border-white/10">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
@@ -1670,7 +1674,7 @@
                     </div>
                     <div>
                         <h3 class="text-sm font-extrabold text-white leading-none">AI Call-Prep Intelligence Dossier</h3>
-                        <div class="text-[11px] text-slate-400 mt-1">Automated sales briefing synthesized by WeaveFlow AI</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Automated sales briefing synthesized by AnswerWeave AI</div>
                     </div>
                 </div>
                 <button onclick="closeBriefModal()" class="text-slate-400 hover:text-white text-xl font-bold leading-none">&times;</button>

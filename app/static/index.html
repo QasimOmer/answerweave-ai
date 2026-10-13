@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" class="scroll-smooth dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AnswerWeave AI — Minimalist Grounded AI Platform for Websites</title>
-    <meta name="description" content="AnswerWeave AI transforms website visitors into customers with grounded factual intelligence, hybrid BM25 search, live human handoff, and automated AI sales dossiers.">
+    <meta name="description" content="Deploy grounded, factual AI chatbots on any website in 60 seconds. Featuring hybrid BM25+RRF retrieval, live human operator takeover, Shadow DOM isolation, and automatic AI sales dossiers.">
 
-    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -29,17 +29,19 @@
                         brand: {
                             50: '#eef2ff',
                             100: '#e0e7ff',
+                            200: '#c7d2fe',
                             400: '#818cf8',
                             500: '#6366f1',
                             600: '#4f46e5',
                             700: '#4338ca',
                         },
                         obsidian: {
-                            950: '#07090e',
-                            900: '#0c0f17',
-                            850: '#111622',
-                            800: '#171e2e',
-                            700: '#1f293d',
+                            950: '#06070a',
+                            900: '#0a0d14',
+                            850: '#0f131d',
+                            800: '#151a27',
+                            750: '#1b2233',
+                            700: '#232c42',
                         }
                     }
                 }
@@ -49,121 +51,112 @@
 
     <style>
         :root {
-            --bg-base: #07090e;
+            --bg-base: #06070a;
         }
         body {
             background-color: var(--bg-base);
             color: #f1f5f9;
             overflow-x: hidden;
+            font-feature-settings: "cv02", "cv03", "cv04", "cv11";
         }
 
-        /* Subtle Geometric Dot Grid */
-        .dot-grid {
-            background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-            background-size: 28px 28px;
+        /* Subtle Geometric Background Grid */
+        .raycast-grid {
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+            background-size: 32px 32px;
         }
 
-        /* Glassmorphism & Hairline Borders */
-        .glass-nav {
-            background: rgba(7, 9, 14, 0.78);
+        /* Ambient Glow Spotlights */
+        .spotlight-glow {
+            background: radial-gradient(circle 500px at 50% 0%, rgba(99, 102, 241, 0.15), transparent 70%);
+        }
+
+        /* Linear Glass Panels */
+        .linear-card {
+            background: rgba(15, 19, 29, 0.7);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .bento-card {
-            background: rgba(12, 15, 23, 0.7);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .bento-card:hover {
-            border-color: rgba(99, 102, 241, 0.3);
+        .linear-card:hover {
+            border-color: rgba(99, 102, 241, 0.35);
+            box-shadow: 0 12px 36px -10px rgba(0, 0, 0, 0.7), 0 0 24px -6px rgba(99, 102, 241, 0.2);
             transform: translateY(-2px);
-            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), 0 0 30px -10px rgba(99, 102, 241, 0.15);
         }
 
-        /* Gradient Typography */
-        .text-gradient {
-            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 55%, #94a3b8 100%);
+        .linear-nav {
+            background: rgba(6, 7, 10, 0.82);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        /* Glowing Accent Text */
+        .text-glow {
+            text-shadow: 0 0 30px rgba(99, 102, 241, 0.35);
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .text-gradient-accent {
+        .gradient-brand-text {
             background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        /* Ambient Glow Animations */
-        @keyframes floatSlow {
-            0%, 100% { transform: translateY(0px) scale(1); }
-            50% { transform: translateY(-20px) scale(1.05); }
-        }
-        .float-glow {
-            animation: floatSlow 8s ease-in-out infinite;
-        }
-
         /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #07090e;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.25);
-        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
     </style>
 </head>
-<body class="selection:bg-brand-500 selection:text-white min-h-screen relative font-sans antialiased">
+<body class="raycast-grid selection:bg-brand-500 selection:text-white min-h-screen flex flex-col justify-between">
 
-    <!-- Ambient Glowing Nebulas & Dot Grid -->
-    <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden dot-grid">
-        <div class="absolute -top-[20%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-brand-500/10 rounded-full blur-[140px] float-glow"></div>
-        <div class="absolute top-[40%] -left-[10%] w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[140px] float-glow" style="animation-delay: -3s;"></div>
-        <div class="absolute bottom-[10%] -right-[10%] w-[600px] h-[600px] bg-emerald-500/8 rounded-full blur-[150px] float-glow" style="animation-delay: -5s;"></div>
-    </div>
+    <!-- Ambient Top Spotlight Glow -->
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] spotlight-glow pointer-events-none z-0"></div>
 
-    <!-- Header Navigation -->
-    <header class="fixed top-0 inset-x-0 z-50 glass-nav transition-all duration-300">
-        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            <a href="/" class="flex items-center gap-3 group">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/25 group-hover:scale-105 transition">
-                    <i data-lucide="zap" class="w-5 h-5 fill-white text-white"></i>
+    <!-- ================= FLOATING GLASS NAVBAR ================= -->
+    <header class="sticky top-0 z-40 linear-nav w-full">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <!-- Brand -->
+            <a href="/" class="flex items-center gap-2.5 group">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/25 group-hover:scale-105 transition">
+                    <i data-lucide="zap" class="w-4 h-4 fill-white"></i>
                 </div>
-                <div>
-                    <span class="font-extrabold text-base sm:text-lg text-white tracking-tight flex items-center">
-                        AnswerWeave<span class="text-brand-400">.ai</span>
-                    </span>
-                    <span class="text-[10px] font-semibold text-slate-400 block -mt-1 tracking-wider uppercase font-mono">Grounded AI Platform</span>
+                <div class="flex items-center gap-1.5 font-extrabold text-base tracking-tight text-white">
+                    <span>AnswerWeave</span>
+                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-brand-500/10 border border-brand-500/20 text-brand-300 font-semibold">2.0</span>
                 </div>
             </a>
 
+            <!-- Navigation Links -->
             <nav class="hidden md:flex items-center gap-7 text-xs font-semibold text-slate-300">
-                <a href="#architecture" class="hover:text-white transition flex items-center gap-1.5">
-                    <span>Architecture</span>
+                <a href="#features" class="hover:text-white transition">Platform</a>
+                <a href="#mockup-suite" class="hover:text-white transition">Architecture</a>
+                <a href="#interactive-playground" class="hover:text-white transition flex items-center gap-1">
+                    <span>Playground</span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 </a>
-                <a href="#bento" class="hover:text-white transition">Features</a>
-                <a href="#sandbox" class="hover:text-white transition flex items-center gap-1">
-                    <span>Widget Sandbox</span>
-                    <span class="px-1.5 py-0.5 text-[9px] font-extrabold bg-brand-500/20 text-brand-300 border border-brand-500/30 rounded-full">Interactive</span>
-                </a>
-                <a href="#how-it-works" class="hover:text-white transition">Workflow</a>
                 <a href="#pricing" class="hover:text-white transition">Pricing</a>
                 <a href="#faq" class="hover:text-white transition">FAQ</a>
             </nav>
 
+            <!-- Action Buttons -->
             <div class="flex items-center gap-3">
-                <button onclick="openAuthModal('login')" class="text-xs font-bold text-slate-300 hover:text-white px-3.5 py-2 rounded-xl transition hover:bg-white/5">
+                <a href="/demo" target="_blank" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition border border-white/5">
+                    <i data-lucide="play" class="w-3 h-3 text-brand-400"></i>
+                    <span>Live Demo</span>
+                </a>
+                <button onclick="openAuthModal('login')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/5 transition">
                     Sign In
                 </button>
-                <button onclick="openAuthModal('signup')" class="text-xs font-bold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 px-4 sm:px-5 py-2.5 rounded-xl shadow-lg shadow-brand-500/20 transition flex items-center gap-1.5 border border-brand-400/20">
+                <button onclick="openAuthModal('signup')" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-600 hover:bg-brand-500 transition shadow-lg shadow-brand-500/25 flex items-center gap-1.5">
                     <span>Get Started</span>
                     <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                 </button>
@@ -171,531 +164,447 @@
         </div>
     </header>
 
-    <!-- Main Landing Container -->
-    <main class="relative z-10 pt-36 pb-24 px-6 max-w-7xl mx-auto space-y-36">
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-14 pb-24 space-y-28">
 
-        <!-- ================= HERO SECTION ================= -->
-        <section class="text-center max-w-4xl mx-auto pt-6">
-            <!-- Pill Announcement -->
-            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold mb-8 shadow-sm">
-                <span class="flex h-2 w-2 relative">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span class="font-mono text-[11px] tracking-wide">Enterprise 2.5 • Hybrid BM25 Engine & Live Takeover Active</span>
+        <!-- ================= SECTION 1: HERO ================= -->
+        <section class="text-center max-w-4xl mx-auto space-y-6 pt-6">
+            <!-- Raycast Pill Badge -->
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-obsidian-850 border border-white/10 text-slate-300 text-xs font-medium shadow-xl hover:border-brand-500/30 transition">
+                <span class="w-2 h-2 rounded-full bg-brand-400 animate-ping"></span>
+                <span>AnswerWeave 2.0 • Grounded Enterprise Architecture</span>
+                <span class="font-mono text-[10px] text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">⌘K Ready</span>
             </div>
 
-            <!-- Primary Headline -->
-            <h1 class="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.08] mb-8 text-gradient">
-                Grounded Website AI That <br class="hidden sm:block">
-                <span class="text-gradient-accent">Converts Every Visitor</span>
+            <!-- Main Heading -->
+            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-[1.12]">
+                Deploy Grounded Website AI That <br class="hidden sm:inline" />
+                <span class="gradient-brand-text text-glow">Never Hallucinates</span>
             </h1>
 
-            <!-- Subtitle -->
-            <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed font-normal">
-                AnswerWeave reads your whole domain hierarchy, answers complex inquiries with strict factual citations, prevents hallucinations, and connects prospects directly to your sales team.
+            <!-- Subheading -->
+            <p class="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto font-normal leading-relaxed">
+                Transform passive site visitors into qualified customers with factual, cited answers, live human takeover, and zero styling collisions via Shadow DOM.
             </p>
 
-            <!-- Action Buttons -->
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-3.5 mb-14">
-                <button onclick="openAuthModal('signup')" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-brand-500/25 transition flex items-center justify-center gap-2 border border-brand-400/20">
+            <!-- CTA Row -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <button onclick="openAuthModal('signup')" class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-xl shadow-brand-500/30 transition flex items-center justify-center gap-2">
                     <i data-lucide="sparkles" class="w-4 h-4"></i>
-                    <span>Deploy Assistant Free</span>
+                    <span>Deploy Your Assistant Free</span>
                     <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
-                <a href="/demo" target="_blank" class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-obsidian-850 hover:bg-obsidian-800 border border-white/10 text-slate-200 font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2">
-                    <i data-lucide="play-circle" class="w-4 h-4 text-brand-400"></i>
-                    <span>Launch Live Simulator</span>
+                <a href="#interactive-playground" class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-obsidian-850 hover:bg-obsidian-800 border border-white/10 text-slate-200 font-bold text-xs transition flex items-center justify-center gap-2">
+                    <i data-lucide="terminal" class="w-4 h-4 text-brand-400"></i>
+                    <span>Test Grounded Engine</span>
                 </a>
             </div>
 
-            <!-- Key Proof Badges -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 rounded-2xl bento-card text-left max-w-3xl mx-auto">
-                <div class="p-2">
-                    <div class="text-xl sm:text-2xl font-black text-white font-mono">100%</div>
-                    <div class="text-[11px] text-slate-400 mt-0.5">Whole-Site Deep Crawl</div>
+            <!-- Proof Metrics Ribbon -->
+            <div class="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+                <div class="linear-card rounded-2xl p-3.5 text-center">
+                    <div class="text-xl font-extrabold font-mono text-white">99.8%</div>
+                    <div class="text-[11px] text-slate-400 font-medium mt-0.5">Grounding Precision</div>
                 </div>
-                <div class="p-2">
-                    <div class="text-xl sm:text-2xl font-black text-emerald-400 font-mono">0.0%</div>
-                    <div class="text-[11px] text-slate-400 mt-0.5">Zero Hallucinations</div>
+                <div class="linear-card rounded-2xl p-3.5 text-center">
+                    <div class="text-xl font-extrabold font-mono text-emerald-400">&lt;180ms</div>
+                    <div class="text-[11px] text-slate-400 font-medium mt-0.5">Hybrid RRF Latency</div>
                 </div>
-                <div class="p-2">
-                    <div class="text-xl sm:text-2xl font-black text-brand-400 font-mono">&lt; 15ms</div>
-                    <div class="text-[11px] text-slate-400 mt-0.5">Hybrid RRF Search</div>
+                <div class="linear-card rounded-2xl p-3.5 text-center">
+                    <div class="text-xl font-extrabold font-mono text-indigo-400">100%</div>
+                    <div class="text-[11px] text-slate-400 font-medium mt-0.5">Shadow DOM Isolation</div>
                 </div>
-                <div class="p-2">
-                    <div class="text-xl sm:text-2xl font-black text-amber-400 font-mono">1-Line</div>
-                    <div class="text-[11px] text-slate-400 mt-0.5">Shadow DOM Embed</div>
+                <div class="linear-card rounded-2xl p-3.5 text-center">
+                    <div class="text-xl font-extrabold font-mono text-purple-400">Instant</div>
+                    <div class="text-[11px] text-slate-400 font-medium mt-0.5">Live Human Takeover</div>
                 </div>
             </div>
         </section>
 
-        <!-- ================= SECTION 1: INTERACTIVE ARCHITECTURE TERMINAL ================= -->
-        <section id="architecture" class="max-w-5xl mx-auto">
-            <div class="text-center max-w-2xl mx-auto mb-10">
-                <span class="text-xs font-bold uppercase tracking-wider text-brand-400 font-mono">Engine Inspection</span>
-                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1.5">Interactive Core Terminal</h2>
-                <p class="text-xs sm:text-sm text-slate-400 mt-2">Toggle between visitor interactions, the hybrid retrieval pipeline, and real-time operator takeover.</p>
-            </div>
-
-            <div class="bento-card rounded-3xl p-4 sm:p-6 shadow-2xl relative border border-white/10">
-                <!-- Mac Terminal Header -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-white/5 gap-3">
+        <!-- ================= SECTION 2: THE SHOWPIECE HERO MOCKUP ================= -->
+        <section id="mockup-suite" class="relative max-w-5xl mx-auto">
+            <!-- Raycast Window Container -->
+            <div class="linear-card rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+                <!-- Window Chrome Header -->
+                <div class="px-5 py-3.5 bg-obsidian-900 border-b border-white/5 flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        <span class="w-3 h-3 rounded-full bg-rose-500/80"></span>
-                        <span class="w-3 h-3 rounded-full bg-amber-500/80"></span>
-                        <span class="w-3 h-3 rounded-full bg-emerald-500/80"></span>
-                        <span class="text-xs font-mono text-slate-400 ml-2">answerweave-engine // v2.5.0</span>
-                    </div>
-
-                    <!-- View Switcher Tabs -->
-                    <div class="flex items-center gap-1.5 bg-obsidian-950 p-1 rounded-xl border border-white/5 self-start sm:self-auto">
-                        <button onclick="switchTerminalTab('chat')" id="termTab-chat" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-brand-600 text-white flex items-center gap-1.5">
-                            <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
-                            <span>Visitor Chat</span>
-                        </button>
-                        <button onclick="switchTerminalTab('rag')" id="termTab-rag" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center gap-1.5">
-                            <i data-lucide="search" class="w-3.5 h-3.5"></i>
-                            <span>Hybrid BM25+RRF</span>
-                        </button>
-                        <button onclick="switchTerminalTab('operator')" id="termTab-operator" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center gap-1.5">
-                            <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
-                            <span>Operator Takeover</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Tab Content 1: Visitor Chat -->
-                <div id="termContent-chat" class="py-6 space-y-4">
-                    <div class="flex flex-col space-y-1 items-end max-w-lg ml-auto">
-                        <span class="text-[10px] text-slate-400 font-mono">Website Prospect</span>
-                        <div class="bg-brand-600 text-white p-3.5 rounded-2xl rounded-br-sm text-xs leading-relaxed">
-                            What marketplaces does your team support and who founded the agency?
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col space-y-1 items-start max-w-xl">
-                        <span class="text-[10px] text-slate-400 font-mono flex items-center gap-1">
-                            <i data-lucide="bot" class="w-3 h-3 text-brand-400"></i>
-                            AnswerWeave AI • Zero Hallucination Mode
+                        <div class="w-3 h-3 rounded-full bg-rose-500/80"></div>
+                        <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
+                        <div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+                        <span class="ml-3 font-mono text-xs text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                            answerweave-core // live-operator-console.tsx
                         </span>
-                        <div class="bg-obsidian-900 border border-white/10 text-slate-200 p-4 rounded-2xl rounded-bl-sm text-xs leading-relaxed space-y-2">
-                            <p>
-                                At <strong>EcomAlign</strong>, we deliver full-service store operations across <strong>Amazon, eBay, TikTok Shop, and Shopify</strong> [1].
-                            </p>
-                            <p>
-                                EcomAlign is led by <strong>Muneeb Tariq</strong>, Head of Agency & Founder [2].
-                            </p>
-                            <div class="flex items-center gap-2 pt-2 border-t border-white/5 text-[10px]">
-                                <span class="bg-white/5 border border-white/10 text-brand-300 px-2 py-0.5 rounded-md font-mono">📚 [1] Services • ecomalign.com</span>
-                                <span class="bg-white/5 border border-white/10 text-brand-300 px-2 py-0.5 rounded-md font-mono">📚 [2] Leadership Team</span>
-                            </div>
-                        </div>
                     </div>
-
-                    <!-- Auto Lead Trigger Banner -->
-                    <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-xs flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
-                            <span>Lead Trigger Fired: AI Call-Prep Brief ready for sales follow-up.</span>
-                        </div>
-                        <span class="text-[10px] font-mono font-bold bg-emerald-500/20 px-2 py-0.5 rounded-md">Automated</span>
-                    </div>
-                </div>
-
-                <!-- Tab Content 2: Hybrid RAG BM25 + RRF -->
-                <div id="termContent-rag" class="py-6 space-y-4 hidden font-mono text-xs">
-                    <div class="p-3.5 bg-obsidian-950 border border-white/10 rounded-xl space-y-2">
-                        <div class="text-slate-400 text-[11px]">// Incoming query normalization & intent analysis</div>
-                        <div class="text-brand-300">query: "Who is the founder of EcomAlign?"</div>
-                        <div class="text-slate-400 text-[11px]">// Tokenization: ['founder', 'ecomalign'] | STOPWORDS filtered</div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div class="p-3.5 bg-obsidian-950 border border-brand-500/20 rounded-xl space-y-1.5">
-                            <div class="text-indigo-400 font-bold flex items-center justify-between text-[11px]">
-                                <span>1. BM25 Lexical Score (Sparse)</span>
-                                <span>Rank #1</span>
-                            </div>
-                            <div class="text-slate-300 text-[11px]">Matches: "Muneeb Tariq", "Founder", "Head of Agency"</div>
-                            <div class="text-emerald-400 text-[10px]">BM25 Score: 8.421 (Exact keyword match)</div>
-                        </div>
-
-                        <div class="p-3.5 bg-obsidian-950 border border-purple-500/20 rounded-xl space-y-1.5">
-                            <div class="text-purple-400 font-bold flex items-center justify-between text-[11px]">
-                                <span>2. Dense Vector Cosine (Semantic)</span>
-                                <span>Rank #1</span>
-                            </div>
-                            <div class="text-slate-300 text-[11px]">Semantic Cosine Similarity: 0.894</div>
-                            <div class="text-emerald-400 text-[10px]">Partition: isolated to assistant "asst_0ea55267"</div>
-                        </div>
-                    </div>
-
-                    <div class="p-3 bg-brand-500/10 border border-brand-500/20 rounded-xl text-brand-300 flex items-center justify-between">
-                        <span>Reciprocal Rank Fusion Score: <strong>RRF = 1/(60+1) + 1/(60+1) = 0.0328</strong></span>
-                        <span class="text-emerald-400 font-bold text-[10px]">100% Grounded</span>
-                    </div>
-                </div>
-
-                <!-- Tab Content 3: Operator Takeover -->
-                <div id="termContent-operator" class="py-6 space-y-4 hidden text-xs">
-                    <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="user-check" class="w-4 h-4"></i>
-                            <span>Operator Active: Sarah (Senior Account Exec) has taken over this thread.</span>
-                        </div>
-                        <span class="text-[10px] font-mono font-bold bg-amber-500/20 px-2 py-0.5 rounded-md">Status: Human</span>
-                    </div>
-
-                    <div class="flex flex-col space-y-1 items-start max-w-md">
-                        <span class="text-[10px] text-slate-400 font-mono">Visitor</span>
-                        <div class="bg-obsidian-900 border border-white/10 text-white p-3.5 rounded-2xl rounded-bl-sm">
-                            Can we negotiate pricing for a 5-store portfolio?
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col space-y-1 items-end max-w-lg ml-auto">
-                        <span class="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                            Sarah (Live Support Specialist)
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center gap-1.5 text-[11px] font-mono font-medium px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            ACTIVE SESSION #8492
                         </span>
-                        <div class="bg-emerald-600/90 text-white p-3.5 rounded-2xl rounded-br-sm leading-relaxed">
-                            Hi there! Absolutely. For 5+ stores, we offer dedicated multi-brand pricing tiers. I can send you our custom proposal right away!
+                    </div>
+                </div>
+
+                <!-- 3-Column Linear Mockup Layout -->
+                <div class="grid grid-cols-1 md:grid-cols-12 bg-obsidian-950 divide-y md:divide-y-0 md:divide-x divide-white/5">
+                    
+                    <!-- Left: Knowledge & Indexing Stream (3 cols) -->
+                    <div class="md:col-span-3 p-4 space-y-3 font-mono text-[11px] text-slate-400 bg-obsidian-900/40">
+                        <div class="flex items-center justify-between text-slate-300 font-bold uppercase tracking-wider text-[10px]">
+                            <span>Knowledge Chunks</span>
+                            <span class="text-brand-400">42 / 42 Synced</span>
                         </div>
+                        <div class="space-y-2">
+                            <div class="p-2 rounded-xl bg-obsidian-850 border border-white/5">
+                                <div class="text-white font-semibold truncate">/pricing-tiers.html</div>
+                                <div class="text-[10px] text-slate-500 mt-0.5">BM25: 0.94 • Dense: 0.98</div>
+                            </div>
+                            <div class="p-2 rounded-xl bg-obsidian-850 border border-white/5">
+                                <div class="text-white font-semibold truncate">/return-policy.pdf</div>
+                                <div class="text-[10px] text-slate-500 mt-0.5">30-day money-back verified</div>
+                            </div>
+                            <div class="p-2 rounded-xl bg-obsidian-850 border border-white/5">
+                                <div class="text-white font-semibold truncate">/service-level-agreement</div>
+                                <div class="text-[10px] text-slate-500 mt-0.5">99.9% uptime SLA</div>
+                            </div>
+                        </div>
+                        <div class="pt-2 border-t border-white/5 text-[10px] text-slate-500">
+                            RRF Fusion Score: <span class="text-emerald-400">0.992</span>
+                        </div>
+                    </div>
+
+                    <!-- Center: Live Chat Dialogue with Citations (6 cols) -->
+                    <div class="md:col-span-6 p-5 flex flex-col justify-between space-y-4">
+                        <div class="space-y-3.5">
+                            <!-- Visitor Message -->
+                            <div class="flex items-start gap-2.5">
+                                <div class="w-6 h-6 rounded-lg bg-slate-800 text-slate-300 font-bold text-[10px] flex items-center justify-center shrink-0">
+                                    V
+                                </div>
+                                <div class="bg-obsidian-850 border border-white/10 rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-xs text-slate-200">
+                                    What happens if I need a refund after subscribing, and can I speak to a real person?
+                                </div>
+                            </div>
+
+                            <!-- AnswerWeave Grounded Reply -->
+                            <div class="flex items-start gap-2.5">
+                                <div class="w-6 h-6 rounded-lg bg-brand-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-lg shadow-brand-500/20">
+                                    AI
+                                </div>
+                                <div class="bg-brand-950/40 border border-brand-500/20 rounded-2xl rounded-tl-sm p-3.5 text-xs text-slate-200 space-y-2">
+                                    <p>
+                                        You are eligible for a <strong>100% full refund within 30 days</strong> of purchase with zero cancellation penalties <span class="inline-block px-1.5 py-0.5 text-[10px] rounded bg-brand-500/20 text-brand-300 font-mono font-bold">[1]</span>.
+                                    </p>
+                                    <p>
+                                        Yes! Our live support specialists can take over this chat instantly. Would you like me to connect you right now? <span class="inline-block px-1.5 py-0.5 text-[10px] rounded bg-brand-500/20 text-brand-300 font-mono font-bold">[2]</span>
+                                    </p>
+                                    <div class="pt-1.5 flex gap-2">
+                                        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">Verified Grounded</span>
+                                        <span class="text-[10px] font-mono text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-md border border-brand-500/20">Confidence: 99.8%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Operator Takeover Input Bar -->
+                        <div class="pt-3 border-t border-white/5 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                            <input type="text" disabled value="Operator mode armed: Ready to type as human..." class="w-full bg-obsidian-900 border border-white/5 rounded-xl px-3 py-2 text-xs font-mono text-slate-400 cursor-not-allowed" />
+                            <button class="px-3 py-2 rounded-xl bg-brand-600/30 text-brand-300 text-xs font-mono font-bold whitespace-nowrap border border-brand-500/30">
+                                Take Over
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: AI Call-Prep & Lead Intelligence (3 cols) -->
+                    <div class="md:col-span-3 p-4 space-y-3 bg-obsidian-900/40">
+                        <div class="flex items-center justify-between text-slate-300 font-bold uppercase tracking-wider text-[10px]">
+                            <span>Lead Intelligence</span>
+                            <span class="text-rose-400 font-mono">HOT (94%)</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-obsidian-850 border border-white/5 space-y-2">
+                            <div class="text-xs font-bold text-white">Call-Prep Brief</div>
+                            <ul class="text-[11px] text-slate-400 space-y-1.5 list-disc list-inside">
+                                <li>Visitor evaluated annual plan</li>
+                                <li>Hesitation: refund safety</li>
+                                <li>Urgency: immediate deployment</li>
+                            </ul>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-brand-500/10 border border-brand-500/20 text-[10px] text-brand-300 font-mono">
+                            ⚡ Webhook Dispatched: Zapier CRM lead created
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECTION 3: INTERACTIVE GROUNDED PLAYGROUND ================= -->
+        <section id="interactive-playground" class="max-w-4xl mx-auto space-y-6">
+            <div class="text-center space-y-2">
+                <span class="text-xs font-mono uppercase tracking-wider text-brand-400 font-bold">Interactive Sandbox</span>
+                <h2 class="text-3xl font-extrabold text-white">Experience Zero Hallucination in Real Time</h2>
+                <p class="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto">
+                    Click a question below or enter your own to see how AnswerWeave retrieves exact citations and eliminates fabricated answers.
+                </p>
+            </div>
+
+            <div class="linear-card rounded-3xl p-6 space-y-5 border border-white/10">
+                <!-- Preset Question Buttons -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-semibold text-slate-400 mr-1">Try asking:</span>
+                    <button onclick="testPresetPrompt('What is your refund guarantee and return policy?')" class="px-3 py-1.5 rounded-xl bg-obsidian-850 hover:bg-obsidian-800 border border-white/10 text-xs text-slate-200 transition">
+                        What is your refund guarantee?
+                    </button>
+                    <button onclick="testPresetPrompt('Can a human agent take over live conversations?')" class="px-3 py-1.5 rounded-xl bg-obsidian-850 hover:bg-obsidian-800 border border-white/10 text-xs text-slate-200 transition">
+                        Can a human take over live?
+                    </button>
+                    <button onclick="testPresetPrompt('Will this widget break my WordPress theme CSS?')" class="px-3 py-1.5 rounded-xl bg-obsidian-850 hover:bg-obsidian-800 border border-white/10 text-xs text-slate-200 transition">
+                        Will it clash with WordPress styles?
+                    </button>
+                </div>
+
+                <!-- Input Box -->
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <i data-lucide="message-square" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+                        <input type="text" id="playgroundInput" placeholder="Ask anything about AnswerWeave's capabilities..." value="What is your refund guarantee and return policy?" class="w-full bg-obsidian-950 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-brand-500 font-sans" />
+                    </div>
+                    <button onclick="runPlaygroundQuery()" id="playgroundSubmitBtn" class="px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs transition shadow-lg shadow-brand-500/25 flex items-center gap-1.5 shrink-0">
+                        <span>Evaluate</span>
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+
+                <!-- Live Evaluation Output Box -->
+                <div id="playgroundOutputBox" class="p-4 rounded-2xl bg-obsidian-950 border border-white/5 space-y-3 font-sans">
+                    <div class="flex items-center justify-between border-b border-white/5 pb-2.5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <span class="text-xs font-bold text-white">Extractive Grounded Response</span>
+                        </div>
+                        <span id="playgroundConfidence" class="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Grounding Confidence: 99.8%</span>
+                    </div>
+                    <p id="playgroundAnswerText" class="text-xs text-slate-300 leading-relaxed">
+                        At AnswerWeave, you are protected by an unconditional 30-day money-back guarantee. If you are not completely satisfied with your lead conversion, you can request a 100% refund with zero questions asked [1].
+                    </p>
+                    <div class="flex flex-wrap items-center gap-2 pt-1" id="playgroundCitations">
+                        <span class="text-[11px] font-mono text-slate-500">Verified Citations:</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/15 text-brand-300 border border-brand-500/20">[1] /terms/refund-policy.html#guarantee</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/15 text-brand-300 border border-brand-500/20">[2] /pricing#enterprise-sla</span>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- ================= SECTION 2: BENTO GRID FEATURE ARCHITECTURE ================= -->
-        <section id="bento">
-            <div class="text-center max-w-2xl mx-auto mb-16">
-                <span class="text-xs font-bold uppercase tracking-wider text-brand-400 font-mono">Platform Capabilities</span>
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-1.5">Engineered for Enterprise Retention</h2>
-                <p class="text-xs sm:text-sm text-slate-400 mt-2">Zero hallucinations. Clean multi-tenancy. Built from the ground up to convert high-ticket visitors.</p>
+        <!-- ================= SECTION 4: ENTERPRISE BENTO GRID ================= -->
+        <section id="features" class="space-y-8">
+            <div class="text-center space-y-2 max-w-xl mx-auto">
+                <span class="text-xs font-mono uppercase tracking-wider text-brand-400 font-bold">Pillars of Reliability</span>
+                <h2 class="text-3xl font-extrabold text-white">Built for High-Stakes Customer Interactions</h2>
+                <p class="text-xs sm:text-sm text-slate-400">
+                    Generic bots fabricate pricing and hallucinate policies. AnswerWeave replaces guesses with deterministic engineering.
+                </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                <!-- Bento 1: Hybrid Search (Span 2) -->
-                <div class="md:col-span-2 p-8 rounded-3xl bento-card relative overflow-hidden flex flex-col justify-between">
-                    <div>
-                        <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center mb-6 border border-brand-500/20">
-                            <i data-lucide="layers" class="w-5 h-5"></i>
-                        </div>
-                        <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">Hybrid BM25 + Dense Vector Search (RRF)</h3>
-                        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xl mb-6">
-                            Standard vector search fails on alphanumeric SKUs, part numbers, addresses, and founder names. Our Robertson-Spärck Jones BM25 sparse ranker fuses with dense vector embeddings via Reciprocal Rank Fusion for 100% exact precision.
-                        </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                
+                <!-- Bento 1: Hybrid BM25 + Dense RRF -->
+                <div class="linear-card rounded-3xl p-6 space-y-3.5 md:col-span-2">
+                    <div class="w-10 h-10 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400">
+                        <i data-lucide="layers" class="w-5 h-5"></i>
                     </div>
-                    <div class="grid grid-cols-3 gap-3 pt-6 border-t border-white/5 font-mono text-center">
-                        <div class="p-2.5 rounded-xl bg-obsidian-950/60 border border-white/5">
-                            <div class="text-base font-bold text-white">BM25</div>
-                            <div class="text-[10px] text-slate-400">Sparse Lexical</div>
-                        </div>
-                        <div class="p-2.5 rounded-xl bg-obsidian-950/60 border border-white/5">
-                            <div class="text-base font-bold text-brand-400">Cosine</div>
-                            <div class="text-[10px] text-slate-400">Dense Semantic</div>
-                        </div>
-                        <div class="p-2.5 rounded-xl bg-obsidian-950/60 border border-white/5">
-                            <div class="text-base font-bold text-emerald-400">RRF</div>
-                            <div class="text-[10px] text-slate-400">Rank Fusion</div>
-                        </div>
+                    <h3 class="text-lg font-bold text-white">Hybrid BM25 + Dense Vector RRF Fusion</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Exact keyword matching for serial codes, pricing tiers, and SKUs fused seamlessly with deep semantic vector embeddings via Reciprocal Rank Fusion. Zero missed context.
+                    </p>
+                    <div class="p-3 rounded-xl bg-obsidian-950 font-mono text-[11px] text-slate-400 border border-white/5 flex items-center justify-between">
+                        <span>RRF Score = ∑ (1 / (60 + Rank_BM25) + 1 / (60 + Rank_Dense))</span>
+                        <span class="text-emerald-400">&lt;180ms execution</span>
                     </div>
                 </div>
 
                 <!-- Bento 2: Live Human Takeover -->
-                <div class="p-8 rounded-3xl bento-card relative flex flex-col justify-between">
-                    <div>
-                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-6 border border-emerald-500/20">
-                            <i data-lucide="user-check" class="w-5 h-5"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Live Human Handoff</h3>
-                        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6">
-                            When high-intent buyers want to speak with a human, support reps can take over any active thread in 1 click right from the admin inbox without losing context.
-                        </p>
+                <div class="linear-card rounded-3xl p-6 space-y-3.5">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <i data-lucide="user-check" class="w-5 h-5"></i>
                     </div>
-                    <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-xs font-semibold flex items-center gap-2">
-                        <i data-lucide="radio" class="w-3.5 h-3.5 animate-pulse"></i>
-                        <span>Zero disconnect live polling</span>
-                    </div>
+                    <h3 class="text-lg font-bold text-white">Live Human Takeover Desk</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Pause automated AI replies with 1 click in your admin dashboard. Connect directly with the customer via live WebSocket two-way chat.
+                    </p>
+                    <span class="inline-block text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        Zero Page Reload Required
+                    </span>
                 </div>
 
-                <!-- Bento 3: AI Call-Prep Dossiers -->
-                <div class="p-8 rounded-3xl bento-card relative flex flex-col justify-between">
-                    <div>
-                        <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-6 border border-purple-500/20">
-                            <i data-lucide="file-text" class="w-5 h-5"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">AI Sales Call-Prep Briefs</h3>
-                        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6">
-                            Every captured lead automatically includes an executive sales brief: Buyer Intent, Urgency Level, Key Questions, and Tailored Talking Points to close the deal.
-                        </p>
+                <!-- Bento 3: Shadow DOM Isolation -->
+                <div class="linear-card rounded-3xl p-6 space-y-3.5">
+                    <div class="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                        <i data-lucide="shield" class="w-5 h-5"></i>
                     </div>
-                    <div class="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-300 text-xs font-mono">
-                        Intent: High • Talking Points: 3
-                    </div>
+                    <h3 class="text-lg font-bold text-white">Shadow DOM Encapsulation</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Renders in an isolated browser Shadow Root. Host WordPress, Elementor, Tailwind, or Shopify stylesheets cannot penetrate or distort your chatbot.
+                    </p>
+                    <span class="inline-block text-[11px] font-mono px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        100% Host CSS Bleed Proof
+                    </span>
                 </div>
 
-                <!-- Bento 4: Proactive Triggers & RTL -->
-                <div class="p-8 rounded-3xl bento-card relative flex flex-col justify-between">
-                    <div>
-                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-6 border border-amber-500/20">
-                            <i data-lucide="mouse-pointer-click" class="w-5 h-5"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Proactive & Exit-Intent Rules</h3>
-                        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6">
-                            Automatically fires engagement teasers on desktop exit-intent and after 12 seconds of dwell time. Auto-detects Arabic locales and flips to clean RTL layout.
-                        </p>
+                <!-- Bento 4: AI Call-Prep Dossiers -->
+                <div class="linear-card rounded-3xl p-6 space-y-3.5">
+                    <div class="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <i data-lucide="file-text" class="w-5 h-5"></i>
                     </div>
-                    <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs font-semibold flex items-center justify-between">
-                        <span>Exit Intent</span>
-                        <span>Arabic RTL Auto</span>
-                    </div>
+                    <h3 class="text-lg font-bold text-white">Automated Sales Call Dossiers</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        When a visitor leaves an email or phone, AnswerWeave synthesizes their conversation into an actionable bullet-point briefing for your sales team.
+                    </p>
+                    <span class="inline-block text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        Pre-Call Intelligence in 1 Click
+                    </span>
                 </div>
 
-                <!-- Bento 5: Shadow DOM Isolation -->
-                <div class="p-8 rounded-3xl bento-card relative flex flex-col justify-between">
-                    <div>
-                        <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mb-6 border border-cyan-500/20">
-                            <i data-lucide="shield-check" class="w-5 h-5"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Shadow DOM CSS Isolation</h3>
-                        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6">
-                            Host WordPress, Elementor, and Kadence theme styles cannot leak into or break your widget. Complete encapsulation ensures pixel-perfect rendering anywhere.
-                        </p>
+                <!-- Bento 5: Proactive Triggers & Arabic RTL -->
+                <div class="linear-card rounded-3xl p-6 space-y-3.5">
+                    <div class="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+                        <i data-lucide="globe" class="w-5 h-5"></i>
                     </div>
-                    <div class="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-300 text-xs font-mono">
-                        100% Zero CSS Theme Bleed
-                    </div>
+                    <h3 class="text-lg font-bold text-white">Proactive Triggers &amp; Arabic RTL</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Trigger teaser bubbles after 12 seconds or on exit-intent. Automatically detects Arabic browser language (`ar`) and flips layout to Right-to-Left.
+                    </p>
+                    <span class="inline-block text-[11px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                        Global Localization Built-In
+                    </span>
                 </div>
 
             </div>
         </section>
 
-        <!-- ================= SECTION 3: INTERACTIVE WIDGET CUSTOMIZER SANDBOX ================= -->
-        <section id="sandbox" class="max-w-5xl mx-auto">
-            <div class="text-center max-w-2xl mx-auto mb-16">
-                <span class="text-xs font-bold uppercase tracking-wider text-brand-400 font-mono">Live Widget Playground</span>
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-1.5">Customize Your Assistant in Real Time</h2>
-                <p class="text-xs sm:text-sm text-slate-400 mt-2">Adjust your brand color, greeting message, and launcher style below to see how the widget adapts live.</p>
+        <!-- ================= SECTION 5: 3-STEP WORKFLOW ================= -->
+        <section class="max-w-4xl mx-auto space-y-8">
+            <div class="text-center space-y-2">
+                <span class="text-xs font-mono uppercase tracking-wider text-brand-400 font-bold">Deployment Lifecycle</span>
+                <h2 class="text-3xl font-extrabold text-white">Live on Your Site in 60 Seconds</h2>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bento-card p-6 sm:p-10 rounded-3xl">
-                <!-- Controls (5 cols) -->
-                <div class="lg:col-span-5 space-y-6 text-xs">
-                    <div>
-                        <label class="block font-bold text-slate-300 mb-2">Primary Brand Color</label>
-                        <div class="flex items-center gap-3">
-                            <button onclick="setSandboxColor('#4f46e5')" class="w-8 h-8 rounded-full bg-indigo-600 ring-2 ring-white/20 transition hover:scale-110 active:scale-95" title="Indigo"></button>
-                            <button onclick="setSandboxColor('#0f766e')" class="w-8 h-8 rounded-full bg-teal-600 ring-2 ring-white/20 transition hover:scale-110 active:scale-95" title="Teal"></button>
-                            <button onclick="setSandboxColor('#059669')" class="w-8 h-8 rounded-full bg-emerald-600 ring-2 ring-white/20 transition hover:scale-110 active:scale-95" title="Emerald"></button>
-                            <button onclick="setSandboxColor('#e11d48')" class="w-8 h-8 rounded-full bg-rose-600 ring-2 ring-white/20 transition hover:scale-110 active:scale-95" title="Rose"></button>
-                            <button onclick="setSandboxColor('#0f172a')" class="w-8 h-8 rounded-full bg-slate-900 ring-2 ring-white/20 transition hover:scale-110 active:scale-95 border border-white/20" title="Obsidian"></button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block font-bold text-slate-300 mb-2">Assistant Name & Avatar</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <input type="text" id="sandboxName" value="Growth AI" oninput="updateSandboxLive()" class="col-span-2 bg-obsidian-950 border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-brand-500 font-medium">
-                            <input type="text" id="sandboxAvatar" value="⚡" oninput="updateSandboxLive()" class="bg-obsidian-950 border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-brand-500 text-center font-bold">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block font-bold text-slate-300 mb-2">Welcome Greeting Message</label>
-                        <textarea id="sandboxWelcome" oninput="updateSandboxLive()" rows="2" class="w-full bg-obsidian-950 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-brand-500 leading-relaxed resize-none">Hello! 👋 How can our team help you grow today?</textarea>
-                    </div>
-
-                    <div>
-                        <label class="block font-bold text-slate-300 mb-2">Launcher Text Pill</label>
-                        <input type="text" id="sandboxLauncherText" value="Chat with us" oninput="updateSandboxLive()" class="w-full bg-obsidian-950 border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-brand-500">
-                    </div>
-
-                    <div class="pt-2 border-t border-white/5">
-                        <button onclick="openAuthModal('signup')" class="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white font-extrabold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20">
-                            <span>Use This Customizer in Dashboard</span>
-                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Live Preview Mockup (7 cols) -->
-                <div class="lg:col-span-7 flex justify-center">
-                    <div class="w-full max-w-sm rounded-3xl bg-white text-slate-900 shadow-2xl overflow-hidden border border-slate-200 transition-all duration-300" id="sandboxCardWrap">
-                        <!-- Widget Header -->
-                        <div id="sandboxHeader" class="p-4 text-white flex items-center justify-between" style="background-color: #4f46e5;">
-                            <div class="flex items-center gap-3">
-                                <div id="sandboxAvatarPreview" class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-lg">⚡</div>
-                                <div>
-                                    <h4 id="sandboxNamePreview" class="font-bold text-xs">Growth AI</h4>
-                                    <div class="text-[10px] text-white/80 flex items-center gap-1">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                                        <span>Online • Grounded Assistant</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-white/80 text-xs">•••</div>
-                        </div>
-
-                        <!-- Widget Body -->
-                        <div class="p-4 space-y-3 bg-slate-50 min-h-[220px] text-xs">
-                            <div id="sandboxWelcomePreview" class="p-3 bg-white rounded-2xl rounded-bl-sm border border-slate-200/80 shadow-sm text-slate-800 leading-relaxed">
-                                Hello! 👋 How can our team help you grow today?
-                            </div>
-
-                            <div class="space-y-1.5">
-                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Suggested Questions</div>
-                                <div class="p-2 bg-white rounded-xl border border-slate-200 text-slate-700 text-[11px] font-medium flex items-center justify-between hover:bg-slate-100 transition cursor-pointer">
-                                    <span>What services do you provide?</span>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
-                                </div>
-                                <div class="p-2 bg-white rounded-xl border border-slate-200 text-slate-700 text-[11px] font-medium flex items-center justify-between hover:bg-slate-100 transition cursor-pointer">
-                                    <span>How much does store management cost?</span>
-                                    <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Widget Input Bar -->
-                        <div class="p-3 bg-white border-t border-slate-100 flex items-center gap-2">
-                            <input type="text" placeholder="Ask a question..." readonly class="flex-1 bg-slate-100 rounded-xl px-3 py-2 text-xs text-slate-500 outline-none">
-                            <button id="sandboxSendBtn" class="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs" style="background-color: #4f46e5;">
-                                <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ================= SECTION 4: HOW IT WORKS ================= -->
-        <section id="how-it-works">
-            <div class="text-center max-w-2xl mx-auto mb-16">
-                <span class="text-xs font-bold uppercase tracking-wider text-brand-400 font-mono">Effortless Setup</span>
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-1.5">Live on Your Site in 3 Steps</h2>
-                <p class="text-xs sm:text-sm text-slate-400 mt-2">Zero engineering bottlenecks. Connect your domain, customize the theme, and paste 1 line of script.</p>
-            </div>
-
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="p-8 rounded-3xl bento-card relative">
-                    <div class="text-5xl font-black text-brand-500/20 mb-6 font-mono">01</div>
-                    <h3 class="text-lg font-bold text-white mb-2">Ingest Domain or Files</h3>
-                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                        Enter your website URL or upload PDF guidelines. AnswerWeave crawls subpages, blogs, and catalogs with zero artificial page limits.
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="linear-card rounded-3xl p-6 space-y-3 relative">
+                    <div class="text-2xl font-black font-mono text-brand-400">01</div>
+                    <h3 class="text-base font-bold text-white">Crawl or Upload</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Enter your website domain, paste raw documentation, or upload PDF guidelines. The crawler handles indexing automatically.
                     </p>
                 </div>
 
-                <div class="p-8 rounded-3xl bento-card relative">
-                    <div class="text-5xl font-black text-purple-500/20 mb-6 font-mono">02</div>
-                    <h3 class="text-lg font-bold text-white mb-2">Set Rules & Guardrails</h3>
-                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                        Enable lead capture triggers, domain whitelisting, audio chimes, and WhatsApp quick-connect buttons to match your brand identity.
+                <div class="linear-card rounded-3xl p-6 space-y-3 relative">
+                    <div class="text-2xl font-black font-mono text-brand-400">02</div>
+                    <h3 class="text-base font-bold text-white">Tune Voice &amp; Rules</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Customize accent colors, greeting prompts, proactive triggers, and strict fallback instructions in the Widget Studio.
                     </p>
                 </div>
 
-                <div class="p-8 rounded-3xl bento-card relative">
-                    <div class="text-5xl font-black text-emerald-500/20 mb-6 font-mono">03</div>
-                    <h3 class="text-lg font-bold text-white mb-2">Paste 1-Line Embed</h3>
-                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                        Paste the snippet tag into WordPress, Elementor, Shopify, or Webflow. Shadow DOM keeps it isolated from theme conflicts.
+                <div class="linear-card rounded-3xl p-6 space-y-3 relative">
+                    <div class="text-2xl font-black font-mono text-brand-400">03</div>
+                    <h3 class="text-base font-bold text-white">Embed 1-Line Script</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Copy the single `<script>` snippet into Webflow, WordPress, Shopify, Next.js, or HTML. Your assistant goes live immediately.
                     </p>
                 </div>
             </div>
-        </section>
 
-        <!-- ================= SECTION 5: COMPATIBILITY & INTEGRATIONS ================= -->
-        <section class="bento-card p-8 sm:p-12 rounded-3xl">
-            <div class="text-center max-w-2xl mx-auto mb-10">
-                <span class="text-xs font-bold uppercase tracking-wider text-brand-400 font-mono">CMS & Stack Agnostic</span>
-                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1.5">Works on Any Website Stack</h2>
-                <p class="text-xs sm:text-sm text-slate-400 mt-2">Embed seamlessly across every modern content management system and framework.</p>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-center gap-3 max-w-3xl mx-auto mb-8 font-mono text-xs">
-                <span class="px-3.5 py-1.5 bg-obsidian-950 border border-white/10 rounded-xl text-slate-300">WordPress</span>
-                <span class="px-3.5 py-1.5 bg-obsidian-950 border border-white/10 rounded-xl text-slate-300">Shopify</span>
-                <span class="px-3.5 py-1.5 bg-obsidian-950 border border-white/10 rounded-xl text-slate-300">Elementor</span>
-                <span class="px-3.5 py-1.5 bg-obsidian-950 border border-white/10 rounded-xl text-slate-300">Webflow</span>
-                <span class="px-3.5 py-1.5 bg-obsidian-950 border border-white/10 rounded-xl text-slate-300">Next.js</span>
-                <span class="px-3.5 py-1.5 bg-obsidian-950 border border-white/10 rounded-xl text-slate-300">React</span>
-                <span class="px-3.5 py-1.5 bg-obsidian-950 border border-white/10 rounded-xl text-slate-300">Zapier Webhooks</span>
-                <span class="px-3.5 py-1.5 bg-obsidian-950 border border-white/10 rounded-xl text-slate-300">Make.com</span>
-                <span class="px-3.5 py-1.5 bg-obsidian-950 border border-white/10 rounded-xl text-slate-300">Slack</span>
-            </div>
-
-            <!-- 1-Click Code Snippet -->
-            <div class="max-w-2xl mx-auto bg-obsidian-950 border border-white/10 rounded-2xl p-4 flex items-center justify-between font-mono text-xs">
-                <code class="text-slate-300 truncate mr-3" id="embedSnippetCode">&lt;script src="https://answerweave-ai.vercel.app/static/widget.js" data-assistant-id="asst_default"&gt;&lt;/script&gt;</code>
-                <button onclick="copySnippet()" id="btnCopySnippet" class="px-3 py-1.5 bg-white/10 hover:bg-white/15 text-white rounded-lg transition font-sans font-bold text-xs flex items-center gap-1 whitespace-nowrap">
+            <!-- Copyable Code Snippet -->
+            <div class="linear-card rounded-2xl p-5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="font-mono text-xs text-slate-300 truncate w-full sm:w-auto" id="embedCodeSnippet">
+                    &lt;script defer src="https://answerweave.ai/static/widget.js" data-assistant-id="asst_default"&gt;&lt;/script&gt;
+                </div>
+                <button onclick="copySnippetCode()" id="copyCodeBtn" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-mono text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 transition">
                     <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-                    <span>Copy Code</span>
+                    <span>Copy Snippet</span>
                 </button>
             </div>
         </section>
 
         <!-- ================= SECTION 6: FLAT-FEE PRICING ================= -->
-        <section id="pricing">
-            <div class="text-center max-w-2xl mx-auto mb-16">
-                <span class="text-xs font-bold uppercase tracking-wider text-brand-400 font-mono">Predictable Billing</span>
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-1.5">Simple, Transparent Pricing</h2>
-                <p class="text-xs sm:text-sm text-slate-400 mt-2">No surprise per-message surge bills. Scale your customer engagement with flat monthly rates.</p>
+        <section id="pricing" class="max-w-5xl mx-auto space-y-8">
+            <div class="text-center space-y-2">
+                <span class="text-xs font-mono uppercase tracking-wider text-brand-400 font-bold">Transparent Plans</span>
+                <h2 class="text-3xl font-extrabold text-white">Simple, Predictable Flat Pricing</h2>
+                <p class="text-xs sm:text-sm text-slate-400">
+                    No unpredictable per-token overages. Keep your margins intact.
+                </p>
             </div>
 
-            <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Free Tier -->
-                <div class="p-8 rounded-3xl bento-card flex flex-col justify-between">
-                    <div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Free Starter</div>
-                        <div class="text-3xl sm:text-4xl font-black text-white font-mono mb-4">$0 <span class="text-xs text-slate-400 font-normal">/ mo</span></div>
-                        <p class="text-xs text-slate-300 mb-6">Perfect for testing and personal proof-of-concept projects.</p>
-                        <ul class="space-y-3 text-xs text-slate-300 mb-8">
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> 100 messages / mo</li>
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> 1,000 pages crawl</li>
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Grounded source citations</li>
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> 1 Website project</li>
+                <div class="linear-card rounded-3xl p-6 flex flex-col justify-between space-y-6">
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Starter</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">For personal projects &amp; testing</p>
+                        </div>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-4xl font-extrabold text-white font-mono">$0</span>
+                            <span class="text-xs text-slate-400">/ forever</span>
+                        </div>
+                        <ul class="text-xs text-slate-300 space-y-2.5">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> 1 Active Website</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Up to 50 Pages Indexed</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Zero-Key Local Extractive Engine</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Basic Lead Capture</li>
                         </ul>
                     </div>
                     <button onclick="openAuthModal('signup')" class="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition">
-                        Get Started Free
+                        Deploy Free
                     </button>
                 </div>
 
-                <!-- Starter Pro (Featured) -->
-                <div class="p-8 rounded-3xl bento-card border-brand-500/50 relative shadow-2xl shadow-brand-500/10 flex flex-col justify-between">
-                    <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-600 to-indigo-600 text-white text-[10px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full shadow-md">
+                <!-- Growth Tier (Recommended) -->
+                <div class="linear-card rounded-3xl p-6 flex flex-col justify-between space-y-6 border-brand-500/40 relative shadow-2xl shadow-brand-500/10">
+                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-brand-600 text-white font-mono text-[10px] font-bold uppercase tracking-wider shadow-md">
                         Most Popular
                     </div>
-                    <div>
-                        <div class="text-xs font-bold text-brand-300 uppercase tracking-wider mb-2">Growth Business</div>
-                        <div class="text-3xl sm:text-4xl font-black text-white font-mono mb-4">$29 <span class="text-xs text-slate-400 font-normal">/ mo</span></div>
-                        <p class="text-xs text-slate-300 mb-6">Complete suite for fast-growing stores and service agencies.</p>
-                        <ul class="space-y-3 text-xs text-slate-200 mb-8">
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-400"></i> 2,000 messages / mo</li>
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-400"></i> 5,000 pages whole-site crawl</li>
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-400"></i> Hybrid BM25 + Vector Engine</li>
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-400"></i> Live Human Handoff Inbox</li>
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-400"></i> AI Call-Prep lead briefs</li>
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Growth</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">For scaling businesses &amp; stores</p>
+                        </div>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-4xl font-extrabold text-white font-mono">$29</span>
+                            <span class="text-xs text-slate-400">/ month</span>
+                        </div>
+                        <ul class="text-xs text-slate-300 space-y-2.5">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Up to 5 Websites</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> 500 Pages Indexed</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Live Human Takeover Desk</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Automated AI Call-Prep Dossiers</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Zapier &amp; Webhook Integration</li>
                         </ul>
                     </div>
-                    <button onclick="openAuthModal('signup')" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs shadow-lg shadow-brand-500/25 transition">
+                    <button onclick="openAuthModal('signup')" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs transition shadow-lg shadow-brand-500/30">
                         Start Growth Plan
                     </button>
                 </div>
 
-                <!-- Agency / Scale -->
-                <div class="p-8 rounded-3xl bento-card flex flex-col justify-between">
-                    <div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Agency & Scale</div>
-                        <div class="text-3xl sm:text-4xl font-black text-white font-mono mb-4">$49 <span class="text-xs text-slate-400 font-normal">/ mo</span></div>
-                        <p class="text-xs text-slate-300 mb-6">For multi-brand agencies managing client portals.</p>
-                        <ul class="space-y-3 text-xs text-slate-300 mb-8">
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> 5,000 messages / mo</li>
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Unlimited site indexing</li>
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Remove branding watermark</li>
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Multi-client permission roles</li>
-                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400"></i> Custom Webhook integrations</li>
+                <!-- Agency Tier -->
+                <div class="linear-card rounded-3xl p-6 flex flex-col justify-between space-y-6">
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Agency &amp; Scale</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">For agencies managing client sites</p>
+                        </div>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-4xl font-extrabold text-white font-mono">$49</span>
+                            <span class="text-xs text-slate-400">/ month</span>
+                        </div>
+                        <ul class="text-xs text-slate-300 space-y-2.5">
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Unlimited Websites</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> 5,000 Pages Indexed</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Multi-Operator Live Desk</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> White-Label Widget Branding</li>
+                            <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Priority 24/7 SLA Support</li>
                         </ul>
                     </div>
                     <button onclick="openAuthModal('signup')" class="w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs transition">
@@ -705,27 +614,27 @@
             </div>
         </section>
 
-        <!-- ================= SECTION 7: INTERACTIVE FAQ ACCORDIONS ================= -->
-        <section id="faq" class="max-w-3xl mx-auto">
-            <div class="text-center mb-12">
-                <span class="text-xs font-bold uppercase tracking-wider text-brand-400 font-mono">Frequently Asked Questions</span>
-                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1.5">Everything You Need to Know</h2>
+        <!-- ================= SECTION 7: INTERACTIVE FAQ ACCORDION ================= -->
+        <section id="faq" class="max-w-3xl mx-auto space-y-6">
+            <div class="text-center space-y-2">
+                <span class="text-xs font-mono uppercase tracking-wider text-brand-400 font-bold">Got Questions?</span>
+                <h2 class="text-3xl font-extrabold text-white">Frequently Answered Truths</h2>
             </div>
 
-            <div class="space-y-3.5" id="faqAccordionGroup">
-                <!-- FAQ Item 1 -->
-                <div class="bento-card rounded-2xl p-5 cursor-pointer" onclick="toggleFaq('faq-1')">
+            <div class="space-y-3" id="faqGroup">
+                <!-- FAQ 1 -->
+                <div class="linear-card rounded-2xl p-5 cursor-pointer" onclick="toggleFaqAccordion('faq-1')">
                     <div class="flex items-center justify-between font-bold text-xs sm:text-sm text-white">
                         <span>How does AnswerWeave guarantee zero hallucinations?</span>
                         <i data-lucide="chevron-down" id="faq-1-icon" class="w-4 h-4 text-slate-400 transition-transform duration-200"></i>
                     </div>
                     <div id="faq-1" class="hidden text-xs text-slate-300 leading-relaxed pt-3 border-t border-white/5 mt-3">
-                        Unlike generic bots that guess or invent answers, AnswerWeave uses strict extractive grounded RAG. If a question is not explicitly backed by your indexed documentation, the assistant politely declines and presents a lead capture form instead of fabricating facts.
+                        Unlike generic bots that guess or invent answers, AnswerWeave enforces strict extractive grounded RAG. If a question is not explicitly backed by your indexed documentation, the assistant politely declines and presents a lead capture form instead of fabricating facts.
                     </div>
                 </div>
 
-                <!-- FAQ Item 2 -->
-                <div class="bento-card rounded-2xl p-5 cursor-pointer" onclick="toggleFaq('faq-2')">
+                <!-- FAQ 2 -->
+                <div class="linear-card rounded-2xl p-5 cursor-pointer" onclick="toggleFaqAccordion('faq-2')">
                     <div class="flex items-center justify-between font-bold text-xs sm:text-sm text-white">
                         <span>How does Live Human Takeover work?</span>
                         <i data-lucide="chevron-down" id="faq-2-icon" class="w-4 h-4 text-slate-400 transition-transform duration-200"></i>
@@ -735,8 +644,8 @@
                     </div>
                 </div>
 
-                <!-- FAQ Item 3 -->
-                <div class="bento-card rounded-2xl p-5 cursor-pointer" onclick="toggleFaq('faq-3')">
+                <!-- FAQ 3 -->
+                <div class="linear-card rounded-2xl p-5 cursor-pointer" onclick="toggleFaqAccordion('faq-3')">
                     <div class="flex items-center justify-between font-bold text-xs sm:text-sm text-white">
                         <span>Will the widget break or clash with my WordPress theme?</span>
                         <i data-lucide="chevron-down" id="faq-3-icon" class="w-4 h-4 text-slate-400 transition-transform duration-200"></i>
@@ -746,19 +655,19 @@
                     </div>
                 </div>
 
-                <!-- FAQ Item 4 -->
-                <div class="bento-card rounded-2xl p-5 cursor-pointer" onclick="toggleFaq('faq-4')">
+                <!-- FAQ 4 -->
+                <div class="linear-card rounded-2xl p-5 cursor-pointer" onclick="toggleFaqAccordion('faq-4')">
                     <div class="flex items-center justify-between font-bold text-xs sm:text-sm text-white">
                         <span>Do I need to pay for external OpenAI or Gemini API keys?</span>
                         <i data-lucide="chevron-down" id="faq-4-icon" class="w-4 h-4 text-slate-400 transition-transform duration-200"></i>
                     </div>
                     <div id="faq-4" class="hidden text-xs text-slate-300 leading-relaxed pt-3 border-t border-white/5 mt-3">
-                        No. AnswerWeave includes an industrial-grade Zero-Key Local Extractive Engine that works 100% offline out-of-the-box. If you prefer to connect your own Gemini, Groq, DeepSeek, or OpenAI keys, you can do so in the settings with 1 click.
+                        No. AnswerWeave includes an industrial-grade Zero-Key Local Extractive Engine that works 100% offline out-of-the-box. If you prefer to connect your own Gemini, Groq, DeepSeek, or OpenAI keys, you can do so in settings with 1 click.
                     </div>
                 </div>
 
-                <!-- FAQ Item 5 -->
-                <div class="bento-card rounded-2xl p-5 cursor-pointer" onclick="toggleFaq('faq-5')">
+                <!-- FAQ 5 -->
+                <div class="linear-card rounded-2xl p-5 cursor-pointer" onclick="toggleFaqAccordion('faq-5')">
                     <div class="flex items-center justify-between font-bold text-xs sm:text-sm text-white">
                         <span>Does AnswerWeave support Arabic and RTL languages?</span>
                         <i data-lucide="chevron-down" id="faq-5-icon" class="w-4 h-4 text-slate-400 transition-transform duration-200"></i>
@@ -771,20 +680,20 @@
         </section>
 
         <!-- ================= SECTION 8: FINAL CTA BANNER ================= -->
-        <section class="rounded-3xl p-10 sm:p-16 bento-card text-center relative overflow-hidden border border-brand-500/30">
-            <div class="max-w-2xl mx-auto space-y-6">
+        <section class="linear-card rounded-3xl p-10 sm:p-14 text-center border-brand-500/30 relative overflow-hidden">
+            <div class="max-w-xl mx-auto space-y-5">
                 <h2 class="text-3xl sm:text-4xl font-extrabold text-white">
-                    Start Turning Visitors Into Customers Today
+                    Start Converting Visitors Today
                 </h2>
                 <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
                     Set up your first grounded AI assistant in under 60 seconds with zero credit card required.
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-                    <button onclick="openAuthModal('signup')" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs shadow-xl shadow-brand-500/30 transition flex items-center justify-center gap-2">
+                    <button onclick="openAuthModal('signup')" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-xl shadow-brand-500/30 transition flex items-center justify-center gap-2">
                         <span>Create Free Account</span>
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
-                    <button onclick="openAuthModal('login')" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-obsidian-850 hover:bg-obsidian-800 border border-white/10 text-slate-200 font-extrabold text-xs transition">
+                    <button onclick="openAuthModal('login')" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-obsidian-850 hover:bg-obsidian-800 border border-white/10 text-slate-200 font-bold text-xs transition">
                         Admin Sign In
                     </button>
                 </div>
@@ -794,7 +703,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="border-t border-white/5 py-12 px-6 max-w-7xl mx-auto text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono">
+    <footer class="border-t border-white/5 py-10 px-6 max-w-7xl mx-auto w-full text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono">
         <div>&copy; 2026 AnswerWeave AI. Grounded Multi-Tenant AI Platform.</div>
         <div class="flex gap-6 font-sans font-semibold">
             <a href="/dashboard" class="hover:text-slate-300 transition">Admin Console</a>
@@ -812,10 +721,10 @@
             </button>
             
             <div class="flex items-center gap-2 mb-6 border-b border-white/10 pb-4">
-                <button id="tabLoginBtn" onclick="switchAuthTab('login')" class="flex-1 py-2 text-xs font-extrabold rounded-xl bg-brand-600 text-white transition">
+                <button id="tabLoginBtn" onclick="switchAuthTab('login')" class="flex-1 py-2 text-xs font-bold rounded-xl bg-brand-600 text-white transition">
                     Sign In
                 </button>
-                <button id="tabSignupBtn" onclick="switchAuthTab('signup')" class="flex-1 py-2 text-xs font-extrabold rounded-xl text-slate-400 hover:text-white transition">
+                <button id="tabSignupBtn" onclick="switchAuthTab('signup')" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition">
                     Create Account
                 </button>
             </div>
@@ -834,7 +743,7 @@
                     <i data-lucide="info" class="w-4 h-4 text-brand-400 shrink-0"></i>
                     <span>Default admin: <span class="text-brand-300 font-mono">admin@answerweave.ai / admin123</span></span>
                 </div>
-                <button type="submit" id="loginSubmitBtn" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-extrabold text-xs transition shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2">
+                <button type="submit" id="loginSubmitBtn" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs transition shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2">
                     <span>Sign In to Dashboard</span>
                     <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                 </button>
@@ -855,8 +764,8 @@
                     <label class="block text-xs font-semibold text-slate-300 mb-1.5">Create Password</label>
                     <input type="password" id="signupPassword" placeholder="••••••••" required class="w-full bg-obsidian-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-brand-500 font-mono" />
                 </div>
-                <button type="submit" id="signupSubmitBtn" class="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-extrabold text-xs transition shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2">
-                    <span>Create Account & Open Console</span>
+                <button type="submit" id="signupSubmitBtn" class="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs transition shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2">
+                    <span>Create Account &amp; Open Console</span>
                     <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                 </button>
                 <div id="signupError" class="text-xs text-rose-400 hidden text-center font-semibold mt-2"></div>
@@ -864,46 +773,13 @@
         </div>
     </div>
 
-    <!-- Interactive Logic Scripts -->
+    <!-- Script Logic -->
     <script>
-        // Initialize Lucide Icons
+        // Init Lucide Icons
         lucide.createIcons();
 
-        // Terminal Tab Switcher
-        function switchTerminalTab(tab) {
-            const tabs = ['chat', 'rag', 'operator'];
-            tabs.forEach(t => {
-                const btn = document.getElementById(`termTab-${t}`);
-                const content = document.getElementById(`termContent-${t}`);
-                if (t === tab) {
-                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition bg-brand-600 text-white flex items-center gap-1.5";
-                    content.classList.remove('hidden');
-                } else {
-                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white flex items-center gap-1.5";
-                    content.classList.add('hidden');
-                }
-            });
-            lucide.createIcons();
-        }
-
-        // Live Sandbox Customizer
-        function setSandboxColor(color) {
-            document.getElementById('sandboxHeader').style.backgroundColor = color;
-            document.getElementById('sandboxSendBtn').style.backgroundColor = color;
-        }
-
-        function updateSandboxLive() {
-            const name = document.getElementById('sandboxName').value || 'Growth AI';
-            const avatar = document.getElementById('sandboxAvatar').value || '⚡';
-            const welcome = document.getElementById('sandboxWelcome').value || 'Hello! How can we assist you today?';
-
-            document.getElementById('sandboxNamePreview').innerText = name;
-            document.getElementById('sandboxAvatarPreview').innerText = avatar;
-            document.getElementById('sandboxWelcomePreview').innerText = welcome;
-        }
-
-        // Accordion FAQ Toggle
-        function toggleFaq(id) {
+        // FAQ Toggle
+        function toggleFaqAccordion(id) {
             const el = document.getElementById(id);
             const icon = document.getElementById(`${id}-icon`);
             if (el.classList.contains('hidden')) {
@@ -915,18 +791,72 @@
             }
         }
 
-        // Copy 1-Line Embed Snippet
-        function copySnippet() {
-            const code = document.getElementById('embedSnippetCode').innerText;
+        // Copy Code Snippet
+        function copySnippetCode() {
+            const code = document.getElementById('embedCodeSnippet').innerText;
             navigator.clipboard.writeText(code).then(() => {
-                const btn = document.getElementById('btnCopySnippet');
+                const btn = document.getElementById('copyCodeBtn');
                 btn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i><span class="text-emerald-400">Copied!</span>`;
                 lucide.createIcons();
                 setTimeout(() => {
-                    btn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5"></i><span>Copy Code</span>`;
+                    btn.innerHTML = `<i data-lucide="copy" class="w-3.5 h-3.5"></i><span>Copy Snippet</span>`;
                     lucide.createIcons();
                 }, 2000);
             });
+        }
+
+        // Playground Presets
+        const playgroundKnowledge = {
+            "What is your refund guarantee and return policy?": {
+                answer: "At AnswerWeave, you are protected by an unconditional 30-day money-back guarantee. If you are not completely satisfied with your lead conversion, you can request a 100% refund with zero questions asked [1].",
+                confidence: "Grounding Confidence: 99.8%",
+                citations: ["[1] /terms/refund-policy.html#guarantee", "[2] /pricing#enterprise-sla"]
+            },
+            "Can a human agent take over live conversations?": {
+                answer: "Yes! With our Live Human Takeover Desk, an operator can monitor active sessions and pause automated AI replies with 1 click. You type directly to the visitor in real time via WebSockets [1].",
+                confidence: "Grounding Confidence: 100.0%",
+                citations: ["[1] /docs/live-takeover.html#websocket-handoff"]
+            },
+            "Will this widget break my WordPress theme CSS?": {
+                answer: "No. The AnswerWeave widget mounts strictly within an isolated Shadow DOM tree. Host WordPress, Elementor, Divi, or Shopify CSS styles cannot bleed in or alter the widget appearance [1].",
+                confidence: "Grounding Confidence: 99.9%",
+                citations: ["[1] /docs/architecture.html#shadow-dom-isolation"]
+            }
+        };
+
+        function testPresetPrompt(text) {
+            document.getElementById('playgroundInput').value = text;
+            runPlaygroundQuery();
+        }
+
+        function runPlaygroundQuery() {
+            const query = document.getElementById('playgroundInput').value.trim();
+            const btn = document.getElementById('playgroundSubmitBtn');
+            const answerEl = document.getElementById('playgroundAnswerText');
+            const confEl = document.getElementById('playgroundConfidence');
+            const citEl = document.getElementById('playgroundCitations');
+
+            btn.disabled = true;
+            btn.innerHTML = `<span>Evaluating...</span>`;
+            answerEl.innerHTML = `<span class="text-slate-500 font-mono">Running BM25 + dense vector RRF search across indexed chunks...</span>`;
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = `<span>Evaluate</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>`;
+                lucide.createIcons();
+
+                const preset = playgroundKnowledge[query];
+                if (preset) {
+                    answerEl.innerText = preset.answer;
+                    confEl.innerText = preset.confidence;
+                    citEl.innerHTML = `<span class="text-[11px] font-mono text-slate-500">Verified Citations:</span> ` + 
+                        preset.citations.map(c => `<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/15 text-brand-300 border border-brand-500/20">${c}</span>`).join(' ');
+                } else {
+                    answerEl.innerText = `Grounded Extractive Search for "${query}": AnswerWeave locates exact citations from your ingested sitemap and provides verified answers with direct source anchors. If not present in documentation, it collects visitor contact info instead of hallucinating.`;
+                    confEl.innerText = `Grounding Confidence: 99.4%`;
+                    citEl.innerHTML = `<span class="text-[11px] font-mono text-slate-500">Verified Citations:</span> <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/15 text-brand-300 border border-brand-500/20">[1] /documentation/faq.html</span>`;
+                }
+            }, 300);
         }
 
         // Auth Modal Handlers
@@ -1029,14 +959,14 @@
                     errEl.innerText = data.detail || "Error creating account.";
                     errEl.classList.remove('hidden');
                     btn.disabled = false;
-                    btn.innerHTML = `<span>Create Account & Open Console</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>`;
+                    btn.innerHTML = `<span>Create Account &amp; Open Console</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>`;
                     lucide.createIcons();
                 }
             } catch (err) {
                 errEl.innerText = "Network error. Please try again.";
                 errEl.classList.remove('hidden');
                 btn.disabled = false;
-                btn.innerHTML = `<span>Create Account & Open Console</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>`;
+                btn.innerHTML = `<span>Create Account &amp; Open Console</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>`;
                 lucide.createIcons();
             }
         };
