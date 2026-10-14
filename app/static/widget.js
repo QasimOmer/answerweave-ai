@@ -1993,7 +1993,26 @@
         }
     }
 
+    // If the visitor asked for a person while the team is online but nobody joins
+    // within 2 minutes, offer to leave contact details instead of waiting.
+    let liveStatus = 'bot';
+    let humanWaitTimer = null;
+    const HUMAN_WAIT_MS = 120000;
+    function startHumanWaitTimer() {
+        clearTimeout(humanWaitTimer);
+        humanWaitTimer = setTimeout(() => {
+            if (liveStatus === 'human') return;
+            appendSystemNote("No one has picked up yet — leave your email and the team will get back to you.");
+            if (botConfig.lead_capture_enabled !== 0 && botConfig.lead_capture_enabled !== false) renderInChatLeadCard();
+        }, HUMAN_WAIT_MS);
+    }
+    function handleHumanRequestResult(data) {
+        if (data && data.human_requested && data.operators_online) startHumanWaitTimer();
+    }
+
     function applyLiveStatus(status, operatorName) {
+        liveStatus = status || 'bot';
+        if (liveStatus === 'human') clearTimeout(humanWaitTimer);
         const statusEl = $('wf-header-status');
         if (!statusEl) return;
         if (status === 'human') {
@@ -2412,6 +2431,7 @@
                 if (finalData.lead_prompted && botConfig.lead_capture_enabled) {
                     renderInChatLeadCard();
                 }
+                handleHumanRequestResult(finalData);
             }
 
         } catch (streamErr) {
@@ -2443,6 +2463,7 @@
                 if (data.lead_prompted && botConfig.lead_capture_enabled) {
                     renderInChatLeadCard();
                 }
+                handleHumanRequestResult(data);
             } catch (fallbackErr) {
                 appendMsg('bot', "I apologize, but I am having trouble connecting to the service right now. Please try again in a moment.");
             }

@@ -400,6 +400,8 @@ def init_db():
             cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS hide_on_mobile INTEGER DEFAULT 0;")
             cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS custom_css TEXT DEFAULT '';")
             cursor.execute("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'bot';")
+            cursor.execute("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS human_requested_epoch INTEGER DEFAULT 0;")
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_epoch INTEGER DEFAULT 0;")
             cursor.execute("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS operator_name TEXT DEFAULT '';")
             cursor.execute("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS unread_operator_msgs INTEGER DEFAULT 0;")
         except Exception:
@@ -640,6 +642,8 @@ def init_db():
         ("assistants", "hide_on_mobile", "INTEGER DEFAULT 0"),
         ("assistants", "custom_css", "TEXT DEFAULT ''"),
         ("conversations", "status", "TEXT DEFAULT 'bot'"),
+        ("conversations", "human_requested_epoch", "INTEGER DEFAULT 0"),
+        ("users", "last_seen_epoch", "INTEGER DEFAULT 0"),
         ("conversations", "operator_name", "TEXT DEFAULT ''"),
         ("conversations", "unread_operator_msgs", "INTEGER DEFAULT 0")
     ]
@@ -1335,6 +1339,77 @@ def add_operator_message(conversation_id: str, content: str, operator_name: str 
     conn.close()
     return {"status": "success", "content": content, "operator_name": operator_name}
 
+def mark_human_requested(conversation_id: str, cooldown_seconds: int = 600) -> bool:
+    """Flag that the visitor asked for a person. Returns True if this is a new
+    request (none in the last `cooldown_seconds`), so callers alert the team once."""
+    now = int(time.time())
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COALESCE(human_requested_epoch, 0) AS t FROM conversations WHERE id = ?", (conversation_id,))
+    row = cursor.fetchone()
+    previous = int(row["t"] or 0) if row else 0
+    cursor.execute("UPDATE conversations SET human_requested_epoch = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (now, conversation_id))
+    conn.commit()
+    conn.close()
+    return now - previous > cooldown_seconds
+
+
+def list_waiting_conversations(assistant_ids: Optional[List[str]] = None, max_age_seconds: int = 86400) -> List[Dict[str, Any]]:
+    """Chats where a visitor asked for a person and nobody has taken over yet.
+    `assistant_ids=None` means all assistants (admins)."""
+    cutoff = int(time.time()) - max_age_seconds
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT c.id, c.assistant_id, a.name AS assistant_name, c.human_requested_epoch,
+            (SELECT content FROM messages m WHERE m.conversation_id = c.id AND m.role = 'user' ORDER BY m.id DESC LIMIT 1) AS last_message
+        FROM conversations c
+        JOIN assistants a ON a.id = c.assistant_id
+        WHERE COALESCE(c.human_requested_epoch, 0) >= ?
+          AND COALESCE(c.status, 'bot') != 'human'
+        ORDER BY c.human_requested_epoch DESC
+        LIMIT 50
+    """, (cutoff,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    if assistant_ids is not None:
+        allowed = set(assistant_ids)
+        rows = [r for r in rows if r["assistant_id"] in allowed]
+    return rows
+
+
+def clear_human_requested(conversation_id: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE conversations SET human_requested_epoch = 0 WHERE id = ?", (conversation_id,))
+    conn.commit()
+    conn.close()
+
+
+def touch_user_presence(user_id: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET last_seen_epoch = ? WHERE id = ?", (int(time.time()), user_id))
+    conn.commit()
+    conn.close()
+
+
+def count_operators_online(assistant_id: str, window_seconds: int = 90) -> int:
+    """Signed-in dashboard users who can handle this assistant and were active recently."""
+    cutoff = int(time.time()) - window_seconds
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*) AS n FROM users u
+        WHERE COALESCE(u.last_seen_epoch, 0) >= ?
+          AND (u.role = 'admin' OR EXISTS (
+                SELECT 1 FROM user_assistants ua WHERE ua.user_id = u.id AND ua.assistant_id = ?))
+    """, (cutoff, assistant_id))
+    row = cursor.fetchone()
+    conn.close()
+    return int(row["n"] or 0) if row else 0
+
+
 def clear_unread_operator_messages(conversation_id: str):
     """Resets the unread operator message counter."""
     conn = get_db()
@@ -1355,6 +1430,7 @@ def list_conversations_with_metadata(assistant_id: str) -> List[Dict[str, Any]]:
         SELECT c.id, c.assistant_id, c.created_at, c.updated_at,
             COALESCE(c.status, 'bot') as status,
             COALESCE(c.operator_name, '') as operator_name,
+            COALESCE(c.human_requested_epoch, 0) as human_requested_epoch,
             (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) as message_count,
             (SELECT content FROM messages m WHERE m.conversation_id = c.id AND m.role = 'user' ORDER BY id ASC LIMIT 1) as first_query,
             (SELECT content FROM messages m WHERE m.conversation_id = c.id ORDER BY id DESC LIMIT 1) as last_message,

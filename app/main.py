@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 from app.auth import (
     auth_middleware,
+    accessible_assistant_ids,
     create_token,
     can_access_assistant,
     is_admin,
@@ -71,7 +72,13 @@ from app.db import (
     hash_password,
     verify_password,
     set_user_password_hash,
+    mark_human_requested,
+    clear_human_requested,
+    touch_user_presence,
+    count_operators_online,
+    list_waiting_conversations,
 )
+from app.notify import notify_human_requested, send_email, email_provider
 from app.config import (
     get_bot_settings,
     update_bot_settings,
@@ -320,6 +327,30 @@ def api_change_password(req: ChangePasswordRequest, request: Request):
     set_user_password_hash(me["id"], hash_password(req.new_password))
     # Changing the password invalidates every existing session; hand back a fresh token.
     return {"status": "success", "token": create_token(me["id"])}
+
+@app.post("/api/presence")
+def api_presence(request: Request):
+    """Dashboard heartbeat: marks the signed-in user as available for live chats."""
+    touch_user_presence(request.state.user["id"])
+    return {"status": "ok"}
+
+@app.get("/api/inbox/waiting")
+def api_waiting_conversations(request: Request):
+    """Visitors waiting for a person, across every assistant the user can access."""
+    return list_waiting_conversations(accessible_assistant_ids(request.state.user))
+
+@app.post("/api/assistants/{asst_id}/alerts/test")
+def api_test_alert(asst_id: str):
+    asst = get_assistant(asst_id)
+    if not asst:
+        raise HTTPException(status_code=404, detail="Assistant not found")
+    recipients = [e.strip() for e in (asst.get("notification_email") or "").replace(";", ",").split(",") if "@" in e]
+    ok, detail = send_email(
+        recipients,
+        f"Test alert from AnswerWeave — {asst.get('name') or asst_id}",
+        "This is a test. You'll get an email like this when a visitor asks to talk to a person.",
+    )
+    return {"status": "success" if ok else "error", "detail": detail, "provider": email_provider() or None, "recipients": recipients}
 
 # ----------------- User & Client Management Endpoints -----------------
 @app.get("/api/users")
@@ -812,6 +843,7 @@ def api_get_conversation_transcript(conv_id: str, after_id: Optional[int] = None
         "messages": history,
         "status": conv.get("status", "bot") if conv else "bot",
         "operator_name": conv.get("operator_name", "") if conv else "",
+        "human_requested_epoch": int(conv.get("human_requested_epoch") or 0) if conv else 0,
         "unread_operator_msgs": conv.get("unread_operator_msgs", 0) if conv else 0
     }
 
@@ -845,6 +877,7 @@ def api_takeover_conversation(conv_id: str, req: TakeoverRequest):
             assistant_id=conv.get("assistant_id") or "asst_default",
         )
     set_conversation_status(conv_id, status="human", operator_name=operator)
+    clear_human_requested(conv_id)
     return {
         "status": "success",
         "conversation_id": conv_id,
@@ -990,6 +1023,70 @@ def build_operator_handoff_reply(conv_id: str, op_name: str, request: Request) -
     return text
 
 
+# Visitor asks for a person ("can I talk to a human / real person / agent ...").
+HUMAN_REQUEST_PATTERNS = [
+    r"\b(?:talk|speak|chat|connect)\s+(?:me\s+)?(?:to|with)\s+(?:a|an|some|the|your|one\s+of\s+your)?\s*(?:real\s+)?(?:human|person|people|agent|representative|rep|someone|somebody|specialist|staff|team\s+member|sales|support|team|operator|consultant|advisor|adviser|support\s+agent|sales\s+person|salesperson)s?\b",
+    r"\b(?:human|live)\s+(?:agent|support|person|operator|chat)\b",
+    r"\breal\s+(?:person|human)\b",
+    r"\b(?:need|want)\s+(?:a|to\s+talk\s+to\s+a)?\s*human\b",
+    r"(?:موظف|شخص\s+حقيقي|التحدث\s+مع\s+(?:شخص|أحد|موظف)|خدمة\s+العملاء)",
+]
+
+
+def wants_human(message: str) -> bool:
+    text = (message or "").lower()
+    return any(re.search(p, text) for p in HUMAN_REQUEST_PATTERNS)
+
+
+def handle_human_request(asst: Dict[str, Any], conv_id: str, message: str, request: Request) -> Dict[str, Any]:
+    is_new = mark_human_requested(conv_id)
+    online = count_operators_online(asst["id"]) > 0
+    if is_new:
+        try:
+            notify_human_requested(asst, conv_id, message, str(request.base_url))
+        except Exception as e:
+            print(f"Human-request alert failed: {e}")
+    # "EcomAlign Assistant" -> "EcomAlign" so the reply reads "the EcomAlign team".
+    team = re.sub(r"\s+(?:ai\s+)?(?:assistant|chatbot|bot)$", "", (asst.get("name") or "").strip(), flags=re.IGNORECASE) or "our"
+    if online:
+        answer = (f"I've let the {team} team know you'd like to talk to a person — someone will join this chat shortly. "
+                  "You can keep typing here in the meantime.")
+    else:
+        answer = (f"The {team} team isn't online right now, but I've passed your request on. "
+                  "Leave your email below and they'll get back to you as soon as they can.")
+    return {
+        "answer": answer,
+        "sources": [],
+        "lead_prompted": (not online) and bool(asst.get("lead_capture_enabled", 1)),
+        "human_requested": True,
+        "operators_online": online,
+    }
+
+
+def answer_visitor_message(asst: Dict[str, Any], conv_id: str, message: str, request: Request) -> Dict[str, Any]:
+    """Store the visitor's message, produce the reply (AI or human hand-off) and store it."""
+    asst_id = asst["id"]
+    history = get_conversation_history(conv_id, limit=6)
+    add_message(conv_id, "user", message, assistant_id=asst_id)
+
+    if wants_human(message):
+        result = handle_human_request(asst, conv_id, message, request)
+    else:
+        result = generate_grounded_response(query=message, assistant_id=asst_id, conversation_history=history)
+        result.setdefault("human_requested", False)
+        result.setdefault("operators_online", None)
+
+    add_message(
+        conv_id,
+        "assistant",
+        result["answer"],
+        assistant_id=asst_id,
+        sources=result["sources"],
+        lead_prompted=result["lead_prompted"]
+    )
+    return result
+
+
 @app.post("/api/chat")
 def api_chat(req: ChatRequest, request: Request):
     check_rate_limit(request)
@@ -1019,23 +1116,7 @@ def api_chat(req: ChatRequest, request: Request):
             "operator_name": op_name
         }
 
-    history = get_conversation_history(conv_id, limit=6)
-    add_message(conv_id, "user", req.message, assistant_id=asst_id)
-
-    result = generate_grounded_response(
-        query=req.message,
-        assistant_id=asst_id,
-        conversation_history=history
-    )
-
-    add_message(
-        conv_id,
-        "assistant",
-        result["answer"],
-        assistant_id=asst_id,
-        sources=result["sources"],
-        lead_prompted=result["lead_prompted"]
-    )
+    result = answer_visitor_message(asst, conv_id, req.message, request)
 
     return {
         "conversation_id": conv_id,
@@ -1043,7 +1124,9 @@ def api_chat(req: ChatRequest, request: Request):
         "answer": result["answer"],
         "sources": result["sources"],
         "lead_prompted": result["lead_prompted"],
-        "operator_active": False
+        "operator_active": False,
+        "human_requested": result.get("human_requested", False),
+        "operators_online": result.get("operators_online")
     }
 
 @app.post("/api/chat/stream")
@@ -1084,23 +1167,7 @@ def api_chat_stream(req: ChatRequest, request: Request):
             }
         )
 
-    history = get_conversation_history(conv_id, limit=6)
-    add_message(conv_id, "user", req.message, assistant_id=asst_id)
-
-    result = generate_grounded_response(
-        query=req.message,
-        assistant_id=asst_id,
-        conversation_history=history
-    )
-
-    add_message(
-        conv_id,
-        "assistant",
-        result["answer"],
-        assistant_id=asst_id,
-        sources=result["sources"],
-        lead_prompted=result["lead_prompted"]
-    )
+    result = answer_visitor_message(asst, conv_id, req.message, request)
 
     def event_stream():
         yield f"data: {json.dumps({'type': 'start', 'conversation_id': conv_id, 'assistant_id': asst_id})}\n\n"
@@ -1110,7 +1177,7 @@ def api_chat_stream(req: ChatRequest, request: Request):
             if t:
                 yield f"data: {json.dumps({'type': 'token', 'token': t})}\n\n"
                 time.sleep(0.012)
-        yield f"data: {json.dumps({'type': 'done', 'answer': full_text, 'sources': result['sources'], 'lead_prompted': result['lead_prompted'], 'conversation_id': conv_id})}\n\n"
+        yield f"data: {json.dumps({'type': 'done', 'answer': full_text, 'sources': result['sources'], 'lead_prompted': result['lead_prompted'], 'conversation_id': conv_id, 'human_requested': result.get('human_requested', False), 'operators_online': result.get('operators_online')})}\n\n"
 
     return StreamingResponse(
         event_stream(),
