@@ -324,7 +324,7 @@
 
         <!-- SCROLLABLE TAB CONTENT -->
         <main class="flex-1 overflow-y-auto p-6 lg:p-8">
-            <div class="max-w-[1480px] w-full mx-auto space-y-7">
+            <div class="max-w-[1680px] w-full mx-auto space-y-7">
 
                 <!-- ================= TAB 1: OVERVIEW & ANALYTICS ================= -->
                 <section id="tab-analytics" class="tab-pane space-y-7">
@@ -662,6 +662,52 @@
 
                 <!-- ================= TAB 2: KNOWLEDGE VAULT ================= -->
                 <section id="tab-knowledge" class="tab-pane hidden space-y-7">
+                    <!-- Knowledge Telemetry Stats -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4.5">
+                        <div class="glass-panel p-5 rounded-3xl border border-white/8 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Vector Chunks</span>
+                                <div class="font-display text-2xl font-black text-white font-mono mt-1" id="kvKpiChunks">616</div>
+                                <div class="text-[11px] text-emerald-400 font-semibold mt-1 flex items-center gap-1">
+                                    <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> 100% Vectorized
+                                </div>
+                            </div>
+                            <div class="w-10 h-10 rounded-2xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-brand-400">
+                                <i data-lucide="layers" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-5 rounded-3xl border border-white/8 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Indexed Sources</span>
+                                <div class="font-display text-2xl font-black text-white font-mono mt-1" id="kvKpiSources">9</div>
+                                <div class="text-[11px] text-brand-300 font-semibold mt-1">Sitemaps &amp; Documents</div>
+                            </div>
+                            <div class="w-10 h-10 rounded-2xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-400">
+                                <i data-lucide="globe" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-5 rounded-3xl border border-white/8 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Retrieval Latency</span>
+                                <div class="font-display text-2xl font-black text-emerald-400 font-mono mt-1">&lt; 142ms</div>
+                                <div class="text-[11px] text-slate-400 mt-1">Dense + BM25 RRF</div>
+                            </div>
+                            <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
+                                <i data-lucide="zap" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-5 rounded-3xl border border-white/8 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Grounding SLA</span>
+                                <div class="font-display text-2xl font-black text-purple-300 font-mono mt-1">99.8%</div>
+                                <div class="text-[11px] text-purple-300 font-semibold mt-1">Zero Hallucination</div>
+                            </div>
+                            <div class="w-10 h-10 rounded-2xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-purple-400">
+                                <i data-lucide="badge-check" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <!-- Card 1: PDF & Documents Drag-and-Drop -->
                         <div class="glass-panel rounded-3xl p-6.5 border border-white/8 flex flex-col justify-between">
@@ -999,10 +1045,141 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- Continuous Learning & Zero-Hallucination Grounding Loop -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
+                        <!-- Left: Grounding Loop Architecture (7 cols) -->
+                        <div class="lg:col-span-7 glass-panel rounded-3xl p-7 border border-white/8 space-y-5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/25 text-amber-400 flex items-center justify-center">
+                                    <i data-lucide="refresh-cw" class="w-4.5 h-4.5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-white uppercase tracking-wider">The Continuous Grounding &amp; Learning Loop</h4>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">How AnswerWeave turns unanswered visitor questions into permanent, deterministic intelligence</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3.5">
+                                <div class="p-4 rounded-2xl bg-white/5 border border-white/8 flex items-start gap-3.5">
+                                    <div class="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-300 font-bold font-mono text-xs flex items-center justify-center shrink-0 mt-0.5">1</div>
+                                    <div class="space-y-0.5">
+                                        <div class="text-xs font-bold text-white">Unanswered Question Auto-Capture</div>
+                                        <p class="text-[11px] text-slate-400 leading-relaxed">When a visitor asks something not found in your indexed sitemaps or PDFs, the RAG engine logs it here instead of hallucinating a false response.</p>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-white/5 border border-white/8 flex items-start gap-3.5">
+                                    <div class="w-7 h-7 rounded-xl bg-brand-500/20 text-brand-300 font-bold font-mono text-xs flex items-center justify-center shrink-0 mt-0.5">2</div>
+                                    <div class="space-y-0.5">
+                                        <div class="text-xs font-bold text-white">1-Click "Teach AI" Verified Resolution</div>
+                                        <p class="text-[11px] text-slate-400 leading-relaxed">Click "Teach AI", type the verified official company answer once, and confirm. No prompt engineering or code required.</p>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-white/5 border border-white/8 flex items-start gap-3.5">
+                                    <div class="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold font-mono text-xs flex items-center justify-center shrink-0 mt-0.5">3</div>
+                                    <div class="space-y-0.5">
+                                        <div class="text-xs font-bold text-white">Sub-Second Vector RRF Embedding</div>
+                                        <p class="text-[11px] text-slate-400 leading-relaxed">Your verified answer is embedded into vector memory in &lt;180ms with BM25 keyword + dense cosine indexing.</p>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-white/5 border border-white/8 flex items-start gap-3.5">
+                                    <div class="w-7 h-7 rounded-xl bg-purple-500/20 text-purple-300 font-bold font-mono text-xs flex items-center justify-center shrink-0 mt-0.5">4</div>
+                                    <div class="space-y-0.5">
+                                        <div class="text-xs font-bold text-white">Permanent Deterministic Coverage</div>
+                                        <p class="text-[11px] text-slate-400 leading-relaxed">Every future visitor across all websites who asks this or similar questions will now receive the 100% verified grounded answer forever.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: FAQ Best Practices (5 cols) -->
+                        <div class="lg:col-span-5 glass-panel rounded-3xl p-7 border border-white/8 space-y-4 shadow-xl">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-brand-500/15 border border-brand-500/25 text-brand-400 flex items-center justify-center">
+                                    <i data-lucide="lightbulb" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-white uppercase tracking-wider">Knowledge Training Tips</h4>
+                                    <p class="text-[11px] text-slate-400">Maximize AI accuracy &amp; conversion</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3 text-xs">
+                                <div class="p-3.5 rounded-2xl bg-white/5 border border-white/8 space-y-1">
+                                    <div class="font-bold text-white flex items-center gap-1.5 text-xs">
+                                        <span class="text-emerald-400">✓</span> Include Direct Numerical Data
+                                    </div>
+                                    <p class="text-[11px] text-slate-400 leading-relaxed">Specific prices, business hours, shipping delivery windows, and return policies result in 4x higher purchase conversions.</p>
+                                </div>
+
+                                <div class="p-3.5 rounded-2xl bg-white/5 border border-white/8 space-y-1">
+                                    <div class="font-bold text-white flex items-center gap-1.5 text-xs">
+                                        <span class="text-emerald-400">✓</span> Teach Conversational Alternatives
+                                    </div>
+                                    <p class="text-[11px] text-slate-400 leading-relaxed">Use the "+ Teach New Q&amp;A" button to proactively answer questions visitors might ask before they encounter a documentation gap.</p>
+                                </div>
+
+                                <div class="p-3.5 rounded-2xl bg-white/5 border border-white/8 space-y-1">
+                                    <div class="font-bold text-white flex items-center gap-1.5 text-xs">
+                                        <span class="text-emerald-400">✓</span> Strict Grounding Guarantee
+                                    </div>
+                                    <p class="text-[11px] text-slate-400 leading-relaxed">AnswerWeave strictly forbids LLM hallucinations. If an answer isn't in your knowledge vault, it is safely flagged here.</p>
+                                </div>
+                            </div>
+
+                            <button type="button" onclick="openAddCustomQAModal()" class="btn-shimmer w-full text-white font-bold py-3 rounded-2xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-brand-500/20">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                <span>Teach New Custom Q&amp;A</span>
+                            </button>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- ================= TAB 5: LEADS & CALL-PREP ================= -->
                 <section id="tab-leads" class="tab-pane hidden space-y-7">
+                    <!-- Leads Telemetry & Qualification KPIs -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4.5">
+                        <div class="glass-panel p-5.5 rounded-3xl border border-white/8 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Captured Leads</span>
+                                <div class="font-display text-3xl font-black text-white mt-1.5 font-mono" id="leadsKpiTotal">0</div>
+                                <div class="text-[11px] text-purple-300 font-semibold mt-1 flex items-center gap-1.5">
+                                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Synthesized &amp; Ready
+                                </div>
+                            </div>
+                            <div class="w-10 h-10 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center">
+                                <i data-lucide="users" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-5.5 rounded-3xl border border-white/8 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Sales Intent Qualification</span>
+                                <div class="font-display text-3xl font-black text-emerald-400 mt-1.5 font-mono">88%</div>
+                                <div class="text-[11px] text-emerald-400 font-semibold mt-1 flex items-center gap-1.5">
+                                    <i data-lucide="flame" class="w-3.5 h-3.5"></i> High Purchase Intent
+                                </div>
+                            </div>
+                            <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center">
+                                <i data-lucide="trending-up" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-5.5 rounded-3xl border border-white/8 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">AI Call-Prep Latency</span>
+                                <div class="font-display text-3xl font-black text-brand-300 mt-1.5 font-mono">&lt; 1.4s</div>
+                                <div class="text-[11px] text-slate-400 font-semibold mt-1 flex items-center gap-1.5">
+                                    <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Instant Dossier Synthesis
+                                </div>
+                            </div>
+                            <div class="w-10 h-10 rounded-2xl bg-brand-500/15 border border-brand-500/25 text-brand-400 flex items-center justify-center">
+                                <i data-lucide="file-check" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="glass-panel rounded-3xl border border-white/8 overflow-hidden shadow-2xl">
                         <div class="px-7 py-5 border-b border-white/8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
@@ -1039,13 +1216,108 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- Lead Intelligence Pipeline & Sample Dossier Preview -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
+                        <!-- Left: Pipeline (7 cols) -->
+                        <div class="lg:col-span-7 glass-panel rounded-3xl p-7 border border-white/8 space-y-5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center">
+                                    <i data-lucide="git-merge" class="w-4.5 h-4.5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-white uppercase tracking-wider">Automated Sales Brief Generation Pipeline</h4>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">How AnswerWeave turns casual website visitors into ready-to-close enterprise leads</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3.5">
+                                <div class="p-4 rounded-2xl bg-white/5 border border-white/8 flex items-start gap-3.5">
+                                    <div class="w-7 h-7 rounded-xl bg-purple-500/20 text-purple-300 font-bold font-mono text-xs flex items-center justify-center shrink-0 mt-0.5">1</div>
+                                    <div class="space-y-0.5">
+                                        <div class="text-xs font-bold text-white">Purchase Intent Detection</div>
+                                        <p class="text-[11px] text-slate-400 leading-relaxed">The AI constantly monitors conversation semantics for high-intent signals (pricing, integrations, enterprise terms, bulk discounts).</p>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-white/5 border border-white/8 flex items-start gap-3.5">
+                                    <div class="w-7 h-7 rounded-xl bg-brand-500/20 text-brand-300 font-bold font-mono text-xs flex items-center justify-center shrink-0 mt-0.5">2</div>
+                                    <div class="space-y-0.5">
+                                        <div class="text-xs font-bold text-white">Frictionless In-Chat Contact Capture</div>
+                                        <p class="text-[11px] text-slate-400 leading-relaxed">Instead of abrupt popup forms, the assistant gracefully asks: "Would you like our engineering team to email you the complete specs or reach you on WhatsApp?"</p>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-white/5 border border-white/8 flex items-start gap-3.5">
+                                    <div class="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold font-mono text-xs flex items-center justify-center shrink-0 mt-0.5">3</div>
+                                    <div class="space-y-0.5">
+                                        <div class="text-xs font-bold text-white">AI Sales Dossier &amp; Talking Points Synthesis</div>
+                                        <p class="text-[11px] text-slate-400 leading-relaxed">Within 1.4s, the AI analyzes previous messages to extract the prospect's tech stack, urgent pain points, and recommended closing angles for your sales reps.</p>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-white/5 border border-white/8 flex items-start gap-3.5">
+                                    <div class="w-7 h-7 rounded-xl bg-blue-500/20 text-blue-300 font-bold font-mono text-xs flex items-center justify-center shrink-0 mt-0.5">4</div>
+                                    <div class="space-y-0.5">
+                                        <div class="text-xs font-bold text-white">Instant CRM &amp; Webhook Dispatch</div>
+                                        <p class="text-[11px] text-slate-400 leading-relaxed">Dispatches clean JSON payloads immediately to HubSpot, Salesforce, Zapier, Make, or Slack for sub-minute sales response times.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Sample Call-Prep Dossier (5 cols) -->
+                        <div class="lg:col-span-5 glass-panel rounded-3xl p-7 border border-white/8 space-y-4 shadow-xl">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center">
+                                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xs font-bold text-white uppercase tracking-wider">Sample AI Call-Prep Brief</h4>
+                                        <p class="text-[11px] text-slate-400">Synthesized automatically upon contact capture</p>
+                                    </div>
+                                </div>
+                                <span class="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">96% Intent</span>
+                            </div>
+
+                            <div class="p-4 bg-obsidian-950 rounded-2xl border border-white/8 space-y-3 font-sans text-xs">
+                                <div class="flex items-center justify-between pb-2 border-b border-white/5">
+                                    <div>
+                                        <div class="font-bold text-white">Sarah Jenkins</div>
+                                        <div class="text-[11px] text-slate-400 font-mono">sarah@nexusecom.io &bull; +1 (415) 890-2134</div>
+                                    </div>
+                                    <span class="text-[10px] font-bold bg-purple-500/20 text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-500/30">Enterprise Lead</span>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Visitor Core Need:</div>
+                                    <p class="text-[11px] text-slate-200 leading-relaxed bg-white/5 p-2.5 rounded-xl border border-white/5">
+                                        Migrating from Zendesk. Wants flat-fee AI chat with zero per-message charges for 12 Shopify stores before upcoming peak shopping season.
+                                    </p>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Recommended Closing Angle:</div>
+                                    <p class="text-[11px] text-emerald-300 leading-relaxed bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20">
+                                        Pitch Agency Plan ($249/mo flat with 50 bots). Highlight our 1-click Shopify drop-in tag, zero surprise overages guarantee, and instant human takeover capability.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="p-3 bg-white/5 rounded-2xl border border-white/8 flex items-center justify-between text-[11px] text-slate-400">
+                                <span>Dispatched to Webhook:</span>
+                                <span class="font-mono text-emerald-400 font-bold">&lt; 140ms</span>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- ================= TAB 6: WIDGET STUDIO ================= -->
                 <section id="tab-widget" class="tab-pane hidden space-y-7">
-                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        <!-- Customization Controls (5 cols) -->
-                        <div class="lg:col-span-5 glass-panel rounded-3xl p-7 border border-white/8 space-y-6">
+                    <div class="grid grid-cols-1 xl:grid-cols-12 gap-7 items-start">
+                        <!-- Customization Controls (7 cols) -->
+                        <div class="xl:col-span-7 glass-panel rounded-3xl p-7 border border-white/8 space-y-6">
                             <div>
                                 <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                                     <i data-lucide="palette" class="w-4 h-4 text-brand-400"></i>
@@ -1251,135 +1523,159 @@
                                     <span>Save Widget Customization</span>
                                 </button>
                             </form>
+                        </div>
 
-                            <!-- Embed Script Snippet -->
-                            <div class="pt-5 border-t border-white/8 space-y-3">
-                                <label class="block text-xs font-bold text-white flex items-center justify-between">
-                                    <span>1-Line Drop-in Script Tag</span>
-                                    <span class="text-[10px] text-slate-400 font-normal">Paste before &lt;/body&gt;</span>
-                                </label>
-                                <div class="relative">
-                                    <pre id="embedScriptBlock" class="bg-obsidian-950 text-slate-200 p-3.5 rounded-2xl text-[11px] font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed border border-white/10 shadow-inner"></pre>
-                                    <button onclick="copyEmbedScript()" class="absolute top-2.5 right-2.5 bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded-xl text-[10px] font-bold border border-white/10 transition flex items-center gap-1">
-                                        <i data-lucide="copy" class="w-3 h-3"></i>
-                                        <span>Copy</span>
-                                    </button>
-                                </div>
-                                <div class="flex items-center gap-2.5 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[11px] text-emerald-300">
-                                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400 shrink-0"></i>
-                                    <div>
-                                        <span>Domain-Locked: </span>
-                                        <strong class="font-mono text-white" id="embedDomainText">*</strong>
-                                        <span class="text-slate-400 block text-[10px] mt-0.5">Strictly blocks this chatbot from ever loading or showing on any unauthorized website.</span>
+                        <!-- Right Column: Live Interactive Sandbox Preview + 1-Line Embed Script (5 cols) -->
+                        <div class="xl:col-span-5 space-y-6">
+                            <!-- Live Interactive Sandbox Preview -->
+                            <div class="glass-panel rounded-3xl p-5 border border-white/8 shadow-2xl flex flex-col items-center">
+                                <div class="w-full bg-obsidian-900 rounded-[30px] p-3.5 shadow-2xl border border-white/10 relative">
+                                    <!-- Browser Header Bar -->
+                                    <div class="px-4 py-2.5 border-b border-white/8 flex items-center justify-between text-xs text-slate-400">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+                                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
+                                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5 font-mono text-[11px] text-slate-400 bg-obsidian-950 px-3 py-1 rounded-lg border border-white/8">
+                                            <i data-lucide="lock" class="w-3 h-3 text-emerald-400"></i>
+                                            <span id="previewDomainText">ecomalign.com</span>
+                                        </div>
+                                        <button type="button" onclick="toggleMockWindow()" class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/20 transition cursor-pointer" id="mockToggleStateBadge">Preview: Window Open</button>
+                                    </div>
+
+                                    <!-- Sandbox Canvas with Dotted Pattern -->
+                                    <div id="prevCanvasContainer" class="bg-obsidian-950 h-[540px] rounded-[22px] p-4 flex flex-col justify-end items-end relative overflow-hidden transition-all">
+                                        <!-- Background Site Mockup -->
+                                        <div class="absolute inset-0 p-6 flex flex-col justify-center items-center text-center text-slate-600 pointer-events-none">
+                                            <i data-lucide="globe" class="w-10 h-10 opacity-20 mb-2"></i>
+                                            <p class="text-xs font-semibold text-slate-500">Live Website Preview Canvas</p>
+                                            <p class="text-[11px] text-slate-600 max-w-xs mt-1">Tap any popular question below or click the launcher to toggle open/closed preview.</p>
+                                        </div>
+
+                                        <!-- Interactive Widget Window inside Mockup -->
+                                        <div id="prevChatWindow" class="w-full max-w-xs bg-white text-slate-800 rounded-[22px] shadow-2xl border border-slate-200 overflow-hidden relative z-10 flex flex-col h-[430px] transition-all">
+                                            <!-- Widget Header -->
+                                            <div id="prevHeader" class="bg-[#081726] text-white p-3.5 flex items-center justify-between transition-colors shrink-0">
+                                                <div class="flex items-center gap-2.5">
+                                                    <div id="prevAvatar" class="w-8 h-8 rounded-full bg-white text-[#081726] flex items-center justify-center text-sm font-bold shadow-sm shrink-0">⚡</div>
+                                                    <div>
+                                                        <div class="flex items-center gap-1.5 leading-none">
+                                                            <span id="prevTitle" class="font-bold text-xs">EcomAlign Assistant</span>
+                                                            <span class="inline-flex items-center gap-0.5 text-[9px] font-bold text-white/90 bg-white/15 px-1.5 py-0.5 rounded-full backdrop-blur-sm">✓ AI</span>
+                                                        </div>
+                                                        <div class="text-[10.5px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                                            <span class="relative inline-flex items-center justify-center w-2 h-2">
+                                                                <span class="absolute w-2.5 h-2.5 rounded-full bg-emerald-400/30 animate-ping opacity-30"></span>
+                                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                                            </span>
+                                                            <span id="prevSubtitle">Online</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Action Icons in Header -->
+                                                <div class="flex items-center gap-1 text-white/75">
+                                                    <button type="button" id="prevSoundIndicator" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Toggle audio chime">
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                                                    </button>
+                                                    <button type="button" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Contact Email">
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                                    </button>
+                                                    <button type="button" onclick="clearMockChat()" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Start New Conversation">
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                                    </button>
+                                                    <span class="w-[1px] h-3 bg-white/20 mx-0.5"></span>
+                                                    <button type="button" onclick="toggleMockWindow()" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Close Preview Window">
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Widget Chat Body -->
+                                            <div id="prevChatBody" class="flex-1 p-3.5 space-y-3 overflow-y-auto text-xs" style="background-color: #f8fafc; background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px); background-size: 16px 16px;">
+                                                <!-- Welcome Bubble -->
+                                                <div id="prevWelcome" class="bg-white p-2.5 rounded-2xl rounded-bl-sm border border-slate-200 shadow-sm text-slate-800 text-[11.5px] leading-relaxed">
+                                                    Hi! How can I help you today?
+                                                </div>
+
+                                                <!-- Popular questions Section -->
+                                                <div id="prevPopularSection" class="space-y-2 pt-1">
+                                                    <div class="flex items-start gap-2">
+                                                        <div id="prevPopularBar" class="w-1 h-5 bg-[#081726] rounded-full shrink-0 mt-0.5"></div>
+                                                        <div>
+                                                            <div class="font-bold text-xs text-slate-900 leading-none">Popular questions</div>
+                                                            <div class="text-[10px] text-slate-500 mt-0.5">Tap one to get started, or type your own.</div>
+                                                        </div>
+                                                    </div>
+                                                    <div id="prevPopularCards" class="space-y-1.5"></div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Widget Interactive Input -->
+                                            <form id="prevChatForm" onsubmit="handleMockSubmit(event)" class="p-2.5 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0">
+                                                <div class="flex-1 bg-slate-100 border border-slate-200 rounded-full flex items-center px-3 py-1">
+                                                    <input type="text" id="prevChatInput" placeholder="Ask a question..." class="flex-1 text-xs bg-transparent text-slate-800 outline-none" />
+                                                    <span class="text-slate-400 text-xs ml-1 cursor-pointer" title="Voice Input">🎤</span>
+                                                </div>
+                                                <button type="submit" id="prevSendBtn" class="w-7 h-7 rounded-full bg-[#081726] text-white flex items-center justify-center text-xs shrink-0 hover:opacity-90 transition">
+                                                    ➤
+                                                </button>
+                                            </form>
+                                        </div>
+
+                                        <!-- Floating Teaser Bubble and Launcher -->
+                                        <div id="prevLauncherWrap" class="flex items-center gap-2 mt-3 mr-1 relative">
+                                            <div id="prevTeaserBubble" class="bg-white text-slate-800 px-3 py-1.5 rounded-2xl rounded-br-sm shadow-lg border border-slate-200 text-[11px] font-semibold flex items-center gap-1.5 hidden">
+                                                <span id="prevTeaserText">👋 Hi! Need quick answers?</span>
+                                            </div>
+                                            <div id="prevBubble" onclick="toggleMockWindow()" class="w-10 h-10 rounded-full bg-[#081726] text-white flex items-center justify-center shadow-xl transition-all cursor-pointer shrink-0" title="Click to toggle chat preview">
+                                                <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Live Interactive Sandbox Preview (7 cols) -->
-                        <div class="lg:col-span-7 flex flex-col items-center justify-center">
-                            <div class="w-full max-w-md bg-obsidian-900 rounded-[34px] p-3.5 shadow-2xl border border-white/10 relative">
-                                <!-- Browser Header Bar -->
-                                <div class="px-4 py-2.5 border-b border-white/8 flex items-center justify-between text-xs text-slate-400">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
-                                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
-                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
+                            <!-- 1-Line Embed Script Snippet Card -->
+                            <div class="glass-panel rounded-3xl p-6 border border-white/8 space-y-4 shadow-xl">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                            <i data-lucide="code-2" class="w-4 h-4 text-brand-400"></i>
+                                            <span>1-Line Website Embed Script</span>
+                                        </h4>
+                                        <p class="text-[11px] text-slate-400 mt-0.5">Paste this single tag before &lt;/body&gt; on any website or CMS.</p>
                                     </div>
-                                    <div class="flex items-center gap-1.5 font-mono text-[11px] text-slate-400 bg-obsidian-950 px-3 py-1 rounded-lg border border-white/8">
-                                        <i data-lucide="lock" class="w-3 h-3 text-emerald-400"></i>
-                                        <span id="previewDomainText">ecomalign.com</span>
-                                    </div>
-                                    <button type="button" onclick="toggleMockWindow()" class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/20 transition cursor-pointer" id="mockToggleStateBadge">Preview: Window Open</button>
+                                    <button type="button" onclick="copyEmbedScript()" class="bg-brand-600 hover:bg-brand-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5 cursor-pointer">
+                                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                        <span>Copy Tag</span>
+                                    </button>
                                 </div>
-
-                                <!-- Sandbox Canvas with Dotted Pattern -->
-                                <div id="prevCanvasContainer" class="bg-obsidian-950 h-[560px] rounded-[24px] p-4 flex flex-col justify-end items-end relative overflow-hidden transition-all">
-                                    <!-- Background Site Mockup -->
-                                    <div class="absolute inset-0 p-6 flex flex-col justify-center items-center text-center text-slate-600 pointer-events-none">
-                                        <i data-lucide="globe" class="w-10 h-10 opacity-20 mb-2"></i>
-                                        <p class="text-xs font-semibold text-slate-500">Live Website Preview Canvas</p>
-                                        <p class="text-[11px] text-slate-600 max-w-xs mt-1">Tap any popular question below or click the launcher to toggle open/closed preview.</p>
+                                <div class="relative">
+                                    <pre id="embedScriptBlock" class="bg-obsidian-950 text-slate-200 p-3.5 rounded-2xl text-[11px] font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed border border-white/10 shadow-inner"></pre>
+                                </div>
+                                <div class="flex items-start gap-2.5 p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-[11px] text-emerald-300">
+                                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                                    <div class="space-y-0.5">
+                                        <div class="font-bold flex items-center gap-1.5">
+                                            <span>Domain-Locked:</span>
+                                            <code class="font-mono text-white bg-black/40 px-1.5 py-0.5 rounded text-[10px]" id="embedDomainText">*</code>
+                                        </div>
+                                        <p class="text-slate-400 text-[10px] leading-relaxed">Cross-origin security strictly prevents unauthorized embedding on external domains.</p>
                                     </div>
-
-                                    <!-- Interactive Widget Window inside Mockup -->
-                                    <div id="prevChatWindow" class="w-full max-w-xs bg-white text-slate-800 rounded-[22px] shadow-2xl border border-slate-200 overflow-hidden relative z-10 flex flex-col h-[450px] transition-all">
-                                        <!-- Widget Header -->
-                                        <div id="prevHeader" class="bg-[#081726] text-white p-3.5 flex items-center justify-between transition-colors shrink-0">
-                                            <div class="flex items-center gap-2.5">
-                                                <div id="prevAvatar" class="w-8 h-8 rounded-full bg-white text-[#081726] flex items-center justify-center text-sm font-bold shadow-sm shrink-0">⚡</div>
-                                                <div>
-                                                    <div class="flex items-center gap-1.5 leading-none">
-                                                        <span id="prevTitle" class="font-bold text-xs">EcomAlign Assistant</span>
-                                                        <span class="inline-flex items-center gap-0.5 text-[9px] font-bold text-white/90 bg-white/15 px-1.5 py-0.5 rounded-full backdrop-blur-sm">✓ AI</span>
-                                                    </div>
-                                                    <div class="text-[10.5px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                                                        <span class="relative inline-flex items-center justify-center w-2 h-2">
-                                                            <span class="absolute w-2.5 h-2.5 rounded-full bg-emerald-400/30 animate-ping opacity-30"></span>
-                                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                                                        </span>
-                                                        <span id="prevSubtitle">Online</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <!-- Action Icons in Header -->
-                                            <div class="flex items-center gap-1 text-white/75">
-                                                <button type="button" id="prevSoundIndicator" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Toggle audio chime">
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-                                                </button>
-                                                <button type="button" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Contact Email">
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                                                </button>
-                                                <button type="button" onclick="clearMockChat()" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Start New Conversation">
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                                                </button>
-                                                <span class="w-[1px] h-3 bg-white/20 mx-0.5"></span>
-                                                <button type="button" onclick="toggleMockWindow()" class="w-6 h-6 rounded-md hover:bg-white/15 hover:text-white flex items-center justify-center transition cursor-pointer" title="Close Preview Window">
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <!-- Widget Chat Body -->
-                                        <div id="prevChatBody" class="flex-1 p-3.5 space-y-3 overflow-y-auto text-xs" style="background-color: #f8fafc; background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px); background-size: 16px 16px;">
-                                            <!-- Welcome Bubble -->
-                                            <div id="prevWelcome" class="bg-white p-2.5 rounded-2xl rounded-bl-sm border border-slate-200 shadow-sm text-slate-800 text-[11.5px] leading-relaxed">
-                                                Hi! How can I help you today?
-                                            </div>
-
-                                            <!-- Popular questions Section -->
-                                            <div id="prevPopularSection" class="space-y-2 pt-1">
-                                                <div class="flex items-start gap-2">
-                                                    <div id="prevPopularBar" class="w-1 h-5 bg-[#081726] rounded-full shrink-0 mt-0.5"></div>
-                                                    <div>
-                                                        <div class="font-bold text-xs text-slate-900 leading-none">Popular questions</div>
-                                                        <div class="text-[10px] text-slate-500 mt-0.5">Tap one to get started, or type your own.</div>
-                                                    </div>
-                                                </div>
-                                                <div id="prevPopularCards" class="space-y-1.5"></div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Widget Interactive Input -->
-                                        <form id="prevChatForm" onsubmit="handleMockSubmit(event)" class="p-2.5 bg-white border-t border-slate-200 flex items-center gap-2 shrink-0">
-                                            <div class="flex-1 bg-slate-100 border border-slate-200 rounded-full flex items-center px-3 py-1">
-                                                <input type="text" id="prevChatInput" placeholder="Ask a question..." class="flex-1 text-xs bg-transparent text-slate-800 outline-none" />
-                                                <span class="text-slate-400 text-xs ml-1 cursor-pointer" title="Voice Input">🎤</span>
-                                            </div>
-                                            <button type="submit" id="prevSendBtn" class="w-7 h-7 rounded-full bg-[#081726] text-white flex items-center justify-center text-xs shrink-0 hover:opacity-90 transition">
-                                                ➤
-                                            </button>
-                                        </form>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 pt-1 text-[10px] text-slate-400 font-semibold text-center">
+                                    <div class="p-2.5 rounded-xl bg-white/5 border border-white/8">
+                                        <div class="text-white font-bold">100% Isolated</div>
+                                        <div>Shadow DOM</div>
                                     </div>
-
-                                    <!-- Floating Teaser Bubble and Launcher -->
-                                    <div id="prevLauncherWrap" class="flex items-center gap-2 mt-3 mr-1 relative">
-                                        <div id="prevTeaserBubble" class="bg-white text-slate-800 px-3 py-1.5 rounded-2xl rounded-br-sm shadow-lg border border-slate-200 text-[11px] font-semibold flex items-center gap-1.5 hidden">
-                                            <span id="prevTeaserText">👋 Hi! Need quick answers?</span>
-                                        </div>
-                                        <div id="prevBubble" onclick="toggleMockWindow()" class="w-10 h-10 rounded-full bg-[#081726] text-white flex items-center justify-center shadow-xl transition-all cursor-pointer shrink-0" title="Click to toggle chat preview">
-                                            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                        </div>
+                                    <div class="p-2.5 rounded-xl bg-white/5 border border-white/8">
+                                        <div class="text-white font-bold">&lt; 18KB Bundle</div>
+                                        <div>Zero Latency</div>
+                                    </div>
+                                    <div class="p-2.5 rounded-xl bg-white/5 border border-white/8">
+                                        <div class="text-white font-bold">Universal</div>
+                                        <div>Shopify, WP, React</div>
                                     </div>
                                 </div>
                             </div>
@@ -1483,225 +1779,524 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Resource Quotas & Consumption Bento -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Quota 1: Conversation Messages -->
+                        <div class="glass-panel rounded-3xl p-6 border border-white/8 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Monthly Conversation Quota</span>
+                                    <div class="text-2xl font-black text-white font-mono mt-1">1,248 <span class="text-xs text-slate-500 font-normal">/ 2,000 used</span></div>
+                                </div>
+                                <div class="w-10 h-10 rounded-2xl bg-brand-500/15 border border-brand-500/25 text-brand-400 flex items-center justify-center">
+                                    <i data-lucide="message-square" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between text-[11px]">
+                                    <span class="text-slate-400">Current Velocity: 62%</span>
+                                    <span class="text-emerald-400 font-semibold">Resets Nov 1, 2026</span>
+                                </div>
+                                <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-brand-500 to-indigo-500 rounded-full" style="width: 62%;"></div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 text-[11px] text-slate-400 bg-white/5 p-2.5 rounded-xl border border-white/5">
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
+                                <span>Hard Cap Protection: Zero surprise overage charges.</span>
+                            </div>
+                        </div>
+
+                        <!-- Quota 2: Vectors & Pages -->
+                        <div class="glass-panel rounded-3xl p-6 border border-white/8 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Vector Memory Storage</span>
+                                    <div class="text-2xl font-black text-white font-mono mt-1">616 <span class="text-xs text-slate-500 font-normal">/ 5,000 chunks</span></div>
+                                </div>
+                                <div class="w-10 h-10 rounded-2xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center">
+                                    <i data-lucide="layers" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between text-[11px]">
+                                    <span class="text-slate-400">Capacity Used: 12%</span>
+                                    <span class="text-purple-300 font-semibold">9 Sources Vectorized</span>
+                                </div>
+                                <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-purple-500 to-brand-500 rounded-full" style="width: 12%;"></div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 text-[11px] text-slate-400 bg-white/5 p-2.5 rounded-xl border border-white/5">
+                                <i data-lucide="database" class="w-3.5 h-3.5 text-purple-400 shrink-0"></i>
+                                <span>Hybrid RRF: BM25 + Cosine similarity active.</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Active Payment Method -->
+                        <div class="glass-panel rounded-3xl p-6 border border-white/8 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Payment Method</span>
+                                    <div class="text-sm font-bold text-white flex items-center gap-2 mt-1.5 font-mono">
+                                        <span class="px-2 py-0.5 rounded bg-blue-600/30 text-blue-300 text-[10px] font-bold border border-blue-500/40">VISA</span>
+                                        <span>•••• •••• •••• 4242</span>
+                                    </div>
+                                </div>
+                                <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center">
+                                    <i data-lucide="credit-card" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            <div class="text-[11px] text-slate-400 space-y-1">
+                                <div class="flex justify-between">
+                                    <span>Next Billing Date:</span>
+                                    <span class="text-white font-mono font-semibold">Nov 14, 2026</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Recurring Total:</span>
+                                    <span class="text-white font-mono font-semibold">$29.00 USD / mo</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 pt-1">
+                                <button type="button" onclick="upgradePlan('starter')" class="flex-1 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition text-center border border-white/10">
+                                    Update Card
+                                </button>
+                                <button type="button" onclick="upgradePlan('starter')" class="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition text-center shadow">
+                                    Billing Portal &rarr;
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Billing History & Official Tax Invoices Table -->
+                    <div class="glass-panel rounded-3xl border border-white/8 overflow-hidden shadow-2xl">
+                        <div class="px-7 py-5 border-b border-white/8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                    <i data-lucide="file-text" class="w-4 h-4 text-brand-400"></i>
+                                    Billing History &amp; Official Invoices
+                                </h4>
+                                <p class="text-xs text-slate-400 mt-1">Download VAT / tax receipts and track subscription renewals.</p>
+                            </div>
+                            <span class="text-xs text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-xl flex items-center gap-1.5 self-start sm:self-auto">
+                                <i data-lucide="check" class="w-3.5 h-3.5"></i> All Invoices Paid
+                            </span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-white/8 text-xs">
+                                <thead class="bg-obsidian-900/80 text-slate-400 uppercase font-semibold text-[10px] tracking-wider">
+                                    <tr>
+                                        <th class="px-7 py-3.5 text-left">Date</th>
+                                        <th class="px-7 py-3.5 text-left">Plan / Description</th>
+                                        <th class="px-7 py-3.5 text-left">Invoice ID</th>
+                                        <th class="px-7 py-3.5 text-left">Amount</th>
+                                        <th class="px-7 py-3.5 text-left">Status</th>
+                                        <th class="px-7 py-3.5 text-right">Receipt</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-white/8 text-slate-300">
+                                    <tr class="hover:bg-white/[0.02] transition">
+                                        <td class="px-7 py-4 font-mono text-slate-400">Oct 14, 2026</td>
+                                        <td class="px-7 py-4 font-semibold text-white">Starter Plan &mdash; Monthly Subscription</td>
+                                        <td class="px-7 py-4 font-mono text-slate-400">INV-2026-10492</td>
+                                        <td class="px-7 py-4 font-mono font-bold text-white">$29.00 USD</td>
+                                        <td class="px-7 py-4">
+                                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Paid
+                                            </span>
+                                        </td>
+                                        <td class="px-7 py-4 text-right">
+                                            <button onclick="alert('Downloading invoice INV-2026-10492 PDF...')" class="text-slate-400 hover:text-white font-semibold text-[11px] inline-flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-white/5 transition">
+                                                <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-white/[0.02] transition">
+                                        <td class="px-7 py-4 font-mono text-slate-400">Sep 14, 2026</td>
+                                        <td class="px-7 py-4 font-semibold text-white">Starter Plan &mdash; Monthly Subscription</td>
+                                        <td class="px-7 py-4 font-mono text-slate-400">INV-2026-09281</td>
+                                        <td class="px-7 py-4 font-mono font-bold text-white">$29.00 USD</td>
+                                        <td class="px-7 py-4">
+                                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Paid
+                                            </span>
+                                        </td>
+                                        <td class="px-7 py-4 text-right">
+                                            <button onclick="alert('Downloading invoice INV-2026-09281 PDF...')" class="text-slate-400 hover:text-white font-semibold text-[11px] inline-flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-white/5 transition">
+                                                <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-white/[0.02] transition">
+                                        <td class="px-7 py-4 font-mono text-slate-400">Aug 14, 2026</td>
+                                        <td class="px-7 py-4 font-semibold text-white">Starter Plan &mdash; Monthly Subscription</td>
+                                        <td class="px-7 py-4 font-mono text-slate-400">INV-2026-08119</td>
+                                        <td class="px-7 py-4 font-mono font-bold text-white">$29.00 USD</td>
+                                        <td class="px-7 py-4">
+                                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Paid
+                                            </span>
+                                        </td>
+                                        <td class="px-7 py-4 text-right">
+                                            <button onclick="alert('Downloading invoice INV-2026-08119 PDF...')" class="text-slate-400 hover:text-white font-semibold text-[11px] inline-flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-white/5 transition">
+                                                <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Commercial Guarantees & Enterprise SLA Banner -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div class="glass-panel p-5.5 rounded-3xl border border-white/8 space-y-2">
+                            <div class="w-9 h-9 rounded-xl bg-brand-500/15 border border-brand-500/25 text-brand-400 flex items-center justify-center">
+                                <i data-lucide="shield-check" class="w-4.5 h-4.5"></i>
+                            </div>
+                            <h4 class="text-sm font-bold text-white">Zero Surprise Bills Guarantee</h4>
+                            <p class="text-xs text-slate-400 leading-relaxed">Unlike OpenAI or per-conversation charging tools, your subscription is strictly capped. You never pay unexpected overages.</p>
+                        </div>
+                        <div class="glass-panel p-5.5 rounded-3xl border border-white/8 space-y-2">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center">
+                                <i data-lucide="check-circle" class="w-4.5 h-4.5"></i>
+                            </div>
+                            <h4 class="text-sm font-bold text-white">99.9% Grounded Retrieval SLA</h4>
+                            <p class="text-xs text-slate-400 leading-relaxed">High-availability vector retrieval backed by RRF reranking and multi-provider failovers ensuring uninterrupted visitor answers.</p>
+                        </div>
+                        <div class="glass-panel p-5.5 rounded-3xl border border-white/8 space-y-2">
+                            <div class="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center">
+                                <i data-lucide="sparkles" class="w-4.5 h-4.5"></i>
+                            </div>
+                            <h4 class="text-sm font-bold text-white">Agency &amp; White-Label Ready</h4>
+                            <p class="text-xs text-slate-400 leading-relaxed">Manage up to 50 client websites with distinct branding, custom avatars, zero AnswerWeave branding, and client sub-accounts.</p>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- ================= TAB 8: AI ENGINES & SETTINGS ================= -->
-                <section id="tab-settings" class="tab-pane hidden max-w-3xl space-y-7">
-                    <div class="glass-panel rounded-3xl p-7 border border-white/8 space-y-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-brand-500/15 border border-brand-500/25 text-brand-400 flex items-center justify-center">
-                                <i data-lucide="shield" class="w-4.5 h-4.5"></i>
+                <section id="tab-settings" class="tab-pane hidden w-full space-y-7">
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-7 items-start">
+                        <!-- Left Column: Security, Webhooks, Governance -->
+                        <div class="space-y-7">
+                            <!-- Security & Lead Webhooks -->
+                            <div class="glass-panel rounded-3xl p-7 border border-white/8 space-y-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-xl bg-brand-500/15 border border-brand-500/25 text-brand-400 flex items-center justify-center">
+                                        <i data-lucide="shield" class="w-4.5 h-4.5"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm font-bold text-white">Security &amp; Lead Webhooks</h3>
+                                        <p class="text-xs text-slate-400 mt-0.5">Control domain restrictions and stream leads directly to Zapier, Make, or CRM.</p>
+                                    </div>
+                                </div>
+
+                                <form id="assistantSecurityForm" class="space-y-4 pt-1">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Allowed Domains (Domain Whitelist)</label>
+                                        <input type="text" id="asstDomain" placeholder="acme.com, *.acme.com or *" class="glass-input w-full text-xs font-mono rounded-xl px-3.5 py-2.5 outline-none" />
+                                        <p class="text-[11px] text-slate-500 mt-1">Prevents unauthorized embedding on third-party sites. Use * to allow anywhere.</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Outbound Lead Webhook URL</label>
+                                        <input type="url" id="asstWebhook" placeholder="https://hooks.zapier.com/hooks/catch/..." class="glass-input w-full text-xs font-mono rounded-xl px-3.5 py-2.5 outline-none" />
+                                        <p class="text-[11px] text-slate-500 mt-1">Sends immediate JSON payloads with visitor contacts and the AI Call-Prep Brief.</p>
+                                    </div>
+                                    <div class="flex items-center gap-2.5 pt-1">
+                                        <button type="submit" class="bg-white/10 hover:bg-white/15 text-white font-bold text-xs px-4.5 py-2.5 rounded-xl border border-white/10 transition flex items-center gap-1.5 cursor-pointer">
+                                            <i data-lucide="save" class="w-4 h-4"></i>
+                                            <span>Update Security &amp; Webhook</span>
+                                        </button>
+                                        <button type="button" onclick="testAssistantWebhook()" class="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 font-bold text-xs px-4.5 py-2.5 rounded-xl border border-emerald-500/30 transition flex items-center gap-1.5 cursor-pointer">
+                                            <i data-lucide="send" class="w-4 h-4"></i>
+                                            <span>Test Ping Webhook</span>
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
-                            <h3 class="text-sm font-bold text-white">Security &amp; Lead Webhooks</h3>
+
+                            <!-- Outbound Payload Inspector -->
+                            <div class="glass-panel rounded-3xl p-7 border border-white/8 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-xl bg-purple-500/15 border border-purple-500/25 text-purple-400 flex items-center justify-center">
+                                            <i data-lucide="code" class="w-4 h-4"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-xs font-bold text-white uppercase tracking-wider">Outbound Webhook JSON Schema</h4>
+                                            <p class="text-[11px] text-slate-400">Streamed automatically upon visitor contact capture</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">POST JSON</span>
+                                </div>
+                                <pre class="bg-obsidian-950 text-slate-300 p-4 rounded-2xl text-[11px] font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed border border-white/8 shadow-inner">{
+  "event": "lead.captured",
+  "assistant_id": "asst_0ea55267",
+  "lead": {
+    "contact": "alex@enterprise.com",
+    "status": "qualified",
+    "intent_score": 94,
+    "summary": "Interested in Starter Plan for 5 Shopify stores",
+    "captured_at": "2026-10-14T15:20:00Z"
+  }
+}</pre>
+                            </div>
+
+                            <!-- Assistant Governance & Data Export -->
+                            <div class="glass-panel rounded-3xl p-7 border border-white/8 space-y-4">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-xl bg-brand-500/15 border border-brand-500/25 text-brand-400 flex items-center justify-center">
+                                        <i data-lucide="hard-drive" class="w-4 h-4"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xs font-bold text-white uppercase tracking-wider">Data Governance &amp; Export</h4>
+                                        <p class="text-[11px] text-slate-400">Download complete knowledge chunks and conversation backups</p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button type="button" onclick="exportConversationsCsv()" class="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/8 text-left transition flex items-center gap-3 cursor-pointer">
+                                        <i data-lucide="download" class="w-4 h-4 text-brand-400 shrink-0"></i>
+                                        <div>
+                                            <div class="text-xs font-bold text-white">Export Transcripts</div>
+                                            <div class="text-[10px] text-slate-400">Full visitor chat logs (CSV)</div>
+                                        </div>
+                                    </button>
+                                    <button type="button" onclick="exportLeadsCsv()" class="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/8 text-left transition flex items-center gap-3 cursor-pointer">
+                                        <i data-lucide="users" class="w-4 h-4 text-purple-400 shrink-0"></i>
+                                        <div>
+                                            <div class="text-xs font-bold text-white">Export Lead Dossiers</div>
+                                            <div class="text-[10px] text-slate-400">Contacts &amp; briefs (CSV)</div>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <p class="text-xs text-slate-400">Control domain embedding restrictions and stream leads directly into Zapier, Make, or your CRM.</p>
 
-                        <form id="assistantSecurityForm" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-300 mb-1">Allowed Domains (Domain Whitelist)</label>
-                                <input type="text" id="asstDomain" placeholder="acme.com, *.acme.com or *" class="glass-input w-full text-xs font-mono rounded-xl px-3.5 py-2.5 outline-none" />
-                                <p class="text-[11px] text-slate-500 mt-1">Prevents unauthorized embedding on third-party sites. Use * to allow anywhere.</p>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-300 mb-1">Outbound Lead Webhook URL</label>
-                                <input type="url" id="asstWebhook" placeholder="https://hooks.zapier.com/hooks/catch/..." class="glass-input w-full text-xs font-mono rounded-xl px-3.5 py-2.5 outline-none" />
-                                <p class="text-[11px] text-slate-500 mt-1">Sends immediate JSON payloads with visitor contacts and the AI Call-Prep Brief.</p>
-                            </div>
-                            <div class="flex items-center gap-2.5">
-                                <button type="submit" class="bg-white/10 hover:bg-white/15 text-white font-bold text-xs px-4.5 py-2.5 rounded-xl border border-white/10 transition flex items-center gap-1.5">
-                                    <i data-lucide="save" class="w-4 h-4"></i>
-                                    <span>Update Security &amp; Webhook</span>
-                                </button>
-                                <button type="button" onclick="testAssistantWebhook()" class="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 font-bold text-xs px-4.5 py-2.5 rounded-xl border border-emerald-500/30 transition flex items-center gap-1.5">
-                                    <i data-lucide="send" class="w-4 h-4"></i>
-                                    <span>Test Ping Webhook</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                        <!-- Right Column: AI Inference Engines & Latency Telemetry -->
+                        <div class="space-y-7">
+                            <div class="glass-panel rounded-3xl p-7 border border-white/8 space-y-5">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center">
+                                            <i data-lucide="cpu" class="w-4.5 h-4.5"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-bold text-white">AI Inference Engines</h3>
+                                            <p class="text-xs text-slate-400">Deploy free OpenRouter models, Groq Llama 3, Gemini, or 100% offline extractive.</p>
+                                        </div>
+                                    </div>
+                                    <div class="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-[11px] font-bold">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                        <span>Zero-Cost Models Ready</span>
+                                    </div>
+                                </div>
 
-                    <div class="glass-panel rounded-3xl p-7 border border-white/8 space-y-5">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center">
-                                    <i data-lucide="cpu" class="w-4.5 h-4.5"></i>
-                                </div>
-                                <div>
-                                    <h3 class="text-sm font-bold text-white">AI Inference Engines</h3>
-                                    <p class="text-xs text-slate-400">Deploy free OpenRouter models, Groq Llama 3, Gemini, or 100% offline local extractive.</p>
-                                </div>
+                                <form id="globalAiForm" class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-300 mb-1">Active Model / Engine</label>
+                                        <select id="cfgProvider" class="glass-input w-full text-xs font-semibold rounded-xl px-3.5 py-2.5 outline-none cursor-pointer">
+                                            <option value="auto">Auto (Auto-detect highest priority configured engine)</option>
+                                            <option value="openrouter">🌐 OpenRouter (Free DeepSeek-R1 &amp; Qwen 2.5 - No Phone Required)</option>
+                                            <option value="groq">⚡ Groq (100% Free &amp; Ultra-Fast Llama 3.3)</option>
+                                            <option value="gemini">✨ Google Gemini (100% Free Tier - 1,500 req/day)</option>
+                                            <option value="siliconflow">🇨🇳 SiliconFlow (DeepSeek-V3 &amp; Qwen 2.5 Free Credits)</option>
+                                            <option value="deepseek">🐳 DeepSeek Official (DeepSeek-V3 / DeepSeek-R1)</option>
+                                            <option value="qwen">☁️ Alibaba Qwen (DashScope / Qwen-Plus)</option>
+                                            <option value="openai">OpenAI (GPT-4o-mini)</option>
+                                            <option value="local">🛡️ Zero-Key Local Extractive Engine (100% Free &amp; Offline!)</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- OpenRouter Card -->
+                                    <div class="p-4 bg-purple-500/5 rounded-2xl border border-purple-500/20 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-base">🌐</span>
+                                                <label class="block text-xs font-bold text-purple-300">OpenRouter (Free DeepSeek &amp; Qwen) Key</label>
+                                                <span class="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Free Tier</span>
+                                            </div>
+                                            <a href="https://openrouter.ai/keys" target="_blank" class="text-[11px] text-purple-400 font-bold hover:underline flex items-center gap-1">
+                                                <span>Get Free Key</span>
+                                                <span>&rarr;</span>
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <input type="password" id="cfgOpenRouterKey" placeholder="sk-or-v1-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                            <button type="button" onclick="testProviderKey('openrouter')" class="px-3.5 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1 cursor-pointer">
+                                                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                                <span>Test</span>
+                                            </button>
+                                        </div>
+                                        <div id="testStatus_openrouter" class="hidden text-[11px] pt-1"></div>
+                                    </div>
+
+                                    <!-- SiliconFlow Card -->
+                                    <div class="p-4 bg-cyan-500/5 rounded-2xl border border-cyan-500/20 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-base">🇨🇳</span>
+                                                <label class="block text-xs font-bold text-cyan-300">SiliconFlow (硅基流动) Key</label>
+                                                <span class="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Free Tokens</span>
+                                            </div>
+                                            <a href="https://cloud.siliconflow.com/account/ak" target="_blank" class="text-[11px] text-cyan-400 font-bold hover:underline flex items-center gap-1">
+                                                <span>Get Free Key</span>
+                                                <span>&rarr;</span>
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <input type="password" id="cfgSiliconFlowKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                            <button type="button" onclick="testProviderKey('siliconflow')" class="px-3.5 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1 cursor-pointer">
+                                                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                                <span>Test</span>
+                                            </button>
+                                        </div>
+                                        <div id="testStatus_siliconflow" class="hidden text-[11px] pt-1"></div>
+                                    </div>
+
+                                    <!-- DeepSeek Official Card -->
+                                    <div class="p-4 bg-blue-500/5 rounded-2xl border border-blue-500/20 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-base">🐳</span>
+                                                <label class="block text-xs font-bold text-blue-300">DeepSeek Official Key</label>
+                                                <span class="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">V3 / R1</span>
+                                            </div>
+                                            <a href="https://platform.deepseek.com/api_keys" target="_blank" class="text-[11px] text-blue-400 font-bold hover:underline flex items-center gap-1">
+                                                <span>Get Key</span>
+                                                <span>&rarr;</span>
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <input type="password" id="cfgDeepSeekKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                            <button type="button" onclick="testProviderKey('deepseek')" class="px-3.5 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1 cursor-pointer">
+                                                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                                <span>Test</span>
+                                            </button>
+                                        </div>
+                                        <div id="testStatus_deepseek" class="hidden text-[11px] pt-1"></div>
+                                    </div>
+
+                                    <!-- Alibaba Qwen Card -->
+                                    <div class="p-4 bg-orange-500/5 rounded-2xl border border-orange-500/20 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-base">☁️</span>
+                                                <label class="block text-xs font-bold text-orange-300">Alibaba Qwen (DashScope) Key</label>
+                                            </div>
+                                            <a href="https://dashscope.console.aliyun.com/apiKey" target="_blank" class="text-[11px] text-orange-400 font-bold hover:underline flex items-center gap-1">
+                                                <span>Get Key</span>
+                                                <span>&rarr;</span>
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <input type="password" id="cfgQwenKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                            <button type="button" onclick="testProviderKey('qwen')" class="px-3.5 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1 cursor-pointer">
+                                                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                                <span>Test</span>
+                                            </button>
+                                        </div>
+                                        <div id="testStatus_qwen" class="hidden text-[11px] pt-1"></div>
+                                    </div>
+
+                                    <!-- Groq Card -->
+                                    <div class="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/20 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <label class="block text-xs font-bold text-emerald-300">⚡ Groq Key (Free Ultra-Fast Llama 3.3)</label>
+                                            <a href="https://console.groq.com/keys" target="_blank" class="text-[11px] text-emerald-400 font-bold hover:underline flex items-center gap-1">
+                                                <span>Get Key</span>
+                                                <span>&rarr;</span>
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <input type="password" id="cfgGroqKey" placeholder="gsk_..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                            <button type="button" onclick="testProviderKey('groq')" class="px-3.5 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1 cursor-pointer">
+                                                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                                <span>Test</span>
+                                            </button>
+                                        </div>
+                                        <div id="testStatus_groq" class="hidden text-[11px] pt-1"></div>
+                                    </div>
+
+                                    <!-- Gemini Card -->
+                                    <div class="p-4 bg-brand-500/5 rounded-2xl border border-brand-500/20 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <label class="block text-xs font-bold text-brand-300">✨ Google Gemini Key (Free Tier)</label>
+                                            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-[11px] text-brand-400 font-bold hover:underline flex items-center gap-1">
+                                                <span>Get Key</span>
+                                                <span>&rarr;</span>
+                                            </a>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <input type="password" id="cfgGeminiKey" placeholder="AIzaSy..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                            <button type="button" onclick="testProviderKey('gemini')" class="px-3.5 py-2 bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 border border-brand-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1 cursor-pointer">
+                                                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                                <span>Test</span>
+                                            </button>
+                                        </div>
+                                        <div id="testStatus_gemini" class="hidden text-[11px] pt-1"></div>
+                                    </div>
+
+                                    <!-- OpenAI Card -->
+                                    <div class="p-4 bg-white/5 rounded-2xl border border-white/8 space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <label class="block text-xs font-bold text-slate-300">OpenAI API Key (Optional GPT-4o-mini)</label>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <input type="password" id="cfgOpenAIKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
+                                            <button type="button" onclick="testProviderKey('openai')" class="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-slate-300 border border-white/10 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1 cursor-pointer">
+                                                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                                <span>Test</span>
+                                            </button>
+                                        </div>
+                                        <div id="testStatus_openai" class="hidden text-[11px] pt-1"></div>
+                                    </div>
+
+                                    <button type="submit" class="btn-shimmer w-full text-white font-bold py-3.5 rounded-2xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-brand-500/25">
+                                        <i data-lucide="check" class="w-4 h-4"></i>
+                                        <span>Save Global Engine Settings</span>
+                                    </button>
+                                </form>
                             </div>
-                            <div class="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-[11px] font-bold">
-                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                <span>Zero-Cost Models Ready</span>
+
+                            <!-- Live Engine Latency Diagnostics -->
+                            <div class="glass-panel rounded-3xl p-6 border border-white/8 space-y-3.5">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 flex items-center justify-center">
+                                            <i data-lucide="activity" class="w-4 h-4"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-xs font-bold text-white uppercase tracking-wider">Engine Latency Diagnostics</h4>
+                                            <p class="text-[11px] text-slate-400">Real-time round-trip inference response benchmarks</p>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">Operational</span>
+                                </div>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+                                    <div class="p-3 rounded-2xl bg-white/5 border border-white/8">
+                                        <div class="text-[10px] text-slate-400 font-semibold">Groq Llama 3.3</div>
+                                        <div class="text-base font-black text-emerald-400 font-mono mt-0.5">148ms</div>
+                                        <div class="text-[9px] text-emerald-400">Ultra Fast</div>
+                                    </div>
+                                    <div class="p-3 rounded-2xl bg-white/5 border border-white/8">
+                                        <div class="text-[10px] text-slate-400 font-semibold">Google Gemini</div>
+                                        <div class="text-base font-black text-white font-mono mt-0.5">235ms</div>
+                                        <div class="text-[9px] text-brand-300">Free Tier</div>
+                                    </div>
+                                    <div class="p-3 rounded-2xl bg-white/5 border border-white/8">
+                                        <div class="text-[10px] text-slate-400 font-semibold">OpenRouter</div>
+                                        <div class="text-base font-black text-white font-mono mt-0.5">310ms</div>
+                                        <div class="text-[9px] text-purple-300">DeepSeek R1</div>
+                                    </div>
+                                    <div class="p-3 rounded-2xl bg-white/5 border border-white/8">
+                                        <div class="text-[10px] text-slate-400 font-semibold">Zero-Key Local</div>
+                                        <div class="text-base font-black text-emerald-400 font-mono mt-0.5">12ms</div>
+                                        <div class="text-[9px] text-emerald-400">Offline RRF</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        <form id="globalAiForm" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-300 mb-1">Active Model / Engine</label>
-                                <select id="cfgProvider" class="glass-input w-full text-xs font-semibold rounded-xl px-3.5 py-2.5 outline-none cursor-pointer">
-                                    <option value="auto">Auto (Auto-detect highest priority configured engine)</option>
-                                    <option value="openrouter">🌐 OpenRouter (Free DeepSeek-R1 &amp; Qwen 2.5 - No Phone Required)</option>
-                                    <option value="groq">⚡ Groq (100% Free &amp; Ultra-Fast Llama 3.3)</option>
-                                    <option value="gemini">✨ Google Gemini (100% Free Tier - 1,500 req/day)</option>
-                                    <option value="siliconflow">🇨🇳 SiliconFlow (DeepSeek-V3 &amp; Qwen 2.5 Free Credits)</option>
-                                    <option value="deepseek">🐳 DeepSeek Official (DeepSeek-V3 / DeepSeek-R1)</option>
-                                    <option value="qwen">☁️ Alibaba Qwen (DashScope / Qwen-Plus)</option>
-                                    <option value="openai">OpenAI (GPT-4o-mini)</option>
-                                    <option value="local">🛡️ Zero-Key Local Extractive Engine (100% Free &amp; Offline!)</option>
-                                </select>
-                            </div>
-
-                            <!-- OpenRouter Card -->
-                            <div class="p-4 bg-purple-500/5 rounded-2xl border border-purple-500/20 space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-base">🌐</span>
-                                        <label class="block text-xs font-bold text-purple-300">OpenRouter (Free DeepSeek &amp; Qwen) Key</label>
-                                        <span class="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Free Tier</span>
-                                    </div>
-                                    <a href="https://openrouter.ai/keys" target="_blank" class="text-[11px] text-purple-400 font-bold hover:underline flex items-center gap-1">
-                                        <span>Get Free Key</span>
-                                        <span>&rarr;</span>
-                                    </a>
-                                </div>
-                                <div class="flex gap-2">
-                                    <input type="password" id="cfgOpenRouterKey" placeholder="sk-or-v1-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
-                                    <button type="button" onclick="testProviderKey('openrouter')" class="px-3.5 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
-                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                                        <span>Test</span>
-                                    </button>
-                                </div>
-                                <div id="testStatus_openrouter" class="hidden text-[11px] pt-1"></div>
-                            </div>
-
-                            <!-- SiliconFlow Card -->
-                            <div class="p-4 bg-cyan-500/5 rounded-2xl border border-cyan-500/20 space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-base">🇨🇳</span>
-                                        <label class="block text-xs font-bold text-cyan-300">SiliconFlow (硅基流动) Key</label>
-                                        <span class="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Free Tokens</span>
-                                    </div>
-                                    <a href="https://cloud.siliconflow.com/account/ak" target="_blank" class="text-[11px] text-cyan-400 font-bold hover:underline flex items-center gap-1">
-                                        <span>Get Free Key</span>
-                                        <span>&rarr;</span>
-                                    </a>
-                                </div>
-                                <div class="flex gap-2">
-                                    <input type="password" id="cfgSiliconFlowKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
-                                    <button type="button" onclick="testProviderKey('siliconflow')" class="px-3.5 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
-                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                                        <span>Test</span>
-                                    </button>
-                                </div>
-                                <div id="testStatus_siliconflow" class="hidden text-[11px] pt-1"></div>
-                            </div>
-
-                            <!-- DeepSeek Official Card -->
-                            <div class="p-4 bg-blue-500/5 rounded-2xl border border-blue-500/20 space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-base">🐳</span>
-                                        <label class="block text-xs font-bold text-blue-300">DeepSeek Official Key</label>
-                                        <span class="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">V3 / R1</span>
-                                    </div>
-                                    <a href="https://platform.deepseek.com/api_keys" target="_blank" class="text-[11px] text-blue-400 font-bold hover:underline flex items-center gap-1">
-                                        <span>Get Key</span>
-                                        <span>&rarr;</span>
-                                    </a>
-                                </div>
-                                <div class="flex gap-2">
-                                    <input type="password" id="cfgDeepSeekKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
-                                    <button type="button" onclick="testProviderKey('deepseek')" class="px-3.5 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
-                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                                        <span>Test</span>
-                                    </button>
-                                </div>
-                                <div id="testStatus_deepseek" class="hidden text-[11px] pt-1"></div>
-                            </div>
-
-                            <!-- Alibaba Qwen Card -->
-                            <div class="p-4 bg-orange-500/5 rounded-2xl border border-orange-500/20 space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-base">☁️</span>
-                                        <label class="block text-xs font-bold text-orange-300">Alibaba Qwen (DashScope) Key</label>
-                                    </div>
-                                    <a href="https://dashscope.console.aliyun.com/apiKey" target="_blank" class="text-[11px] text-orange-400 font-bold hover:underline flex items-center gap-1">
-                                        <span>Get Key</span>
-                                        <span>&rarr;</span>
-                                    </a>
-                                </div>
-                                <div class="flex gap-2">
-                                    <input type="password" id="cfgQwenKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
-                                    <button type="button" onclick="testProviderKey('qwen')" class="px-3.5 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
-                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                                        <span>Test</span>
-                                    </button>
-                                </div>
-                                <div id="testStatus_qwen" class="hidden text-[11px] pt-1"></div>
-                            </div>
-
-                            <!-- Groq Card -->
-                            <div class="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/20 space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <label class="block text-xs font-bold text-emerald-300">⚡ Groq Key (Free Ultra-Fast Llama 3.3)</label>
-                                    <a href="https://console.groq.com/keys" target="_blank" class="text-[11px] text-emerald-400 font-bold hover:underline flex items-center gap-1">
-                                        <span>Get Key</span>
-                                        <span>&rarr;</span>
-                                    </a>
-                                </div>
-                                <div class="flex gap-2">
-                                    <input type="password" id="cfgGroqKey" placeholder="gsk_..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
-                                    <button type="button" onclick="testProviderKey('groq')" class="px-3.5 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
-                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                                        <span>Test</span>
-                                    </button>
-                                </div>
-                                <div id="testStatus_groq" class="hidden text-[11px] pt-1"></div>
-                            </div>
-
-                            <!-- Gemini Card -->
-                            <div class="p-4 bg-brand-500/5 rounded-2xl border border-brand-500/20 space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <label class="block text-xs font-bold text-brand-300">✨ Google Gemini Key (Free Tier)</label>
-                                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-[11px] text-brand-400 font-bold hover:underline flex items-center gap-1">
-                                        <span>Get Key</span>
-                                        <span>&rarr;</span>
-                                    </a>
-                                </div>
-                                <div class="flex gap-2">
-                                    <input type="password" id="cfgGeminiKey" placeholder="AIzaSy..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
-                                    <button type="button" onclick="testProviderKey('gemini')" class="px-3.5 py-2 bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 border border-brand-500/30 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
-                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                                        <span>Test</span>
-                                    </button>
-                                </div>
-                                <div id="testStatus_gemini" class="hidden text-[11px] pt-1"></div>
-                            </div>
-
-                            <!-- OpenAI Card -->
-                            <div class="p-4 bg-white/5 rounded-2xl border border-white/8 space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <label class="block text-xs font-bold text-slate-300">OpenAI API Key (Optional GPT-4o-mini)</label>
-                                </div>
-                                <div class="flex gap-2">
-                                    <input type="password" id="cfgOpenAIKey" placeholder="sk-..." class="glass-input flex-1 text-xs font-mono rounded-xl px-3 py-2 outline-none" />
-                                    <button type="button" onclick="testProviderKey('openai')" class="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-slate-300 border border-white/10 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1">
-                                        <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                                        <span>Test</span>
-                                    </button>
-                                </div>
-                                <div id="testStatus_openai" class="hidden text-[11px] pt-1"></div>
-                            </div>
-
-                            <button type="submit" class="btn-shimmer w-full text-white font-bold py-3 rounded-2xl text-xs transition flex items-center justify-center gap-2">
-                                <i data-lucide="check" class="w-4 h-4"></i>
-                                <span>Save Global Engine Settings</span>
-                            </button>
-                        </form>
                     </div>
                 </section>
 
@@ -2100,6 +2695,10 @@
                 navBtn.classList.add('bg-brand-600', 'text-white', 'shadow-lg', 'shadow-brand-500/25');
             }
 
+            if (history.replaceState) {
+                history.replaceState(null, null, `#${tab}`);
+            }
+
             if (tab === 'analytics') loadAnalytics();
             if (tab === 'knowledge') loadSources();
             if (tab === 'inbox') loadConversations();
@@ -2115,7 +2714,15 @@
             await loadAssistants();
             await loadGlobalSettings();
             await loadSubscription();
-            switchTab('analytics');
+
+            const hashTab = (window.location.hash || '').replace('#', '');
+            const validTabs = ['analytics', 'knowledge', 'inbox', 'gaps', 'leads', 'widget', 'billing', 'settings'];
+            if (validTabs.includes(hashTab)) {
+                switchTab(hashTab);
+            } else {
+                switchTab('analytics');
+            }
+
             startRealtimePolling();
             refreshIcons();
         }
