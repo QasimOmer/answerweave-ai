@@ -240,6 +240,7 @@ def search_relevant_chunks(
     dense_ranks = {orig_idx: rank + 1 for rank, orig_idx in enumerate(dense_indexed)}
 
     # 3. Fuse via Reciprocal Rank Fusion (RRF) with constant k=60
+    has_dense_client = get_genai_client() is not None
     scored_chunks = []
     for i, c in enumerate(valid_chunks):
         r_bm25 = bm25_ranks[i]
@@ -293,8 +294,7 @@ def search_relevant_chunks(
                     effective_sim += 0.15
 
         # Grounding condition: require at least 1 keyword hit if using fallback pseudo-embedding
-        client = get_genai_client()
-        if not client and meaningful_query_words and keyword_hits == 0 and bm25_val == 0.0 and not (is_catalog_query and any(p in c["content"] for p in ["• Price:", "Price:", "AED", "$"])):
+        if not has_dense_client and meaningful_query_words and keyword_hits == 0 and bm25_val == 0.0 and not (is_catalog_query and any(p in c["content"] for p in ["• Price:", "Price:", "AED", "$"])):
             continue
 
         if effective_sim >= min_similarity:
@@ -311,6 +311,20 @@ def search_relevant_chunks(
             })
             
     scored_chunks.sort(key=lambda x: x["similarity"], reverse=True)
-    return scored_chunks[:effective_top_k]
+
+    # Crawls often store the same boilerplate (service lists, footers, repeated
+    # sections) under many URLs. Keep only the best-scoring copy so duplicates
+    # don't crowd distinct, relevant passages out of the top-k.
+    unique_chunks = []
+    seen_fingerprints = set()
+    for sc in scored_chunks:
+        fingerprint = re.sub(r"\s+", " ", sc["content"].lower()).strip()[:300]
+        if fingerprint in seen_fingerprints:
+            continue
+        seen_fingerprints.add(fingerprint)
+        unique_chunks.append(sc)
+        if len(unique_chunks) >= effective_top_k:
+            break
+    return unique_chunks
 
 

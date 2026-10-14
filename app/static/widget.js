@@ -1805,7 +1805,7 @@
         // WhatsApp Direct Quick-Connect in Header
         const waHeaderBtn = $('wf-whatsapp-header-btn');
         if (waHeaderBtn) {
-            const waNum = botConfig.whatsapp_number || (botConfig.name && botConfig.name.toLowerCase().includes('ideal homes') ? '+971505594888' : '');
+            const waNum = botConfig.whatsapp_number || '';
             if (waNum) {
                 const clean = waNum.replace(/[^0-9]/g, '');
                 waHeaderBtn.style.display = 'inline-flex';
