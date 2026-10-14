@@ -2322,7 +2322,8 @@
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-Host-Domain': currentHost
+                    'X-Host-Domain': currentHost,
+                    'X-AW-Widget': '2'
                 },
                 body: JSON.stringify({
                     assistant_id: ASSISTANT_ID,
@@ -2413,7 +2414,8 @@
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'X-Host-Domain': currentHost
+                        'X-Host-Domain': currentHost,
+                        'X-AW-Widget': '2'
                     },
                     body: JSON.stringify({
                         assistant_id: ASSISTANT_ID,

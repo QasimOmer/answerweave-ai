@@ -800,7 +800,14 @@ def api_takeover_conversation(conv_id: str, req: TakeoverRequest):
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found.")
     if conv.get("status") != "human":
-        add_message(conv_id, "system", f"{operator} joined the chat", assistant_id=conv.get("assistant_id") or "asst_default")
+        asst = get_assistant(conv.get("assistant_id") or "") or {}
+        org = (asst.get("name") or "").strip()
+        from_org = f" from {org}" if org else ""
+        add_message(
+            conv_id, "system",
+            f"You're now chatting with {operator}{from_org} — a real person, not the AI assistant.",
+            assistant_id=conv.get("assistant_id") or "asst_default",
+        )
     set_conversation_status(conv_id, status="human", operator_name=operator)
     return {
         "status": "success",
@@ -816,7 +823,7 @@ def api_release_conversation(conv_id: str):
     conv = get_conversation(conv_id)
     if conv and conv.get("status") == "human":
         name = conv.get("operator_name") or "The operator"
-        add_message(conv_id, "system", f"{name} left the chat. The assistant will answer from here.", assistant_id=conv.get("assistant_id") or "asst_default")
+        add_message(conv_id, "system", f"{name} has left the chat. You're back with the AI assistant.", assistant_id=conv.get("assistant_id") or "asst_default")
     set_conversation_status(conv_id, status="bot", operator_name="")
     return {
         "status": "success",
@@ -925,6 +932,28 @@ def api_dismiss_gap(asst_id: str, gap_id: int):
     return {"status": "success", "message": "Knowledge gap dismissed."}
 
 # ----------------- Chat Endpoint -----------------
+def build_operator_handoff_reply(conv_id: str, op_name: str, request: Request) -> str:
+    """Reply for a visitor message while a person is handling the chat.
+
+    Current widgets (which send `X-AW-Widget: 2`) receive operator messages live,
+    so they get no auto-reply. Older widget builds that browsers may still have
+    cached can't receive live messages, so we tell them who they're talking to and
+    include the operator's replies since the visitor's previous message.
+    """
+    if request.headers.get("x-aw-widget") == "2":
+        return ""
+    history = get_conversation_history(conv_id, limit=60)
+    user_idxs = [i for i, m in enumerate(history) if m.get("role") == "user"]
+    since = user_idxs[-2] if len(user_idxs) >= 2 else -1
+    recent_ops = [m.get("content", "") for m in history[since + 1:] if m.get("role") == "operator"]
+    text = f"You're chatting with {op_name}, a real person from our team."
+    if recent_ops:
+        text += "\n\n" + "\n\n".join(f"**{op_name}:** {c}" for c in recent_ops[-3:])
+    else:
+        text += f" {op_name} will reply here in a moment."
+    return text
+
+
 @app.post("/api/chat")
 def api_chat(req: ChatRequest, request: Request):
     check_rate_limit(request)
@@ -943,11 +972,11 @@ def api_chat(req: ChatRequest, request: Request):
     if conv and conv.get("status") == "human":
         add_message(conv_id, "user", req.message, assistant_id=asst_id)
         op_name = conv.get("operator_name") or "Support Specialist"
-        # A person is handling this chat: don't auto-reply, the operator answers live.
+        # A person is handling this chat: no AI reply (see build_operator_handoff_reply).
         return {
             "conversation_id": conv_id,
             "assistant_id": asst_id,
-            "answer": "",
+            "answer": build_operator_handoff_reply(conv_id, op_name, request),
             "sources": [],
             "lead_prompted": False,
             "operator_active": True,
@@ -1000,10 +1029,14 @@ def api_chat_stream(req: ChatRequest, request: Request):
     if conv and conv.get("status") == "human":
         add_message(conv_id, "user", req.message, assistant_id=asst_id)
         op_name = conv.get("operator_name") or "Support Specialist"
-        # A person is handling this chat: no auto-reply, just tell the widget who's on.
+        # A person is handling this chat: no AI reply (see build_operator_handoff_reply).
+        handoff_reply = build_operator_handoff_reply(conv_id, op_name, request)
+
         def operator_stream():
             yield f"data: {json.dumps({'type': 'start', 'conversation_id': conv_id, 'assistant_id': asst_id, 'operator_active': True})}\n\n"
-            yield f"data: {json.dumps({'type': 'done', 'answer': '', 'sources': [], 'lead_prompted': False, 'conversation_id': conv_id, 'operator_active': True, 'operator_name': op_name})}\n\n"
+            if handoff_reply:
+                yield f"data: {json.dumps({'type': 'token', 'token': handoff_reply})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'answer': handoff_reply, 'sources': [], 'lead_prompted': False, 'conversation_id': conv_id, 'operator_active': True, 'operator_name': op_name})}\n\n"
 
         return StreamingResponse(
             operator_stream(),
