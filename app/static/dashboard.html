@@ -3444,18 +3444,41 @@
                 if (!messages || messages.length === 0) {
                     container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">No messages recorded in this session.</div>`;
                 } else {
+                    // Keep the operator's scroll position on background refreshes unless
+                    // they were already at the bottom or new messages arrived.
+                    const prevCount = Number(container.dataset.count || 0);
+                    const sameConv = container.dataset.conv === convId;
+                    const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+                    const opName = data.operator_name || 'Operator';
+
+                    // Operator's view: visitor on the left, your side (assistant + operator) on the right.
                     container.innerHTML = messages.map(m => {
-                        const isUser = m.role === 'user';
+                        const time = m.created_at ? `<span class="text-slate-600">· ${escapeHtml(formatConvTime(m.created_at))}</span>` : '';
+                        if (m.role === 'system') {
+                            return `<div class="flex justify-center"><span class="text-[12px] text-slate-400 bg-white/[0.04] border border-white/7 rounded-full px-3 py-1">${escapeHtml(m.content || '')}</span></div>`;
+                        }
+                        const isVisitor = m.role === 'user';
+                        const isOperator = m.role === 'operator';
+                        const label = isVisitor ? 'Visitor' : (isOperator ? `${escapeHtml(opName)} (you)` : 'Assistant');
+                        const bubble = isVisitor
+                            ? 'bg-white/[0.05] text-slate-100 border border-white/8 rounded-bl-md'
+                            : isOperator
+                                ? 'bg-emerald-500/15 text-emerald-50 border border-emerald-500/30 rounded-br-md'
+                                : 'bg-brand-600/15 text-slate-100 border border-brand-500/25 rounded-br-md';
                         return `
-                            <div class="flex flex-col ${isUser ? 'items-end' : 'items-start'} gap-1">
-                                <span class="text-[11.5px] text-slate-500">${isUser ? 'Visitor' : (m.role === 'operator' ? 'Operator' : 'Assistant')}</span>
-                                <div class="${isUser ? 'bg-brand-600 text-white' : 'bg-white/[0.04] text-slate-200 border border-white/8'} px-3.5 py-2.5 rounded-2xl ${isUser ? 'rounded-br-md' : 'rounded-bl-md'} max-w-[85%] text-[13px] leading-relaxed break-words">
+                            <div class="flex flex-col ${isVisitor ? 'items-start' : 'items-end'} gap-1">
+                                <span class="text-[11.5px] ${isOperator ? 'text-emerald-300' : 'text-slate-500'} flex items-center gap-1">${label} ${time}</span>
+                                <div class="${bubble} px-3.5 py-2.5 rounded-2xl max-w-[85%] text-[13px] leading-relaxed break-words">
                                     ${renderMarkdown(m.content || '')}
                                 </div>
                             </div>
                         `;
                     }).join('');
-                    container.scrollTop = container.scrollHeight;
+                    if (!sameConv || !isSilent || nearBottom || messages.length > prevCount) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                    container.dataset.count = String(messages.length);
+                    container.dataset.conv = convId;
                 }
                 refreshIcons();
 
@@ -3503,6 +3526,18 @@
             input.disabled = true;
 
             try {
+                // Take over first, so the assistant stops replying before the visitor
+                // sees the operator's message (takeover is a no-op if already taken over).
+                const btn = document.getElementById('btnToggleTakeover');
+                if (!btn || btn.getAttribute('data-status') !== 'human') {
+                    const t = await fetch(`/api/conversations/${selectedConversationId}/takeover`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ operator_name: operatorName })
+                    });
+                    if (!t.ok) throw new Error("Takeover status " + t.status);
+                }
+
                 const res = await fetch(`/api/conversations/${selectedConversationId}/operator-message`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3513,15 +3548,9 @@
                     })
                 });
                 if (!res.ok) throw new Error("Status " + res.status);
-                
-                await fetch(`/api/conversations/${selectedConversationId}/takeover`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ operator_name: operatorName })
-                });
 
                 await selectConversation(selectedConversationId);
-                showToast("Operator message sent directly to visitor!");
+                loadConversations(true);
             } catch (err) {
                 console.error("Send operator reply error:", err);
                 showToast("Failed to send message.");
@@ -4561,6 +4590,7 @@
             const initialDisplay = document.getElementById('adminInitial');
 
             if (user && (user.name || user.email)) {
+                window.currentUser = user;
                 if (emailDisplay) emailDisplay.innerText = user.name || user.email;
                 if (initialDisplay) initialDisplay.innerText = (user.name || user.email)[0].toUpperCase();
             } else {

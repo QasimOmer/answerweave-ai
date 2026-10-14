@@ -861,7 +861,9 @@ def generate_grounded_response(
     if conversation_history:
         recent = conversation_history[-4:]
         for msg in recent:
-            role = "User" if msg.get("role") == "user" else "Assistant"
+            if msg.get("role") == "system":
+                continue
+            role = "User" if msg.get("role") == "user" else ("Support agent" if msg.get("role") == "operator" else "Assistant")
             history_str += f"{role}: {msg.get('content', '')}\n"
 
     from app.catalog_intelligence import parse_user_query_intent

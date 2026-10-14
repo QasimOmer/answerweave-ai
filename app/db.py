@@ -1181,16 +1181,33 @@ def add_message(
     conn.commit()
     conn.close()
 
-def get_conversation_history(conversation_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+def get_conversation_history(conversation_id: str, limit: int = 10, after_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Returns the most recent `limit` messages in chronological order.
+
+    With `after_id`, returns only messages newer than that id (oldest first), which
+    lets the widget and inbox poll for just the new messages.
+    """
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT role, content, sources_json, lead_prompted, created_at
-        FROM messages
-        WHERE conversation_id = ?
-        ORDER BY id ASC
-        LIMIT ?
-    """, (conversation_id, limit))
+    if after_id is not None:
+        cursor.execute("""
+            SELECT id, role, content, sources_json, lead_prompted, created_at
+            FROM messages
+            WHERE conversation_id = ? AND id > ?
+            ORDER BY id ASC
+            LIMIT ?
+        """, (conversation_id, int(after_id), limit))
+    else:
+        cursor.execute("""
+            SELECT id, role, content, sources_json, lead_prompted, created_at FROM (
+                SELECT id, role, content, sources_json, lead_prompted, created_at
+                FROM messages
+                WHERE conversation_id = ?
+                ORDER BY id DESC
+                LIMIT ?
+            ) AS recent
+            ORDER BY id ASC
+        """, (conversation_id, limit))
     rows = cursor.fetchall()
     conn.close()
     
@@ -1200,6 +1217,7 @@ def get_conversation_history(conversation_id: str, limit: int = 10) -> List[Dict
         if hasattr(created_at, "isoformat"):
             created_at = created_at.isoformat()
         item = {
+            "id": r["id"],
             "role": r["role"],
             "content": r["content"],
             "lead_prompted": bool(r["lead_prompted"]),
@@ -1242,7 +1260,10 @@ def set_conversation_status(conversation_id: str, status: str = "bot", operator_
 
 def add_operator_message(conversation_id: str, content: str, operator_name: str = "Operator", assistant_id: str = "") -> Dict[str, Any]:
     """Adds a human operator message to the conversation and increments unread count."""
-    add_message(conversation_id, "assistant", content, assistant_id=assistant_id)
+    if not assistant_id:
+        conv = get_conversation(conversation_id)
+        assistant_id = (conv or {}).get("assistant_id") or "asst_default"
+    add_message(conversation_id, "operator", content, assistant_id=assistant_id)
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""

@@ -767,9 +767,9 @@ def api_list_conversations(asst_id: str):
     return list_conversations_with_metadata(assistant_id=asst_id)
 
 @app.get("/api/conversations/{conv_id}/transcript")
-def api_get_conversation_transcript(conv_id: str):
-    """Fetches full back-and-forth transcript for a specific conversation."""
-    history = get_conversation_history(conv_id, limit=50)
+def api_get_conversation_transcript(conv_id: str, after_id: Optional[int] = None):
+    """Fetches the transcript (latest 200 messages), or only messages after `after_id`."""
+    history = get_conversation_history(conv_id, limit=200, after_id=after_id)
     conv = get_conversation(conv_id)
     return {
         "conversation_id": conv_id,
@@ -796,6 +796,11 @@ def api_get_conversation_status(conv_id: str):
 def api_takeover_conversation(conv_id: str, req: TakeoverRequest):
     """Transfers a conversation from automated AI to a live human operator."""
     operator = req.operator_name or "Support Operator"
+    conv = get_conversation(conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found.")
+    if conv.get("status") != "human":
+        add_message(conv_id, "system", f"{operator} joined the chat", assistant_id=conv.get("assistant_id") or "asst_default")
     set_conversation_status(conv_id, status="human", operator_name=operator)
     return {
         "status": "success",
@@ -808,6 +813,10 @@ def api_takeover_conversation(conv_id: str, req: TakeoverRequest):
 @app.post("/api/conversations/{conv_id}/release")
 def api_release_conversation(conv_id: str):
     """Returns a conversation back to the automated AI assistant."""
+    conv = get_conversation(conv_id)
+    if conv and conv.get("status") == "human":
+        name = conv.get("operator_name") or "The operator"
+        add_message(conv_id, "system", f"{name} left the chat. The assistant will answer from here.", assistant_id=conv.get("assistant_id") or "asst_default")
     set_conversation_status(conv_id, status="bot", operator_name="")
     return {
         "status": "success",
@@ -934,11 +943,11 @@ def api_chat(req: ChatRequest, request: Request):
     if conv and conv.get("status") == "human":
         add_message(conv_id, "user", req.message, assistant_id=asst_id)
         op_name = conv.get("operator_name") or "Support Specialist"
-        notice = f"Your message was received by {op_name}. They are actively on the chat and will reply directly in a moment."
+        # A person is handling this chat: don't auto-reply, the operator answers live.
         return {
             "conversation_id": conv_id,
             "assistant_id": asst_id,
-            "answer": notice,
+            "answer": "",
             "sources": [],
             "lead_prompted": False,
             "operator_active": True,
@@ -991,16 +1000,10 @@ def api_chat_stream(req: ChatRequest, request: Request):
     if conv and conv.get("status") == "human":
         add_message(conv_id, "user", req.message, assistant_id=asst_id)
         op_name = conv.get("operator_name") or "Support Specialist"
-        notice = f"Your message was received by {op_name}. They are actively on the chat and will reply directly in a moment."
-        
+        # A person is handling this chat: no auto-reply, just tell the widget who's on.
         def operator_stream():
             yield f"data: {json.dumps({'type': 'start', 'conversation_id': conv_id, 'assistant_id': asst_id, 'operator_active': True})}\n\n"
-            tokens = re.split(r'(\s+)', notice)
-            for t in tokens:
-                if t:
-                    yield f"data: {json.dumps({'type': 'token', 'token': t})}\n\n"
-                    time.sleep(0.010)
-            yield f"data: {json.dumps({'type': 'done', 'answer': notice, 'sources': [], 'lead_prompted': False, 'conversation_id': conv_id, 'operator_active': True, 'operator_name': op_name})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'answer': '', 'sources': [], 'lead_prompted': False, 'conversation_id': conv_id, 'operator_active': True, 'operator_name': op_name})}\n\n"
 
         return StreamingResponse(
             operator_stream(),

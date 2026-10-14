@@ -1199,6 +1199,61 @@
         }
 
         /* ================= RESPONSIVE STYLES FOR ALL SCREEN SIZES ================= */
+        /* Live operator messages, system notes and unread badge */
+        .wf-bubble-operator {
+            border: 1px solid rgba(16, 185, 129, 0.35) !important;
+        }
+        .wf-operator-label {
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            font-size: 11.5px !important;
+            font-weight: 600 !important;
+            color: #059669 !important;
+            margin-bottom: 4px !important;
+        }
+        .wf-operator-dot {
+            width: 7px !important;
+            height: 7px !important;
+            border-radius: 50% !important;
+            background: #10b981 !important;
+            display: inline-block !important;
+        }
+        .wf-system-note {
+            display: block !important;
+            align-self: center !important;
+            width: fit-content !important;
+            max-width: 90% !important;
+            margin: 6px auto !important;
+            padding: 4px 12px !important;
+            border-radius: 999px !important;
+            background: var(--wf-surface, #f1f5f9) !important;
+            color: var(--wf-text-muted, #64748b) !important;
+            font-size: 11.5px !important;
+            text-align: center !important;
+        }
+        .wf-unread-badge {
+            position: absolute !important;
+            top: -4px !important;
+            right: -4px !important;
+            min-width: 20px !important;
+            height: 20px !important;
+            padding: 0 6px !important;
+            border-radius: 999px !important;
+            background: #ef4444 !important;
+            color: #ffffff !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            line-height: 20px !important;
+            text-align: center !important;
+            border: 2px solid #ffffff !important;
+            box-sizing: content-box !important;
+            pointer-events: none !important;
+            z-index: 2 !important;
+        }
+        .wf-position-left .wf-unread-badge { right: auto !important; left: 40px !important; }
+        .wf-is-open .wf-unread-badge { display: none !important; }
+
         /* Light brand colors: switch on-primary text to dark for readable contrast. */
         .wf-light-primary .wf-header,
         .wf-light-primary .wf-header *:not(.wf-avatar-box):not(.wf-avatar-box *),
@@ -1475,6 +1530,7 @@
                 </span>
                 <span id="wf-btn-label" style="display:none;"></span>
             </button>
+            <span class="wf-unread-badge" id="wf-unread-badge" style="display:none;"></span>
         </div>
     `;
     shadow.appendChild(root);
@@ -1582,6 +1638,7 @@
         botConfig = { ...botConfig, ...asst };
         applyConfig();
         mountWidget();
+        restoreConversation();
     })
     .catch(err => {
         console.warn(`[AnswerWeave] Widget blocked: ${err.message}`);
@@ -1891,53 +1948,142 @@
         });
     }
 
-    // Live Operator Polling
-    let knownMessageCount = 0;
-    async function checkOperatorMessages() {
-        if (!isOpen) return;
+    // ---------------------------------------------------------------------------
+    // Live conversation sync (operator replies, join/leave notes, history restore)
+    // ---------------------------------------------------------------------------
+    const LAST_ID_KEY = `wf_last_${ASSISTANT_ID}`;
+    const STARTED_KEY = `wf_started_${ASSISTANT_ID}`;
+    let lastMessageId = parseInt(sessionStorage.getItem(LAST_ID_KEY) || '0', 10) || 0;
+    let conversationStarted = sessionStorage.getItem(STARTED_KEY) === '1';
+    let unreadCount = 0;
+    let syncInFlight = false;
+
+    function setLastMessageId(id) {
+        if (id && id > lastMessageId) {
+            lastMessageId = id;
+            sessionStorage.setItem(LAST_ID_KEY, String(id));
+        }
+    }
+
+    function markConversationStarted() {
+        if (!conversationStarted) {
+            conversationStarted = true;
+            sessionStorage.setItem(STARTED_KEY, '1');
+        }
+    }
+
+    function updateUnreadBadge() {
+        const badge = $('wf-unread-badge');
+        if (!badge) return;
+        if (unreadCount > 0 && !isOpen) {
+            badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+            badge.style.display = 'block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
+    function applyLiveStatus(status, operatorName) {
+        const statusEl = $('wf-header-status');
+        if (!statusEl) return;
+        if (status === 'human') {
+            statusEl.innerText = `${operatorName || 'Support team'} · Live`;
+            statusEl.style.color = '#10b981';
+        } else if (statusEl.innerText.endsWith('· Live')) {
+            statusEl.innerText = botConfig.widget_subtitle || 'Online';
+            statusEl.style.color = '';
+        }
+    }
+
+    function appendOperatorMsg(text, operatorName, opts = {}) {
+        const bubble = document.createElement('div');
+        bubble.className = 'wf-bubble wf-bubble-bot wf-bubble-operator';
+        bubble.innerHTML = `
+            <div class="wf-operator-label"><span class="wf-operator-dot"></span>${escapeHtml(operatorName || 'Support team')}</div>
+            <div>${formatMessageText(text)}</div>
+        `;
+        bodyEl.appendChild(bubble);
+        bodyEl.scrollTop = bodyEl.scrollHeight;
+        if (!opts.silent) playChime();
+    }
+
+    function appendSystemNote(text) {
+        const note = document.createElement('div');
+        note.className = 'wf-system-note';
+        note.textContent = text;
+        bodyEl.appendChild(note);
+        bodyEl.scrollTop = bodyEl.scrollHeight;
+    }
+
+    async function fetchTranscript(afterId) {
+        const qs = afterId ? `?after_id=${encodeURIComponent(afterId)}` : '';
+        const res = await fetch(`${API_BASE}/api/conversations/${encodeURIComponent(conversationId)}/transcript${qs}`, {
+            headers: { 'X-Host-Domain': currentHost }
+        });
+        if (!res.ok) return null;
+        return res.json();
+    }
+
+    // Re-renders the conversation after a page navigation so nothing is lost.
+    async function restoreConversation() {
+        if (!conversationStarted) return;
         try {
-            const res = await fetch(`${API_BASE}/api/conversations/${conversationId}/transcript`, {
-                headers: { 'X-Host-Domain': currentHost }
-            });
-            if (!res.ok) return;
-            const data = await res.json();
+            const data = await fetchTranscript(0);
+            if (!data) return;
             const msgs = data.messages || [];
-
-            // Update operator live badge
-            const statusEl = $('wf-header-status');
-            if (data.status === 'human') {
-                if (statusEl) {
-                    statusEl.innerText = `${data.operator_name || 'Agent'} (Live)`;
-                    statusEl.style.color = '#10b981';
-                }
-            } else if (statusEl && statusEl.innerText.includes('(Live)')) {
-                statusEl.innerText = botConfig.widget_subtitle || 'Online';
-                statusEl.style.color = '';
+            if (msgs.length) {
+                const popSec = $('wf-popular-section');
+                if (popSec) popSec.style.display = 'none';
             }
-
-            // Sync new operator messages into the chat
-            if (knownMessageCount > 0 && msgs.length > knownMessageCount) {
-                const newMsgs = msgs.slice(knownMessageCount);
-                for (const m of newMsgs) {
-                    if (m.role === 'assistant') {
-                        const existing = Array.from(bodyEl.querySelectorAll('.wf-bubble-assistant'));
-                        const alreadyThere = existing.some(b => b.innerText.trim() === m.content.trim());
-                        if (!alreadyThere) {
-                            renderMessage('assistant', m.content, m.sources || []);
-                            playChime();
-                        }
-                    }
-                }
+            for (const m of msgs) {
+                if (m.role === 'user') appendMsg('user', m.content);
+                else if (m.role === 'assistant') appendMsg('bot', m.content, m.sources || [], { silent: true });
+                else if (m.role === 'operator') appendOperatorMsg(m.content, data.operator_name, { silent: true });
+                else if (m.role === 'system') appendSystemNote(m.content);
+                setLastMessageId(m.id);
             }
-            knownMessageCount = msgs.length;
+            applyLiveStatus(data.status, data.operator_name);
         } catch (e) {}
     }
 
-    setInterval(() => {
-        if (isOpen) {
-            checkOperatorMessages();
+    // Picks up messages the visitor didn't send themselves: operator replies and
+    // join/leave notes. The visitor's own messages and bot replies are already on screen.
+    async function syncConversation() {
+        if (!conversationStarted || syncInFlight) return;
+        syncInFlight = true;
+        try {
+            const data = await fetchTranscript(lastMessageId);
+            if (!data) return;
+            for (const m of (data.messages || [])) {
+                if (m.role === 'operator') {
+                    appendOperatorMsg(m.content, data.operator_name);
+                    if (!isOpen) {
+                        unreadCount += 1;
+                        const teaserText = $('wf-teaser-text');
+                        if (teaserBubble && teaserText) {
+                            teaserText.innerText = `${data.operator_name || 'Support'}: ${m.content.slice(0, 80)}${m.content.length > 80 ? '…' : ''}`;
+                            teaserBubble.style.display = 'block';
+                        }
+                    }
+                } else if (m.role === 'system') {
+                    appendSystemNote(m.content);
+                }
+                setLastMessageId(m.id);
+            }
+            applyLiveStatus(data.status, data.operator_name);
+            updateUnreadBadge();
+        } catch (e) {
+        } finally {
+            syncInFlight = false;
         }
-    }, 4000);
+    }
+
+    // Poll every 3s while the chat is open, every 12s while minimised.
+    let syncTick = 0;
+    setInterval(() => {
+        syncTick += 1;
+        if (isOpen || syncTick % 4 === 0) syncConversation();
+    }, 3000);
 
     function renderPopularCards() {
         if (!popularCardsEl) return;
@@ -1976,6 +2122,9 @@
         isOpen = !isOpen;
         const btnLabel = $('wf-btn-label');
         if (isOpen) {
+            unreadCount = 0;
+            updateUnreadBadge();
+            syncConversation();
             win.classList.add('wf-open');
             root.classList.add('wf-is-open');
             if (btnLabel) btnLabel.style.display = 'none';
@@ -2038,8 +2187,13 @@
     resetBtn.addEventListener('click', () => {
         conversationId = `wf_${ASSISTANT_ID}_${Math.random().toString(36).substring(2, 10)}`;
         sessionStorage.setItem(`wf_conv_${ASSISTANT_ID}`, conversationId);
-        
-        const userBubbles = bodyEl.querySelectorAll('.wf-bubble, .wf-lead-card');
+        lastMessageId = 0;
+        conversationStarted = false;
+        sessionStorage.removeItem(LAST_ID_KEY);
+        sessionStorage.removeItem(STARTED_KEY);
+        applyLiveStatus('bot');
+
+        const userBubbles = bodyEl.querySelectorAll('.wf-bubble, .wf-lead-card, .wf-system-note');
         userBubbles.forEach(b => b.remove());
         const popSec = $('wf-popular-section');
         if (popSec) popSec.style.display = 'block';
@@ -2144,6 +2298,7 @@
         if (popSec) popSec.style.display = 'none';
 
         appendMsg('user', query);
+        markConversationStarted();
 
         // Typing indicator
         const typingEl = document.createElement('div');
@@ -2214,9 +2369,18 @@
                 }
             }
 
+            // A person has taken over: there's no bot reply, the operator answers live.
+            if (finalData && finalData.operator_active && !accumulatedText.trim()) {
+                botBubble.remove();
+                applyLiveStatus('human', finalData.operator_name);
+                syncConversation();
+                return;
+            }
+
             contentDiv.innerHTML = formatMessageText(accumulatedText);
             attachCopyButton(botBubble, accumulatedText);
             playChime();
+            syncConversation();
 
             // Finalize with formatted citations & lead card
             if (finalData) {
@@ -2258,6 +2422,11 @@
                     })
                 });
                 const data = await res.json();
+                if (data.operator_active && !(data.answer || '').trim()) {
+                    applyLiveStatus('human', data.operator_name);
+                    syncConversation();
+                    return;
+                }
                 appendMsg('bot', data.answer, data.sources);
                 if (data.lead_prompted && botConfig.lead_capture_enabled) {
                     renderInChatLeadCard();
@@ -2316,7 +2485,7 @@
         return formatted || escaped;
     }
 
-    function appendMsg(role, text, sources = []) {
+    function appendMsg(role, text, sources = [], opts = {}) {
         const bubble = document.createElement('div');
         bubble.className = `wf-bubble ${role === 'user' ? 'wf-bubble-user' : 'wf-bubble-bot'}`;
 
@@ -2340,7 +2509,7 @@
         bubble.innerHTML = html;
         if (role !== 'user') {
             attachCopyButton(bubble, text);
-            playChime();
+            if (!opts.silent) playChime();
         }
         bodyEl.appendChild(bubble);
         bodyEl.scrollTop = bodyEl.scrollHeight;
