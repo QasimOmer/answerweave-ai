@@ -381,77 +381,51 @@
                         </div>
                     </div>
 
-                    <!-- Hero Feature Banner -->
-                    <div class="glass-panel-elevated rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden border border-brand-500/35 bg-gradient-to-r from-brand-950/60 via-obsidian-900 to-obsidian-950">
-                        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                            <div class="space-y-2.5">
-                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/15 border border-brand-500/25 text-xs font-semibold text-brand-300">
-                                    <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
-                                    AnswerWeave Commercial SaaS Architecture
-                                </div>
-                                <h2 class="font-display text-2xl sm:text-3xl font-black tracking-tight text-white" id="bannerAsstTitle">EcomAlign Assistant</h2>
-                                <p class="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-                                    Embed on any website with 1 line of code. Visitors ask questions, receive strictly grounded answers with citations, and high-intent visitors are automatically summarized into sales call briefs.
-                                </p>
+                    <!-- Compact Operational Action Bar -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+                        <div onclick="switchTab('inbox')" class="glass-panel p-3.5 rounded-2xl cursor-pointer hover:border-emerald-500/40 hover:bg-white/[0.04] transition flex items-center gap-3 group">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                                <i data-lucide="radio" class="w-4 h-4 animate-pulse"></i>
                             </div>
-                            <div class="flex flex-col sm:flex-row gap-3 shrink-0">
-                                <button onclick="switchTab('widget')" class="btn-shimmer text-white font-bold text-xs px-6 py-3.5 rounded-2xl shadow-xl shadow-brand-500/30 transition text-center flex items-center justify-center gap-2">
-                                    <i data-lucide="code" class="w-4 h-4"></i>
-                                    <span>Get Embed Script</span>
-                                </button>
-                                <button onclick="switchTab('knowledge')" class="bg-white/10 hover:bg-white/15 text-white font-semibold text-xs px-6 py-3.5 rounded-2xl transition text-center border border-white/10 flex items-center justify-center gap-2">
-                                    <i data-lucide="plus" class="w-4 h-4"></i>
-                                    <span>Upload Knowledge</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Action Launchpad Cards -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div onclick="switchTab('knowledge')" class="glass-panel p-4.5 rounded-2xl cursor-pointer hover:border-brand-500/40 transition flex items-center gap-3.5 group">
-                            <div class="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-                                <i data-lucide="globe" class="w-5 h-5"></i>
-                            </div>
-                            <div>
-                                <div class="text-xs font-bold text-white group-hover:text-brand-300 transition">Crawl Website</div>
-                                <div class="text-[11px] text-slate-400 mt-0.5">Ingest sitemaps or URLs</div>
+                            <div class="min-w-0">
+                                <div class="text-xs font-bold text-white group-hover:text-emerald-300 transition truncate">Live Takeover Desk</div>
+                                <div class="text-[10px] text-slate-400 truncate">Monitor &amp; chat live</div>
                             </div>
                         </div>
 
-                        <div onclick="switchTab('gaps')" class="glass-panel p-4.5 rounded-2xl cursor-pointer hover:border-amber-500/40 transition flex items-center gap-3.5 group">
-                            <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-                                <i data-lucide="help-circle" class="w-5 h-5"></i>
+                        <div onclick="switchTab('knowledge')" class="glass-panel p-3.5 rounded-2xl cursor-pointer hover:border-brand-500/40 hover:bg-white/[0.04] transition flex items-center gap-3 group">
+                            <div class="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                                <i data-lucide="upload-cloud" class="w-4 h-4"></i>
                             </div>
-                            <div>
-                                <div class="text-xs font-bold text-white group-hover:text-amber-300 transition">Teach AI Answers</div>
-                                <div class="text-[11px] text-slate-400 mt-0.5">Resolve knowledge gaps</div>
-                            </div>
-                        </div>
-
-                        <div onclick="switchTab('inbox')" class="glass-panel p-4.5 rounded-2xl cursor-pointer hover:border-emerald-500/40 transition flex items-center gap-3.5 group">
-                            <div class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-                                <i data-lucide="user-check" class="w-5 h-5"></i>
-                            </div>
-                            <div>
-                                <div class="text-xs font-bold text-white group-hover:text-emerald-300 transition">Live Takeover Desk</div>
-                                <div class="text-[11px] text-slate-400 mt-0.5">Monitor visitor chats</div>
+                            <div class="min-w-0">
+                                <div class="text-xs font-bold text-white group-hover:text-brand-300 transition truncate">Ingest Knowledge</div>
+                                <div class="text-[10px] text-slate-400 truncate">Upload PDF or crawl URLs</div>
                             </div>
                         </div>
 
-                        <div onclick="toggleBotTester()" class="glass-panel p-4.5 rounded-2xl cursor-pointer hover:border-purple-500/40 transition flex items-center gap-3.5 group">
-                            <div class="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-                                <i data-lucide="play" class="w-5 h-5"></i>
+                        <div onclick="switchTab('gaps')" class="glass-panel p-3.5 rounded-2xl cursor-pointer hover:border-amber-500/40 hover:bg-white/[0.04] transition flex items-center gap-3 group">
+                            <div class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                                <i data-lucide="help-circle" class="w-4 h-4"></i>
                             </div>
-                            <div>
-                                <div class="text-xs font-bold text-white group-hover:text-purple-300 transition">Test Bot Live</div>
-                                <div class="text-[11px] text-slate-400 mt-0.5">Open sandbox drawer</div>
+                            <div class="min-w-0">
+                                <div class="text-xs font-bold text-white group-hover:text-amber-300 transition truncate">Teach AI Answers</div>
+                                <div class="text-[10px] text-slate-400 truncate">Resolve knowledge gaps</div>
+                            </div>
+                        </div>
+
+                        <div onclick="switchTab('widget')" class="glass-panel p-3.5 rounded-2xl cursor-pointer hover:border-purple-500/40 hover:bg-white/[0.04] transition flex items-center gap-3 group">
+                            <div class="w-8 h-8 rounded-xl bg-purple-500/15 text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                                <i data-lucide="code" class="w-4 h-4"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-xs font-bold text-white group-hover:text-purple-300 transition truncate">Get Embed Script</div>
+                                <div class="text-[10px] text-slate-400 truncate">1-line website widget</div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Dense 2-Column Command Grid -->
-                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
                         <!-- Left 2 Cols: Real-Time Live Grounded Activity & Recent Conversation Desk -->
                         <div class="xl:col-span-2 glass-panel rounded-3xl p-6 border border-white/8 space-y-4">
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/8 pb-4">
