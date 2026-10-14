@@ -99,6 +99,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def revalidate_frontend_assets(request, call_next):
+    """Force browsers to revalidate the widget and HTML pages (cheap 304 via ETag),
+    so customer sites pick up widget updates immediately after a deploy."""
+    response = await call_next(request)
+    path = request.url.path
+    if path.endswith("widget.js") or path.endswith(".html") or path in ("/", "/dashboard", "/demo"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -161,6 +171,15 @@ class UpdateAssistantRequest(BaseModel):
     input_placeholder: Optional[str] = None
     launcher_pulse: Optional[bool] = None
     border_radius: Optional[str] = None
+    font_family: Optional[str] = None
+    widget_width: Optional[str] = None
+    offset_x: Optional[int] = None
+    offset_y: Optional[int] = None
+    launcher_icon: Optional[str] = None
+    teaser_delay: Optional[int] = None
+    exit_intent: Optional[bool] = None
+    hide_on_mobile: Optional[bool] = None
+    custom_css: Optional[str] = None
 
 class IngestUrlRequest(BaseModel):
     url: str
@@ -489,6 +508,23 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
         data["show_branding"] = 1 if data["show_branding"] else 0
     if "launcher_pulse" in data:
         data["launcher_pulse"] = 1 if data["launcher_pulse"] else 0
+    for flag in ("exit_intent", "hide_on_mobile"):
+        if flag in data:
+            data[flag] = 1 if data[flag] else 0
+    # Clamp layout values so a bad input can't push the widget off-screen.
+    for key in ("offset_x", "offset_y"):
+        if key in data and data[key] is not None:
+            data[key] = max(0, min(200, int(data[key])))
+    if "teaser_delay" in data and data["teaser_delay"] is not None:
+        data["teaser_delay"] = max(0, min(600, int(data["teaser_delay"])))
+    if "font_family" in data and data["font_family"] not in ("jakarta", "inter", "system", "serif", "inherit"):
+        data["font_family"] = "jakarta"
+    if "widget_width" in data and data["widget_width"] not in ("compact", "standard", "wide"):
+        data["widget_width"] = "standard"
+    if "launcher_icon" in data and data["launcher_icon"] not in ("chat", "sparkles", "help", "avatar"):
+        data["launcher_icon"] = "chat"
+    if "custom_css" in data and data["custom_css"] is not None:
+        data["custom_css"] = data["custom_css"][:8000]
     success = update_assistant(asst_id, data)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to update assistant")

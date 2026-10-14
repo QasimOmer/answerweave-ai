@@ -271,7 +271,16 @@ def init_db():
             whatsapp_number TEXT DEFAULT '',
             input_placeholder TEXT DEFAULT 'Ask a question...',
             launcher_pulse INTEGER DEFAULT 1,
-            border_radius TEXT DEFAULT '22px'
+            border_radius TEXT DEFAULT '22px',
+            font_family TEXT DEFAULT 'jakarta',
+            widget_width TEXT DEFAULT 'standard',
+            offset_x INTEGER DEFAULT 24,
+            offset_y INTEGER DEFAULT 24,
+            launcher_icon TEXT DEFAULT 'chat',
+            teaser_delay INTEGER DEFAULT 12,
+            exit_intent INTEGER DEFAULT 1,
+            hide_on_mobile INTEGER DEFAULT 0,
+            custom_css TEXT DEFAULT ''
         );
 
         CREATE TABLE IF NOT EXISTS sources (
@@ -365,6 +374,15 @@ def init_db():
             cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS input_placeholder TEXT DEFAULT 'Ask a question...';")
             cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS launcher_pulse INTEGER DEFAULT 1;")
             cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS border_radius TEXT DEFAULT '22px';")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS font_family TEXT DEFAULT 'jakarta';")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS widget_width TEXT DEFAULT 'standard';")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS offset_x INTEGER DEFAULT 24;")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS offset_y INTEGER DEFAULT 24;")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS launcher_icon TEXT DEFAULT 'chat';")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS teaser_delay INTEGER DEFAULT 12;")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS exit_intent INTEGER DEFAULT 1;")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS hide_on_mobile INTEGER DEFAULT 0;")
+            cursor.execute("ALTER TABLE assistants ADD COLUMN IF NOT EXISTS custom_css TEXT DEFAULT '';")
             cursor.execute("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'bot';")
             cursor.execute("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS operator_name TEXT DEFAULT '';")
             cursor.execute("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS unread_operator_msgs INTEGER DEFAULT 0;")
@@ -562,7 +580,10 @@ def init_db():
         role TEXT DEFAULT 'admin',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+    """)
 
+    # 10. User <-> Assistant access mapping
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS user_assistants (
         user_id TEXT NOT NULL,
         assistant_id TEXT NOT NULL,
@@ -593,6 +614,15 @@ def init_db():
         ("assistants", "input_placeholder", "TEXT DEFAULT 'Ask a question...'"),
         ("assistants", "launcher_pulse", "INTEGER DEFAULT 1"),
         ("assistants", "border_radius", "TEXT DEFAULT '22px'"),
+        ("assistants", "font_family", "TEXT DEFAULT 'jakarta'"),
+        ("assistants", "widget_width", "TEXT DEFAULT 'standard'"),
+        ("assistants", "offset_x", "INTEGER DEFAULT 24"),
+        ("assistants", "offset_y", "INTEGER DEFAULT 24"),
+        ("assistants", "launcher_icon", "TEXT DEFAULT 'chat'"),
+        ("assistants", "teaser_delay", "INTEGER DEFAULT 12"),
+        ("assistants", "exit_intent", "INTEGER DEFAULT 1"),
+        ("assistants", "hide_on_mobile", "INTEGER DEFAULT 0"),
+        ("assistants", "custom_css", "TEXT DEFAULT ''"),
         ("conversations", "status", "TEXT DEFAULT 'bot'"),
         ("conversations", "operator_name", "TEXT DEFAULT ''"),
         ("conversations", "unread_operator_msgs", "INTEGER DEFAULT 0")
@@ -905,7 +935,8 @@ def update_assistant(assistant_id: str, data: Dict[str, Any]) -> bool:
         "notification_email", "webhook_url",
         "theme_mode", "widget_subtitle", "launcher_text", "launcher_style",
         "teaser_message", "lead_title", "lead_fields", "sound_enabled", "show_branding", "whatsapp_number",
-        "input_placeholder", "launcher_pulse", "border_radius"
+        "input_placeholder", "launcher_pulse", "border_radius",
+        "font_family", "widget_width", "offset_x", "offset_y", "launcher_icon", "teaser_delay", "exit_intent", "hide_on_mobile", "custom_css"
     ]
     updates = []
     values = []

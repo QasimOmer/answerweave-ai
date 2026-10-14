@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WeaveFlow AI — Multi-Website Simulator</title>
+    <title>AnswerWeave — Multi-Website Simulator</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -66,7 +66,7 @@
         <div class="flex items-center gap-3">
             <span class="text-xs font-black uppercase tracking-wider text-brand-400 bg-brand-500/10 border border-brand-500/20 px-3 py-1 rounded-xl flex items-center gap-2 shadow-sm">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                WeaveFlow Client Simulator
+                AnswerWeave Client Simulator
             </span>
             <span class="text-xs text-slate-400 hidden sm:inline">Active Website:</span>
             <select id="siteSimulatorSelect" onchange="switchSimulatedSite(this.value)" class="text-xs font-bold bg-obsidian-950 text-white border border-white/10 rounded-xl px-3 py-1.5 outline-none cursor-pointer hover:border-brand-500 transition">
@@ -106,7 +106,7 @@
         <div class="max-w-4xl mx-auto px-6 py-20 text-center flex-1 flex flex-col justify-center items-center relative z-10">
             <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-panel text-brand-300 text-xs font-semibold mb-6 shadow-sm border border-brand-500/20">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                WeaveFlow AI Grounded Widget Active on this Website
+                AnswerWeave Grounded Widget Active on this Website
             </div>
             
             <h1 class="text-4xl sm:text-6xl font-black tracking-tight mb-6 text-white leading-tight">
@@ -198,7 +198,7 @@
             if (container) container.remove();
             const styles = document.getElementById('wf-widget-styles');
             if (styles) styles.remove();
-            delete window.WeaveFlowWidgetInitialized;
+            delete window.AnswerWeaveWidgetInitialized;
 
             const oldScript = document.getElementById('embeddedWidgetScript');
             if (oldScript) oldScript.remove();

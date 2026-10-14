@@ -36,7 +36,7 @@
     const ASSISTANT_ID = currentScript && currentScript.getAttribute('data-assistant-id');
 
     if (!ASSISTANT_ID) {
-        console.warn("[WeaveFlow AI] Chatbot widget initialization skipped: Missing 'data-assistant-id' attribute on widget script tag.");
+        console.warn("[AnswerWeave] Chatbot widget initialization skipped: Missing 'data-assistant-id' attribute on widget script tag.");
         return;
     }
 
@@ -64,6 +64,43 @@
 
     let conversationId = sessionStorage.getItem(`wf_conv_${ASSISTANT_ID}`) || (`wf_${ASSISTANT_ID}_${Math.random().toString(36).substring(2, 10)}`);
     sessionStorage.setItem(`wf_conv_${ASSISTANT_ID}`, conversationId);
+
+    const LAUNCHER_ICONS = {
+        chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+        sparkles: '<path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2Z"/>',
+        help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+    };
+
+    function launcherIconHtml() {
+        const icon = botConfig.launcher_icon || 'chat';
+        const av = botConfig.bot_avatar || '';
+        if (icon === 'avatar' && av) {
+            if (av.startsWith('http') || av.startsWith('data:image')) {
+                return `<img src="${escapeHtml(av)}" alt="" style="width:34px !important;height:34px !important;border-radius:50% !important;object-fit:cover !important;display:block !important;" />`;
+            }
+            return `<span style="font-size:24px !important;line-height:1 !important;">${escapeHtml(av)}</span>`;
+        }
+        const paths = LAUNCHER_ICONS[icon] || LAUNCHER_ICONS.chat;
+        return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+    }
+
+    function isLightColor(hex) {
+        const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec((hex || '').trim());
+        if (!m) return false;
+        let h = m[1];
+        if (h.length === 3) h = h.split('').map(c => c + c).join('');
+        const [r, g, b] = [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16) / 255)
+            .map(c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+        // Relative luminance; above ~0.45, white text drops below 3:1 contrast.
+        return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.45;
+    }
+
+    const FONT_STACKS = {
+        jakarta: { css: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" },
+        inter: { css: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap' },
+        system: { css: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
+        serif: { css: "Georgia, 'Times New Roman', serif" },
+    };
 
     let isOpen = false;
     let isRecording = false;
@@ -93,7 +130,7 @@
 
         :host, .wf-root {
             all: initial;
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-family: var(--wf-font, 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif) !important;
             -webkit-font-smoothing: antialiased !important;
             box-sizing: border-box !important;
             color: var(--wf-text, #0f172a) !important;
@@ -150,14 +187,14 @@
 
         .wf-root {
             position: fixed !important;
-            bottom: 24px !important;
-            right: 24px !important;
+            bottom: var(--wf-offset-y, 24px) !important;
+            right: var(--wf-offset-x, 24px) !important;
             z-index: 2147483647 !important;
             pointer-events: none !important;
         }
         .wf-position-left {
             right: auto !important;
-            left: 24px !important;
+            left: var(--wf-offset-x, 24px) !important;
         }
 
         /* Launcher Floating Button Wrap */
@@ -301,9 +338,9 @@
         /* Widget Container Window */
         .wf-window {
             position: fixed !important;
-            bottom: 86px !important;
-            right: 24px !important;
-            width: 395px !important;
+            bottom: calc(var(--wf-offset-y, 24px) + 62px) !important;
+            right: var(--wf-offset-x, 24px) !important;
+            width: var(--wf-width, 395px) !important;
             height: 620px !important;
             max-width: calc(100vw - 36px) !important;
             max-height: calc(100dvh - 110px) !important;
@@ -323,7 +360,7 @@
         }
         .wf-position-left .wf-window {
             right: auto !important;
-            left: 24px !important;
+            left: var(--wf-offset-x, 24px) !important;
         }
         .wf-window.wf-open {
             opacity: 1 !important;
@@ -1162,6 +1199,21 @@
         }
 
         /* ================= RESPONSIVE STYLES FOR ALL SCREEN SIZES ================= */
+        /* Light brand colors: switch on-primary text to dark for readable contrast. */
+        .wf-light-primary .wf-header,
+        .wf-light-primary .wf-header *:not(.wf-avatar-box):not(.wf-avatar-box *),
+        .wf-light-primary button.wf-launcher,
+        .wf-light-primary .wf-bubble-user,
+        .wf-light-primary .wf-bubble-user *,
+        .wf-light-primary button.wf-lead-btn,
+        .wf-light-primary button.wf-send-btn.wf-send-active,
+        .wf-light-primary .wf-action-btn:hover {
+            color: #0f172a !important;
+        }
+        @media (max-width: 640px) {
+            .wf-hide-mobile { display: none !important; }
+        }
+
         @media (max-width: 768px) and (min-width: 641px) {
             .wf-window {
                 width: 375px !important;
@@ -1405,7 +1457,7 @@
                     </svg>
                 </button>
             </form>
-            <div class="wf-footer" id="wf-footer">Powered by WeaveFlow AI</div>
+            <div class="wf-footer" id="wf-footer">Powered by AnswerWeave</div>
         </div>
 
         <!-- Floating Launcher Button Wrap -->
@@ -1532,7 +1584,7 @@
         mountWidget();
     })
     .catch(err => {
-        console.warn(`[WeaveFlow AI] Widget blocked: ${err.message}`);
+        console.warn(`[AnswerWeave] Widget blocked: ${err.message}`);
         // Ensure widget is completely hidden and detached from DOM
         if (hostContainer && hostContainer.parentNode) {
             hostContainer.parentNode.removeChild(hostContainer);
@@ -1626,7 +1678,7 @@
         if (nameEl) nameEl.innerText = botConfig.name || "AI Assistant";
 
         const drawerTitle = $('wf-drawer-title');
-        if (drawerTitle) drawerTitle.innerText = `Start Your Project with ${botConfig.name || 'Us'}`;
+        if (drawerTitle) drawerTitle.innerText = botConfig.lead_title || `Get in touch with ${botConfig.name || 'us'}`;
 
         const statusEl = $('wf-header-status');
         if (statusEl) statusEl.innerText = botConfig.widget_subtitle || "Online";
@@ -1651,6 +1703,53 @@
         const headerEl = $('wf-header');
         if (headerEl) headerEl.style.backgroundColor = primaryColor;
         if (triggerBtn) triggerBtn.style.backgroundColor = primaryColor;
+        root.classList.toggle('wf-light-primary', isLightColor(primaryColor));
+
+        // Layout: edge offsets & panel width
+        const clampPx = (v, d) => { const n = parseInt(v, 10); return `${isNaN(n) ? d : Math.max(0, Math.min(200, n))}px`; };
+        root.style.setProperty('--wf-offset-x', clampPx(botConfig.offset_x, 24));
+        root.style.setProperty('--wf-offset-y', clampPx(botConfig.offset_y, 24));
+        const widths = { compact: '360px', standard: '395px', wide: '440px' };
+        root.style.setProperty('--wf-width', widths[botConfig.widget_width] || widths.standard);
+
+        // Typography
+        const fontKey = botConfig.font_family || 'jakarta';
+        if (fontKey === 'inherit') {
+            try {
+                root.style.setProperty('--wf-font', getComputedStyle(document.body).fontFamily || FONT_STACKS.jakarta.css);
+            } catch (e) {}
+        } else {
+            const font = FONT_STACKS[fontKey] || FONT_STACKS.jakarta;
+            root.style.setProperty('--wf-font', font.css);
+            if (font.href && !document.querySelector(`link[data-wf-font="${fontKey}"]`)) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = font.href;
+                link.setAttribute('data-wf-font', fontKey);
+                document.head.appendChild(link);
+            }
+        }
+
+        // Launcher icon
+        const launcherIconEl = $('wf-btn-icon');
+        if (launcherIconEl && !isOpen) launcherIconEl.innerHTML = launcherIconHtml();
+
+        // Visibility on small screens
+        root.classList.toggle('wf-hide-mobile', botConfig.hide_on_mobile === 1 || botConfig.hide_on_mobile === true);
+
+        // Custom CSS, scoped to the widget's shadow root. External @imports are stripped.
+        let customStyle = shadow.querySelector ? shadow.querySelector('#wf-custom-css') : null;
+        const css = String(botConfig.custom_css || '').slice(0, 8000).replace(/@import[^;]*;?/gi, '').replace(/<\/?style/gi, '');
+        if (css.trim()) {
+            if (!customStyle) {
+                customStyle = document.createElement('style');
+                customStyle.id = 'wf-custom-css';
+                shadow.appendChild(customStyle);
+            }
+            customStyle.textContent = css;
+        } else if (customStyle) {
+            customStyle.remove();
+        }
 
         // Launcher Button Style & Pulse
         const btnLabel = $('wf-btn-label');
@@ -1763,8 +1862,9 @@
     let timeTriggerFired = false;
 
     function initProactiveTriggers() {
-        // 1. Time-on-page trigger (12 seconds)
-        setTimeout(() => {
+        // 1. Time-on-page trigger (configurable; 0 disables)
+        const delaySec = botConfig.teaser_delay === undefined || botConfig.teaser_delay === null ? 12 : Number(botConfig.teaser_delay);
+        if (delaySec > 0 && botConfig.teaser_message) setTimeout(() => {
             if (!isOpen && !timeTriggerFired && !sessionStorage.getItem(`wf_teaser_dismissed_${ASSISTANT_ID}`)) {
                 timeTriggerFired = true;
                 if (teaserBubble) {
@@ -1772,9 +1872,10 @@
                     triggerBtn.classList.add('wf-pulse-once');
                 }
             }
-        }, 12000);
+        }, delaySec * 1000);
 
         // 2. Desktop Exit Intent trigger
+        if (botConfig.exit_intent === 0 || botConfig.exit_intent === false) return;
         document.addEventListener('mouseleave', (e) => {
             if (e.clientY <= 10 && !isOpen && !exitIntentTriggered && !sessionStorage.getItem(`wf_teaser_dismissed_${ASSISTANT_ID}`)) {
                 exitIntentTriggered = true;
@@ -1903,13 +2004,7 @@
                 btnLabel.style.display = 'inline';
             }
             const iconEl = $('wf-btn-icon');
-            if (iconEl) {
-                iconEl.innerHTML = `
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
-                    </svg>
-                `;
-            }
+            if (iconEl) iconEl.innerHTML = launcherIconHtml();
         }
     }
 
