@@ -21,6 +21,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
+from app.auth import (
+    auth_middleware,
+    create_token,
+    can_access_assistant,
+    is_admin,
+    public_assistant_view,
+)
 from app.db import (
     init_db,
     create_assistant,
@@ -59,7 +66,11 @@ from app.db import (
     get_conversation,
     set_conversation_status,
     add_operator_message,
-    clear_unread_operator_messages
+    clear_unread_operator_messages,
+    add_user_assistant,
+    hash_password,
+    verify_password,
+    set_user_password_hash,
 )
 from app.config import (
     get_bot_settings,
@@ -91,6 +102,9 @@ app = FastAPI(
     version="2.2.0"
 )
 
+# Every /api route is private unless listed as public in app/auth.py ROUTE_RULES.
+app.middleware("http")(auth_middleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -121,6 +135,10 @@ class AuthSignupRequest(BaseModel):
 class AuthLoginRequest(BaseModel):
     email: str
     password: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 class CreateUserRequest(BaseModel):
     name: str
@@ -267,29 +285,41 @@ def get_widget_js():
 # ----------------- Admin Auth Endpoints -----------------
 @app.post("/api/auth/signup")
 def api_signup(req: AuthSignupRequest):
-    if len(req.password) < 4:
-        raise HTTPException(status_code=400, detail="Password must be at least 4 characters.")
-    user = create_user(req.email, req.password, req.name)
+    if len(req.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+    if "@" not in (req.email or ""):
+        raise HTTPException(status_code=400, detail="Please enter a valid email address.")
+    # Self-service signups are regular members: they only see assistants they create.
+    user = create_user(req.email, req.password, req.name, role="member")
     if not user:
-        raise HTTPException(status_code=400, detail="User with this email already exists.")
-    return {"status": "success", "user": user}
+        raise HTTPException(status_code=400, detail="An account with this email already exists.")
+    return {"status": "success", "user": user, "token": create_token(user["id"])}
 
 @app.post("/api/auth/login")
 def api_login(req: AuthLoginRequest):
     user = authenticate_user(req.email, req.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid email or password.")
-    return {"status": "success", "user": user}
+    return {"status": "success", "user": user, "token": create_token(user["id"])}
 
 @app.get("/api/auth/me")
-def api_get_me(email: Optional[str] = None):
-    target_email = email.strip().lower() if email else "admin@answerweave.ai"
-    user = get_user_by_email(target_email)
+def api_get_me(request: Request):
+    user = get_user_by_id(request.state.user["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
-    u_dict = dict(user)
-    u_dict.pop("password_hash", None)
-    return u_dict
+    return user
+
+@app.post("/api/auth/change-password")
+def api_change_password(req: ChangePasswordRequest, request: Request):
+    me = request.state.user
+    row = get_user_by_email(me["email"])
+    if not row or not verify_password(req.current_password, row["password_hash"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+    if len(req.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters.")
+    set_user_password_hash(me["id"], hash_password(req.new_password))
+    # Changing the password invalidates every existing session; hand back a fresh token.
+    return {"status": "success", "token": create_token(me["id"])}
 
 # ----------------- User & Client Management Endpoints -----------------
 @app.get("/api/users")
@@ -333,11 +363,11 @@ def api_delete_user(user_id: str):
 
 # ----------------- Multi-Assistant SaaS Endpoints -----------------
 @app.get("/api/assistants")
-def api_list_assistants(user_id: Optional[str] = None):
-    return list_assistants_for_user(user_id)
+def api_list_assistants(request: Request):
+    return list_assistants_for_user(request.state.user["id"])
 
 @app.post("/api/assistants")
-def api_create_assistant(req: CreateAssistantRequest):
+def api_create_assistant(req: CreateAssistantRequest, request: Request):
     target_domain = req.domain or "*"
     if req.website_url and target_domain == "*":
         try:
@@ -355,6 +385,9 @@ def api_create_assistant(req: CreateAssistantRequest):
         bot_avatar=req.bot_avatar or "⚡",
         widget_subtitle=req.widget_subtitle or "Online • AI Assistant"
     )
+
+    if not is_admin(request.state.user):
+        add_user_assistant(request.state.user["id"], asst_id)
 
     pages_indexed = 0
     total_chunks = 0
@@ -491,8 +524,11 @@ def api_get_assistant(asst_id: str, request: Request):
     asst = get_assistant(asst_id)
     if not asst:
         raise HTTPException(status_code=404, detail="Assistant not found")
+    if can_access_assistant(getattr(request.state, "user", None), asst_id):
+        return asst
+    # Anonymous callers (the embedded widget) only get display settings.
     verify_assistant_domain_access(asst, request)
-    return asst
+    return public_assistant_view(asst)
 
 @app.put("/api/assistants/{asst_id}")
 @app.patch("/api/assistants/{asst_id}")
@@ -1256,8 +1292,11 @@ def api_test_assistant_webhook(asst_id: str):
 
 # ----------------- Subscription & Tier Plans -----------------
 @app.get("/api/subscription")
-def api_get_subscription():
-    return get_subscription_info()
+def api_get_subscription(request: Request):
+    info = get_subscription_info()
+    if getattr(request.state, "user", None):
+        return info
+    return {"all_plans": info.get("all_plans", {})}
 
 @app.post("/api/subscription/upgrade")
 def api_upgrade_plan(req: UpgradePlanRequest):

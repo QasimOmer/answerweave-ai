@@ -174,7 +174,13 @@
         const urlParams = new URLSearchParams(window.location.search);
         const requestedAsstId = urlParams.get('assistant_id') || urlParams.get('asst');
 
-        fetch('/api/assistants')
+        // Signed-in users can switch between their assistants; public visitors see the default one.
+        const awToken = localStorage.getItem('aw_token');
+        (awToken
+            ? fetch('/api/assistants', { headers: { 'Authorization': `Bearer ${awToken}` } })
+                .then(r => r.ok ? r : Promise.reject(r))
+                .catch(() => fetch('/api/assistants/asst_default').then(r => r.json()).then(a => new Response(JSON.stringify([a]))))
+            : fetch('/api/assistants/asst_default').then(r => r.json()).then(a => new Response(JSON.stringify(a && a.id ? [a] : []))))
             .then(r => r.json())
             .then(assistants => {
                 if (!assistants || assistants.length === 0) return;

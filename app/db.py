@@ -238,6 +238,22 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+def _default_admin_password() -> str:
+    """Password for the first-run admin account.
+
+    Uses AW_ADMIN_PASSWORD when set. Local SQLite dev keeps the old demo password
+    for convenience; hosted databases get a random one (printed once to the logs).
+    """
+    env = os.environ.get("AW_ADMIN_PASSWORD", "").strip()
+    if env:
+        return env
+    if not USE_POSTGRES:
+        return "admin123"
+    generated = secrets.token_urlsafe(12)
+    print(f"[AnswerWeave] Created admin@answerweave.ai with a random password: {generated} (set AW_ADMIN_PASSWORD to choose one)")
+    return generated
+
+
 def init_db():
     if USE_POSTGRES:
         conn = get_db()
@@ -442,7 +458,7 @@ def init_db():
         cursor.execute("SELECT id FROM users WHERE email = 'admin@answerweave.ai'")
         if not cursor.fetchone():
             admin_id = f"user_{uuid.uuid4().hex[:8]}"
-            pwd_hash = hash_password("admin123")
+            pwd_hash = hash_password(_default_admin_password())
             cursor.execute("INSERT INTO users (id, email, password_hash, name, role) VALUES (?, 'admin@answerweave.ai', ?, 'Admin', 'admin')", (admin_id, pwd_hash))
             conn.commit()
 
@@ -653,7 +669,7 @@ def init_db():
     cursor.execute("SELECT id FROM users WHERE email = 'admin@answerweave.ai'")
     if not cursor.fetchone():
         admin_id = f"user_{uuid.uuid4().hex[:8]}"
-        pwd_hash = hash_password("admin123")
+        pwd_hash = hash_password(_default_admin_password())
         cursor.execute("""
             INSERT INTO users (id, email, password_hash, name, role)
             VALUES (?, 'admin@answerweave.ai', ?, 'Admin', 'admin')
@@ -666,21 +682,59 @@ def init_db():
 import hashlib
 import secrets
 
-def hash_password(password: str, salt: Optional[str] = None) -> str:
-    if not salt:
-        salt = secrets.token_hex(16)
-    hashed = hashlib.sha256(f"{salt}:{password}".encode("utf-8")).hexdigest()
-    return f"{salt}:{hashed}"
+PBKDF2_ITERATIONS = 200_000
+
+
+def _legacy_sha256_hash(password: str, salt: str) -> str:
+    return f"{salt}:" + hashlib.sha256(f"{salt}:{password}".encode("utf-8")).hexdigest()
+
+
+def hash_password(password: str) -> str:
+    """PBKDF2-SHA256 with a random salt: pbkdf2_sha256$<iterations>$<salt>$<hex>."""
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), PBKDF2_ITERATIONS).hex()
+    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt}${digest}"
+
 
 def verify_password(password: str, stored_hash: str) -> bool:
     try:
+        if stored_hash.startswith("pbkdf2_sha256$"):
+            _, iterations, salt, digest = stored_hash.split("$")
+            candidate = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), int(iterations)).hex()
+            return secrets.compare_digest(candidate, digest)
+        # Legacy format "<salt>:<sha256>" from earlier versions.
         parts = stored_hash.split(":")
         if len(parts) != 2:
             return False
-        salt, _ = parts
-        return hash_password(password, salt) == stored_hash
+        return secrets.compare_digest(_legacy_sha256_hash(password, parts[0]), stored_hash)
     except Exception:
         return False
+
+
+def password_needs_upgrade(stored_hash: str) -> bool:
+    return not (stored_hash or "").startswith("pbkdf2_sha256$")
+
+
+def set_user_password_hash(user_id: str, new_hash: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET password_hash = ? WHERE id = ?", (new_hash, user_id))
+    conn.commit()
+    conn.close()
+
+
+def add_user_assistant(user_id: str, assistant_id: str):
+    """Grant a user access to one assistant without touching their other grants."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO user_assistants (user_id, assistant_id)
+        VALUES (?, ?)
+        ON CONFLICT DO NOTHING;
+    """, (user_id, assistant_id))
+    conn.commit()
+    conn.close()
+
 
 def set_user_assistants(user_id: str, assistant_ids: List[str]):
     conn = get_db()
@@ -704,7 +758,7 @@ def get_user_assigned_assistants(user_id: str) -> List[str]:
     conn.close()
     return [r["assistant_id"] for r in rows]
 
-def create_user(email: str, password: str, name: str, role: str = "admin", assigned_assistant_ids: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+def create_user(email: str, password: str, name: str, role: str = "member", assigned_assistant_ids: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
     conn = get_db()
     cursor = conn.cursor()
     user_id = f"user_{uuid.uuid4().hex[:8]}"
@@ -790,6 +844,11 @@ def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
     if not user:
         return None
     if verify_password(password, user["password_hash"]):
+        if password_needs_upgrade(user["password_hash"]):
+            try:
+                set_user_password_hash(user["id"], hash_password(password))
+            except Exception:
+                pass
         u_dict = dict(user)
         u_dict.pop("password_hash", None)
         return u_dict

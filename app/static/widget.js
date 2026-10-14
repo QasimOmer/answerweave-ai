@@ -62,7 +62,17 @@
         sound_enabled: 1
     };
 
-    let conversationId = sessionStorage.getItem(`wf_conv_${ASSISTANT_ID}`) || (`wf_${ASSISTANT_ID}_${Math.random().toString(36).substring(2, 10)}`);
+    // The conversation id is the visitor's key to their own transcript, so make it unguessable.
+    function newConversationId() {
+        let rand = '';
+        try {
+            rand = (crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('')).replace(/-/g, '');
+        } catch (e) {
+            rand = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        }
+        return `wf_${ASSISTANT_ID}_${rand}`;
+    }
+    let conversationId = sessionStorage.getItem(`wf_conv_${ASSISTANT_ID}`) || newConversationId();
     sessionStorage.setItem(`wf_conv_${ASSISTANT_ID}`, conversationId);
 
     const LAUNCHER_ICONS = {
@@ -2185,7 +2195,7 @@
 
     // Reset Chat action
     resetBtn.addEventListener('click', () => {
-        conversationId = `wf_${ASSISTANT_ID}_${Math.random().toString(36).substring(2, 10)}`;
+        conversationId = newConversationId();
         sessionStorage.setItem(`wf_conv_${ASSISTANT_ID}`, conversationId);
         lastMessageId = 0;
         conversationStarted = false;

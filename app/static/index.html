@@ -534,7 +534,6 @@
                     <input type="password" id="loginPassword" autocomplete="current-password" required class="field w-full h-10 rounded-lg px-3 text-[14px]" />
                 </div>
                 <button type="submit" id="loginSubmitBtn" class="btn-primary w-full h-10 rounded-lg text-[14px] font-medium">Sign in</button>
-                <button type="button" onclick="fillDemoCredentials()" class="w-full text-[13px] text-slate-400 hover:text-white transition">Use the demo account</button>
                 <div id="loginError" class="hidden text-[13px] text-rose-300 text-center" role="alert"></div>
             </form>
 
@@ -675,6 +674,11 @@
 
         // ---------- Auth ----------
         function openAuthModal(mode) {
+            // Already signed in: go straight to the dashboard.
+            if ((mode || 'login') === 'login' && localStorage.getItem('aw_token')) {
+                window.location.href = '/dashboard';
+                return;
+            }
             document.getElementById('authModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
             setWidgetVisible(false);
@@ -712,11 +716,6 @@
             setTimeout(() => document.getElementById(isSignup ? 'signupName' : 'loginEmail').focus(), 30);
         }
 
-        function fillDemoCredentials() {
-            document.getElementById('loginEmail').value = 'admin@answerweave.ai';
-            document.getElementById('loginPassword').value = 'admin123';
-        }
-
         async function submitAuth(kind) {
             const isLogin = kind === 'login';
             const btn = document.getElementById(isLogin ? 'loginSubmitBtn' : 'signupSubmitBtn');
@@ -739,6 +738,7 @@
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && data.status === 'success') {
                     localStorage.setItem('aw_user', JSON.stringify(data.user));
+                    localStorage.setItem('aw_token', data.token);
                     window.location.href = '/dashboard';
                     return;
                 }

@@ -315,6 +315,7 @@
                         <div class="my-1 border-t border-white/8"></div>
                         <button onclick="toggleHeaderMenu(false); confirmDeleteCurrentProject()" class="menu-item is-danger" role="menuitem"><i data-lucide="trash-2" class="w-4 h-4"></i>Delete this assistant…</button>
                         <div class="my-1 border-t border-white/8"></div>
+                        <button onclick="openChangePasswordModal()" class="menu-item" role="menuitem"><i data-lucide="key-round" class="w-4 h-4 text-slate-400"></i>Change password</button>
                         <button onclick="logoutAdmin()" class="menu-item" role="menuitem"><i data-lucide="log-out" class="w-4 h-4 text-slate-400"></i>Log out</button>
                     </div>
                 </div>
@@ -1839,6 +1840,33 @@
     </div>
 
     <!-- ================= MODALS & DRAWERS ================= -->
+    <div id="changePasswordModal" class="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="cpTitle" onclick="if (event.target === this) closeChangePasswordModal()">
+        <form onsubmit="submitChangePassword(event)" class="glass-panel-elevated w-full max-w-sm rounded-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 id="cpTitle" class="text-[16px] font-semibold text-white">Change password</h2>
+                <button type="button" onclick="closeChangePasswordModal()" class="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/5" aria-label="Close"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div>
+                <label for="cpCurrent" class="block text-[13px] text-slate-300 mb-1.5">Current password</label>
+                <input id="cpCurrent" type="password" autocomplete="current-password" required class="glass-input w-full h-10 rounded-lg px-3 text-[14px]">
+            </div>
+            <div>
+                <label for="cpNew" class="block text-[13px] text-slate-300 mb-1.5">New password</label>
+                <input id="cpNew" type="password" autocomplete="new-password" minlength="8" required class="glass-input w-full h-10 rounded-lg px-3 text-[14px]">
+                <p class="mt-1.5 text-[12px] text-slate-500">At least 8 characters. You'll stay signed in here; other sessions are signed out.</p>
+            </div>
+            <div>
+                <label for="cpConfirm" class="block text-[13px] text-slate-300 mb-1.5">Confirm new password</label>
+                <input id="cpConfirm" type="password" autocomplete="new-password" minlength="8" required class="glass-input w-full h-10 rounded-lg px-3 text-[14px]">
+            </div>
+            <div id="cpError" class="hidden text-[13px] text-rose-300" role="alert"></div>
+            <div class="flex justify-end gap-2 pt-1">
+                <button type="button" onclick="closeChangePasswordModal()" class="h-9 px-3.5 rounded-lg text-[13px] text-slate-300 hover:bg-white/5">Cancel</button>
+                <button id="cpSubmit" type="submit" class="btn-shimmer h-9 px-4 rounded-lg text-[13px] font-medium text-white">Update password</button>
+            </div>
+        </form>
+    </div>
+
 
     <!-- Modal: Resolve Knowledge Gap -->
     <div id="resolveGapModal" class="fixed inset-0 bg-obsidian-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
@@ -2144,6 +2172,48 @@
 
     <!-- Client Script Logic -->
     <script>
+        // ---- Auth: attach the session token to API calls; signed-out users go to login.
+        const AUTH_TOKEN_KEY = 'aw_token';
+        function getAuthToken() {
+            try { return localStorage.getItem(AUTH_TOKEN_KEY) || ''; } catch (e) { return ''; }
+        }
+        function redirectToLogin() {
+            try {
+                localStorage.removeItem(AUTH_TOKEN_KEY);
+                localStorage.removeItem('aw_user');
+            } catch (e) {}
+            window.location.replace('/?login=1');
+        }
+        if (!getAuthToken()) redirectToLogin();
+
+        const nativeFetch = window.fetch.bind(window);
+        window.fetch = async (input, init = {}) => {
+            const url = typeof input === 'string' ? input : (input && input.url) || '';
+            const isApi = url.startsWith('/api/') || url.startsWith(window.location.origin + '/api/');
+            if (isApi) {
+                const headers = new Headers(init.headers || {});
+                const token = getAuthToken();
+                if (token) headers.set('Authorization', `Bearer ${token}`);
+                init = { ...init, headers };
+            }
+            const res = await nativeFetch(input, init);
+            if (isApi && res.status === 401) redirectToLogin();
+            return res;
+        };
+
+        async function downloadWithAuth(url, filename) {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Download failed: ' + res.status);
+            const blob = await res.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }
+
         let currentAssistantId = 'asst_default';
         let assistantsList = [];
         let sourcesData = [];
@@ -3562,7 +3632,8 @@
 
         function exportConversationsCsv() {
             if (!currentAssistantId) return;
-            window.open(`/api/assistants/${currentAssistantId}/conversations/export`, '_blank');
+            downloadWithAuth(`/api/assistants/${currentAssistantId}/conversations/export`, `conversations_${currentAssistantId}.csv`)
+                .catch(() => showToast('Could not export conversations', 'alert-circle'));
         }
 
         async function testAssistantWebhook() {
@@ -4600,8 +4671,52 @@
         }
 
         function logoutAdmin() {
-            localStorage.removeItem('aw_user');
-            window.location.href = '/?login=1';
+            redirectToLogin();
+        }
+
+        function openChangePasswordModal() {
+            toggleHeaderMenu(false);
+            ['cpCurrent', 'cpNew', 'cpConfirm'].forEach(id => { document.getElementById(id).value = ''; });
+            document.getElementById('cpError').classList.add('hidden');
+            document.getElementById('changePasswordModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('cpCurrent').focus(), 50);
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.add('hidden');
+        }
+
+        async function submitChangePassword(e) {
+            e.preventDefault();
+            const errEl = document.getElementById('cpError');
+            const current = document.getElementById('cpCurrent').value;
+            const next = document.getElementById('cpNew').value;
+            const confirmVal = document.getElementById('cpConfirm').value;
+            errEl.classList.add('hidden');
+            if (next !== confirmVal) {
+                errEl.textContent = "New passwords don't match.";
+                errEl.classList.remove('hidden');
+                return;
+            }
+            const btn = document.getElementById('cpSubmit');
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ current_password: current, new_password: next })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.detail || 'Could not change password.');
+                localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+                closeChangePasswordModal();
+                showToast('Password changed. Other sessions have been signed out.');
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         function escapeHtml(text) {
