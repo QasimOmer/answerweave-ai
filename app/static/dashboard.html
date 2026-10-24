@@ -403,6 +403,43 @@
                         </button>
                     </div>
 
+                    <!-- Answer quality (last 30 days) -->
+                    <div class="glass-panel rounded-xl overflow-hidden">
+                        <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/7">
+                            <div>
+                                <h2 class="text-[14px] font-semibold text-white">Answer quality</h2>
+                                <p class="text-[12.5px] text-slate-500 mt-0.5">Last 30 days · visitor ratings, coverage and speed</p>
+                            </div>
+                            <span id="aqProviders" class="text-[12px] text-slate-500 text-right"></span>
+                        </div>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-px bg-white/5">
+                            <div class="bg-[var(--panel-bg,transparent)] p-4 sm:p-5">
+                                <span class="stat-label">Visitor satisfaction</span>
+                                <div class="stat-value mt-2" id="aqSatisfaction">–</div>
+                                <div class="mt-1 text-[12px] text-slate-500" id="aqRatings">No ratings yet</div>
+                            </div>
+                            <div class="bg-[var(--panel-bg,transparent)] p-4 sm:p-5">
+                                <span class="stat-label">Answered from your content</span>
+                                <div class="stat-value mt-2" id="aqAnswered">–</div>
+                                <div class="mt-1 text-[12px] text-slate-500" id="aqGaps">&nbsp;</div>
+                            </div>
+                            <div class="bg-[var(--panel-bg,transparent)] p-4 sm:p-5">
+                                <span class="stat-label">Avg. reply time</span>
+                                <div class="stat-value mt-2" id="aqSpeed">–</div>
+                                <div class="mt-1 text-[12px] text-slate-500">Message received → reply finished</div>
+                            </div>
+                            <div class="bg-[var(--panel-bg,transparent)] p-4 sm:p-5">
+                                <span class="stat-label">Bot replies</span>
+                                <div class="stat-value mt-2" id="aqReplies">–</div>
+                                <div class="mt-1 text-[12px] text-slate-500">Last 30 days</div>
+                            </div>
+                        </div>
+                        <div class="px-5 py-4 border-t border-white/7">
+                            <h3 class="text-[13px] font-semibold text-white mb-2">Replies visitors marked as not helpful</h3>
+                            <div id="aqDisliked" class="space-y-2 text-[12.5px] text-slate-400">No 👎 ratings yet.</div>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
                         <!-- Recent conversations -->
                         <div class="xl:col-span-2 glass-panel rounded-xl overflow-hidden">
@@ -513,6 +550,21 @@
                             <span class="stat-label">Last updated</span>
                             <div class="stat-value mt-3 !text-[20px] !leading-[34px]" id="kvKpiUpdated">–</div>
                         </div>
+                    </div>
+
+                    <!-- Semantic search index health -->
+                    <div class="glass-panel rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="brain-circuit" class="w-4 h-4 text-brand-400"></i>
+                                <h2 class="text-[14px] font-semibold text-white">Semantic search index</h2>
+                                <span id="embStatusBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-white/5 text-slate-400">Checking…</span>
+                            </div>
+                            <p id="embStatusText" class="text-[12.5px] text-slate-500 mt-1">Lets the assistant find answers even when visitors word things differently from your pages.</p>
+                        </div>
+                        <button id="embReindexBtn" type="button" onclick="runReindex()" class="shrink-0 text-[12.5px] font-medium text-white bg-brand-500/90 hover:bg-brand-500 disabled:opacity-50 disabled:cursor-not-allowed px-3.5 py-2 rounded-lg transition hidden">
+                            Upgrade index
+                        </button>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1264,6 +1316,49 @@
                                         <p class="text-[11.5px] text-slate-500">Applied inside the widget only (Shadow DOM), so it can&#39;t affect the rest of your site. Use <code class="font-mono text-slate-400">!important</code> to override defaults. <code class="font-mono text-slate-400">@import</code> is stripped. Max 8,000 characters.</p>
                                     </div>
                                 </details>
+
+                                <!-- Section: AI Personality -->
+                                <div class="p-4.5 bg-white/5 rounded-2xl border border-white/8 space-y-3.5">
+                                    <div class="flex items-center gap-2 text-xs font-semibold text-white uppercase tracking-wider mb-1">
+                                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-400"></i>
+                                        <span>AI Personality</span>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="asstTone" class="block text-xs font-semibold text-slate-300 mb-1">Tone of voice</label>
+                                            <select id="asstTone" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="friendly">Friendly (default)</option>
+                                                <option value="professional">Professional</option>
+                                                <option value="casual">Casual</option>
+                                                <option value="enthusiastic">Enthusiastic</option>
+                                                <option value="concise">Concise</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="asstReplyLength" class="block text-xs font-semibold text-slate-300 mb-1">Reply length</label>
+                                            <select id="asstReplyLength" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="short">Short</option>
+                                                <option value="balanced">Balanced (default)</option>
+                                                <option value="detailed">Detailed</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div class="flex items-center justify-between mb-1">
+                                            <label for="asstInstructions" class="block text-xs font-semibold text-slate-300">Extra instructions</label>
+                                            <span class="text-[11px] text-slate-400">One per line</span>
+                                        </div>
+                                        <textarea id="asstInstructions" rows="3" maxlength="2000" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none leading-relaxed" placeholder="Refer to customers as &quot;members&quot;.&#10;Mention the free consultation when someone asks about pricing.&#10;Always reply in British English."></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label for="asstAvoidTopics" class="block text-xs font-semibold text-slate-300 mb-1">Topics to avoid</label>
+                                        <input type="text" id="asstAvoidTopics" maxlength="1000" placeholder="Competitors, legal advice, politics" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                    </div>
+                                    <p class="text-[11.5px] text-slate-500">These shape how the assistant talks. Facts about your business still come only from your knowledge base.</p>
+                                </div>
 
                                 <!-- Section 4: Chat Greetings & Experience -->
                                 <div class="p-4.5 bg-white/5 rounded-2xl border border-white/8 space-y-3.5">
@@ -2492,6 +2587,10 @@
             setVal('asstHideMobile', asst.hide_on_mobile === 1 ? 'true' : 'false');
             setVal('asstLeadTitle', asst.lead_title || '');
             setVal('asstCustomCss', asst.custom_css || '');
+            setVal('asstTone', asst.tone || 'friendly');
+            setVal('asstReplyLength', asst.reply_length || 'balanced');
+            setVal('asstInstructions', asst.custom_instructions || '');
+            setVal('asstAvoidTopics', asst.avoid_topics || '');
 
             document.getElementById('asstDomain').value = asst.domain || '*';
             document.getElementById('asstWebhook').value = asst.webhook_url || '';
@@ -2982,12 +3081,13 @@
             try {
                 const getJson = (url, fallback) => fetch(url).then(r => r.ok ? r.json() : fallback).catch(() => fallback);
                 const base = `/api/assistants/${currentAssistantId}`;
-                const [stats, leads, gaps, convs, sources] = await Promise.all([
+                const [stats, leads, gaps, convs, sources, quality] = await Promise.all([
                     getJson(`${base}/analytics`, {}),
                     getJson(`${base}/leads`, []),
                     getJson(`${base}/gaps`, []),
                     getJson(`${base}/conversations`, []),
                     getJson(`${base}/sources`, []),
+                    getJson(`${base}/answer-quality`, null),
                 ]);
 
                 const totalQueries = stats.total_queries ?? 0;
@@ -3021,10 +3121,38 @@
                 if (usageBar) usageBar.style.width = limit ? `${Math.min(100, (totalQueries / limit) * 100)}%` : '0%';
 
                 renderOverviewActivity(convs, leads, gaps, sources);
+                renderAnswerQuality(quality);
 
             } catch (err) {
                 console.error("Analytics load error:", err);
             }
+        }
+
+        function renderAnswerQuality(q) {
+            const set = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
+            if (!q) return;
+            const rated = (q.thumbs_up || 0) + (q.thumbs_down || 0);
+            set('aqSatisfaction', q.satisfaction == null ? '–' : `${q.satisfaction}%`);
+            set('aqRatings', rated ? `👍 ${q.thumbs_up} · 👎 ${q.thumbs_down}` : 'No ratings yet');
+            set('aqAnswered', q.answered_rate == null ? '–' : `${q.answered_rate}%`);
+            set('aqGaps', q.knowledge_gaps ? `${q.knowledge_gaps} repl${q.knowledge_gaps === 1 ? 'y' : 'ies'} without an answer` : (q.replies ? 'Every reply found an answer' : ' '));
+            set('aqSpeed', q.avg_response_ms ? (q.avg_response_ms >= 1000 ? `${(q.avg_response_ms / 1000).toFixed(1)}s` : `${q.avg_response_ms}ms`) : '–');
+            set('aqReplies', (q.replies || 0).toLocaleString());
+            const total = (q.providers || []).reduce((n, p) => n + p.replies, 0);
+            set('aqProviders', total ? 'Answered by ' + q.providers.slice(0, 3).map(p => `${p.provider} ${Math.round(p.replies / total * 100)}%`).join(' · ') : '');
+
+            const list = document.getElementById('aqDisliked');
+            if (!list) return;
+            if (!q.recent_disliked || !q.recent_disliked.length) {
+                list.innerHTML = 'No 👎 ratings yet.';
+                return;
+            }
+            list.innerHTML = q.recent_disliked.map(d => `
+                <div class="rounded-lg bg-white/[0.03] border border-white/7 px-3 py-2.5 cursor-pointer hover:bg-white/[0.05] transition" onclick="openTakeoverInbox('${escapeHtml(d.conversation_id)}')">
+                    <div class="text-slate-200 truncate">“${escapeHtml(d.question || 'Unknown question')}”</div>
+                    <div class="text-slate-500 mt-0.5 line-clamp-2">${escapeHtml((d.answer || '').slice(0, 220))}</div>
+                </div>`).join('') +
+                `<p class="text-[11.5px] text-slate-500 pt-1">These questions are also added to <button class="underline hover:text-slate-300" onclick="switchTab('gaps')">Knowledge gaps</button> so you can teach the right answer.</p>`;
         }
 
         function renderOverviewActivity(convs, leads, gaps, sources) {
@@ -3285,8 +3413,74 @@
                 sourcesData = await res.json();
                 renderSourcesTable(sourcesData);
                 renderKnowledgeStats(sourcesData);
+                loadEmbeddingStatus();
             } catch (err) {
                 console.error("Error loading sources:", err);
+            }
+        }
+
+        function renderEmbeddingStatus(s, note) {
+            const badge = document.getElementById('embStatusBadge');
+            const text = document.getElementById('embStatusText');
+            const btn = document.getElementById('embReindexBtn');
+            if (!badge || !text || !btn || !s) return;
+            const total = s.total_chunks || 0, stale = s.stale_chunks || 0;
+            let label, tone, msg;
+            if (!s.semantic_enabled) {
+                label = 'Keyword only'; tone = 'bg-amber-500/15 text-amber-300';
+                msg = 'Add a Gemini API key in Settings to turn on semantic search, then upgrade the index.';
+            } else if (!total) {
+                label = 'Empty'; tone = 'bg-white/5 text-slate-400';
+                msg = 'Add knowledge and it will be indexed automatically.';
+            } else if (stale) {
+                label = `${Math.round((total - stale) / total * 100)}% upgraded`; tone = 'bg-amber-500/15 text-amber-300';
+                msg = `${stale.toLocaleString()} of ${total.toLocaleString()} chunks were indexed with an older model and only match on exact keywords. Upgrade them to ${s.model}.`;
+            } else {
+                label = 'Up to date'; tone = 'bg-emerald-500/15 text-emerald-300';
+                msg = `All ${total.toLocaleString()} chunks are indexed with ${s.model}.`;
+            }
+            badge.className = `text-[11px] px-2 py-0.5 rounded-full ${tone}`;
+            badge.innerText = label;
+            text.innerText = note || msg;
+            btn.classList.toggle('hidden', !(s.semantic_enabled && stale));
+        }
+
+        async function loadEmbeddingStatus() {
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/embeddings`);
+                if (res.ok) renderEmbeddingStatus(await res.json());
+            } catch (err) {
+                console.error("Error loading index status:", err);
+            }
+        }
+
+        // Upgrades the index in small batches so each request stays well within serverless time limits.
+        async function runReindex() {
+            const btn = document.getElementById('embReindexBtn');
+            if (!btn || btn.disabled) return;
+            btn.disabled = true;
+            const asstId = currentAssistantId;
+            let status = null;
+            try {
+                for (let round = 0; round < 200; round++) {
+                    btn.innerText = status ? `Upgrading… ${status.current_chunks}/${status.total_chunks}` : 'Upgrading…';
+                    const res = await fetch(`/api/assistants/${asstId}/reindex`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    });
+                    if (!res.ok) throw new Error(`Re-index failed (${res.status})`);
+                    status = await res.json();
+                    if (status.done) break;
+                }
+                await loadEmbeddingStatus();
+                if (status && status.error) showToast(status.error, 'error');
+                else showToast('Search index upgraded', 'check');
+            } catch (err) {
+                showToast(err.message || 'Re-index failed', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Upgrade index';
             }
         }
 
@@ -4451,7 +4645,11 @@
                 exit_intent: document.getElementById('asstExitIntent').value === 'true',
                 hide_on_mobile: document.getElementById('asstHideMobile').value === 'true',
                 lead_title: document.getElementById('asstLeadTitle').value.trim(),
-                custom_css: document.getElementById('asstCustomCss').value
+                custom_css: document.getElementById('asstCustomCss').value,
+                tone: document.getElementById('asstTone').value,
+                reply_length: document.getElementById('asstReplyLength').value,
+                custom_instructions: document.getElementById('asstInstructions').value.trim(),
+                avoid_topics: document.getElementById('asstAvoidTopics').value.trim()
             };
 
             try {

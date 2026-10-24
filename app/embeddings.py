@@ -1,51 +1,112 @@
 """
-Embedding generation and vector similarity search supporting multi-assistant partitioning.
+Embedding generation and hybrid search, partitioned per assistant.
+
+- Gemini embeddings with separate query/document task types, batched.
+- Every stored vector is tagged with the model that made it, so vectors from a
+  retired model are never compared with new ones (re-index to upgrade them).
+- Search uses a cached per-assistant index (tokens, BM25 stats, vector matrix)
+  and keeps only passages that are actually relevant to the question.
 """
 
 import math
 import re
 import hashlib
+from collections import Counter
 try:
     import numpy as np
 except Exception:
     np = None
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from google import genai
 from google.genai import types
 
-from app.config import get_api_key, EMBEDDING_MODEL
+from app.config import get_api_key, EMBEDDING_MODEL, EMBEDDING_DIM
 from app.db import get_chunks_for_assistant
+
+PSEUDO_DIM = 256
+PSEUDO_TAG = f"pseudo-{PSEUDO_DIM}"
+EMBED_BATCH_SIZE = 100
+
+_CLIENTS: Dict[str, genai.Client] = {}
+
+
+def current_embedding_tag() -> str:
+    return f"{EMBEDDING_MODEL}@{EMBEDDING_DIM}"
+
+
+def embedding_tag(vec: List[float]) -> str:
+    """Tag stored next to a vector: which model space it lives in."""
+    if not vec:
+        return ""
+    if len(vec) == PSEUDO_DIM:
+        return PSEUDO_TAG
+    if len(vec) == EMBEDDING_DIM:
+        return current_embedding_tag()
+    return f"unknown@{len(vec)}"
+
 
 def get_genai_client() -> Optional[genai.Client]:
     api_key = get_api_key("gemini")
     if not api_key:
         return None
-    try:
-        return genai.Client(api_key=api_key)
-    except Exception:
-        return None
+    client = _CLIENTS.get(api_key)
+    if client is None:
+        try:
+            client = genai.Client(api_key=api_key)
+        except Exception:
+            return None
+        _CLIENTS.clear()  # key changed; drop clients for old keys
+        _CLIENTS[api_key] = client
+    return client
 
-def generate_embedding(text: str) -> List[float]:
-    """Generates an embedding vector for a single text using Gemini, or fallback hash vector."""
+
+def _embed(client: genai.Client, texts: List[str], task_type: str) -> List[List[float]]:
+    response = client.models.embed_content(
+        model=EMBEDDING_MODEL,
+        contents=texts,
+        config=types.EmbedContentConfig(task_type=task_type, output_dimensionality=EMBEDDING_DIM),
+    )
+    vectors = [list(e.values) for e in (response.embeddings or [])]
+    if len(vectors) != len(texts) or any(len(v) != EMBEDDING_DIM for v in vectors):
+        raise ValueError("embedding response did not match the request")
+    return vectors
+
+
+def generate_embedding(text: str, task: str = "query") -> List[float]:
+    """Embed one text. `task` is "query" for visitor questions, "document" for knowledge chunks.
+
+    Falls back to a keyword-hash vector when Gemini isn't configured or fails.
+    """
+    client = get_genai_client()
+    if client:
+        try:
+            task_type = "RETRIEVAL_QUERY" if task == "query" else "RETRIEVAL_DOCUMENT"
+            return _embed(client, [text], task_type)[0]
+        except Exception as e:
+            print(f"Embedding failed ({EMBEDDING_MODEL}), using keyword vector: {e}")
+    return _pseudo_embedding(text)
+
+
+def generate_embeddings_batch(texts: List[str], titles: Optional[List[str]] = None) -> List[List[float]]:
+    """Embed knowledge chunks in batches. Titles, when given, are prepended for context."""
+    docs = [f"{t}\n{x}" if t else x for t, x in zip(titles, texts)] if titles else list(texts)
     client = get_genai_client()
     if not client:
-        return _pseudo_embedding(text)
-        
-    try:
-        response = client.models.embed_content(
-            model=EMBEDDING_MODEL,
-            contents=text
-        )
-        if response.embeddings and len(response.embeddings) > 0:
-            return response.embeddings[0].values
-        return []
-    except Exception as e:
-        return _pseudo_embedding(text)
-
-def generate_embeddings_batch(texts: List[str]) -> List[List[float]]:
-    """Generates embeddings for multiple texts."""
-    return [generate_embedding(t) for t in texts]
+        return [_pseudo_embedding(t) for t in texts]
+    out: List[List[float]] = []
+    for i in range(0, len(docs), EMBED_BATCH_SIZE):
+        batch = docs[i:i + EMBED_BATCH_SIZE]
+        try:
+            out.extend(_embed(client, batch, "RETRIEVAL_DOCUMENT"))
+        except Exception as e:
+            print(f"Batch embedding failed, retrying one by one: {e}")
+            for j, doc in enumerate(batch):
+                try:
+                    out.append(_embed(client, [doc], "RETRIEVAL_DOCUMENT")[0])
+                except Exception:
+                    out.append(_pseudo_embedding(texts[i + j]))
+    return out
 
 STOPWORDS = {
     "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't",
@@ -141,190 +202,265 @@ def cosine_similarity(v1: List[float], v2: List[float]) -> float:
         return 0.0
     return float(dot / (norm_a * norm_b))
 
-def compute_bm25_scores(query_tokens: List[str], chunk_token_lists: List[List[str]], k1: float = 1.5, b: float = 0.75) -> List[float]:
-    """
-    Industrial BM25 lexical ranking algorithm with Robertson-Spärck Jones IDF.
-    """
-    N = len(chunk_token_lists)
-    if N == 0 or not query_tokens:
-        return [0.0] * N
-    
-    doc_lengths = [len(tokens) for tokens in chunk_token_lists]
-    avgdl = (sum(doc_lengths) / N) if N > 0 else 1.0
-    
-    # Document frequencies (df)
-    df = {}
-    for term in query_tokens:
-        df[term] = sum(1 for tokens in chunk_token_lists if term in tokens)
-        
-    scores = []
-    for i, tokens in enumerate(chunk_token_lists):
-        doc_len = doc_lengths[i]
-        tf_dict = {}
-        for t in tokens:
-            tf_dict[t] = tf_dict.get(t, 0) + 1
-            
-        score = 0.0
-        for term in query_tokens:
-            if term not in tf_dict:
-                continue
-            tf = tf_dict[term]
-            term_df = df.get(term, 0)
-            idf = math.log((N - term_df + 0.5) / (term_df + 0.5) + 1.0)
-            denom = tf + k1 * (1.0 - b + b * (doc_len / (avgdl or 1.0)))
-            score += idf * (tf * (k1 + 1.0) / (denom or 1.0))
-        scores.append(score)
-    return scores
+
+# ---------------------------------------------------------------- search index
+
+# Relevance thresholds for gemini-embedding-001 at 768 dimensions. Unrelated
+# question/passage pairs typically score ~0.45-0.55, related ones 0.65+.
+# Re-check with scripts/eval_answers.py if the embedding model changes.
+DENSE_FLOOR = 0.45        # similarity treated as "no signal"
+DENSE_MIN_RELEVANT = 0.60 # a passage this close is relevant even without shared keywords
+PSEUDO_MIN_RELEVANT = 0.30
+RELATIVE_CUTOFF = 0.35    # drop passages scoring under 35% of the best one
+
+_LEGAL_MARKERS = ("privacy policy", "terms of service", "terms & conditions", "privacy-policy",
+                  "terms-of", "cookie policy", "disclaimer")
+_PRICE_MARKERS = ("PRODUCT SPECIFICATION", "PROPERTY LISTING", "• Price:", "Price:", "AED", "$")
+
+
+class _Index:
+    """Per-assistant search structures, rebuilt only when the assistant's chunks change."""
+
+    def __init__(self, chunks: List[Dict[str, Any]]):
+        self.chunks = chunks
+        self.lower = [c["content"].lower() for c in chunks]
+        self.tokens = [Counter(re.findall(r"[a-z0-9]+", t)) for t in self.lower]
+        self.lengths = [sum(t.values()) for t in self.tokens]
+        self.avgdl = (sum(self.lengths) / len(self.lengths)) if self.lengths else 1.0
+        self.df: Counter = Counter()
+        for t in self.tokens:
+            self.df.update(t.keys())
+        self.is_legal = [
+            any(m in f"{c.get('title') or ''} {c.get('url') or ''}".lower() for m in _LEGAL_MARKERS)
+            for c in chunks
+        ]
+        self.tags = [self._tag(c) for c in chunks]
+        self.groups: Dict[str, Tuple[List[int], Any]] = {}
+        by_tag: Dict[str, List[int]] = {}
+        for i, tag in enumerate(self.tags):
+            if tag in (current_embedding_tag(), PSEUDO_TAG):
+                by_tag.setdefault(tag, []).append(i)
+        for tag, rows in by_tag.items():
+            vecs = [self.chunks[i]["embedding"] for i in rows]
+            if np is not None:
+                m = np.asarray(vecs, dtype=np.float32)
+                norms = np.linalg.norm(m, axis=1, keepdims=True)
+                norms[norms == 0] = 1.0
+                self.groups[tag] = (rows, m / norms)
+            else:
+                self.groups[tag] = (rows, vecs)
+        self._catalog: Dict[int, List[Dict[str, Any]]] = {}
+
+    @staticmethod
+    def _tag(chunk: Dict[str, Any]) -> str:
+        if chunk.get("embedding_model"):
+            return chunk["embedding_model"]
+        vec = chunk.get("embedding") or []
+        if len(vec) == PSEUDO_DIM:
+            return PSEUDO_TAG
+        return "legacy" if vec else ""  # made by a retired model before tagging existed
+
+    def bm25(self, terms: List[str], k1: float = 1.5, b: float = 0.75) -> List[float]:
+        n = len(self.chunks)
+        idf = {t: math.log((n - self.df.get(t, 0) + 0.5) / (self.df.get(t, 0) + 0.5) + 1.0) for t in terms}
+        scores = []
+        for tf, dl in zip(self.tokens, self.lengths):
+            s = 0.0
+            for t in terms:
+                f = tf.get(t)
+                if f:
+                    s += idf[t] * (f * (k1 + 1.0)) / (f + k1 * (1.0 - b + b * dl / (self.avgdl or 1.0)))
+            scores.append(s)
+        return scores
+
+    def dense(self, query: str) -> List[Optional[float]]:
+        """Cosine similarity per chunk, or None where the chunk's vector can't be compared."""
+        sims: List[Optional[float]] = [None] * len(self.chunks)
+        for tag, (rows, matrix) in self.groups.items():
+            if tag == PSEUDO_TAG:
+                qv = _pseudo_embedding(query)
+            else:
+                qv = generate_embedding(query, task="query")
+                if len(qv) != EMBEDDING_DIM:
+                    continue  # Gemini unavailable right now; lexical signals still work
+            if np is not None:
+                q = np.asarray(qv, dtype=np.float32)
+                qn = float(np.linalg.norm(q))
+                if qn == 0:
+                    continue
+                values = (matrix @ (q / qn)).tolist()
+            else:
+                values = [cosine_similarity(qv, v) for v in matrix]
+            for i, v in zip(rows, values):
+                sims[i] = float(v)
+        return sims
+
+    def catalog_items(self, i: int) -> List[Dict[str, Any]]:
+        if i not in self._catalog:
+            from app.catalog_intelligence import extract_catalog_items_from_chunk
+            c = self.chunks[i]
+            self._catalog[i] = extract_catalog_items_from_chunk(
+                c["content"], chunk_index=c.get("chunk_index", 1), url=c.get("url", ""), title=c.get("title", "")
+            )
+        return self._catalog[i]
+
+
+_INDEX_CACHE: Dict[str, Tuple[List[Dict[str, Any]], _Index]] = {}
+
+
+def _get_index(assistant_id: str) -> _Index:
+    chunks = get_chunks_for_assistant(assistant_id)
+    cached = _INDEX_CACHE.get(assistant_id)
+    # The chunk cache hands back the same list object until the data changes or expires.
+    if cached and cached[0] is chunks:
+        return cached[1]
+    index = _Index(chunks)
+    _INDEX_CACHE[assistant_id] = (chunks, index)
+    return index
+
+
+def _catalog_boost(index: _Index, i: int, intent: Dict[str, Any]) -> float:
+    from app.catalog_intelligence import match_items_against_query
+    items = index.catalog_items(i)
+    if not items:
+        return 0.05 if any(tag in index.chunks[i]["content"] for tag in _PRICE_MARKERS) else 0.0
+    matched = match_items_against_query(items, intent)
+    boost = 0.35 if any(it.get("within_budget", False) for it in matched) else (0.15 if matched else 0.05)
+    if intent.get("deal_type") == "rent" and any(it.get("deal_type") == "rent" for it in items):
+        boost += 0.10
+    if intent.get("bedrooms") and any(it.get("bedrooms") == intent["bedrooms"] for it in items):
+        boost += 0.10
+    locs = intent.get("locations") or []
+    if locs and any(any(loc in (it.get("location", "") + it.get("name", "")).lower() for loc in locs) for it in items):
+        boost += 0.10
+    return boost
+
 
 def search_relevant_chunks(
     query: str,
     assistant_id: str = "asst_default",
     top_k: int = 5,
-    min_similarity: float = 0.10
+    min_similarity: Optional[float] = None
 ) -> List[Dict[str, Any]]:
     """
-    Enterprise Hybrid Search combining:
-    - BM25 Sparse Lexical Matching (exact alphanumeric SKUs, names, phone numbers)
-    - Dense Vector Cosine Similarity (semantic understanding)
-    - Reciprocal Rank Fusion (RRF) with Catalog & Budget Intelligence Boosts.
+    Hybrid search that returns only passages relevant to the question:
+    - BM25 lexical matching (exact names, SKUs, numbers)
+    - Dense vector similarity (meaning), compared only within the same embedding model
+    - Query-word coverage, catalog/budget boosts, then absolute and relative cutoffs.
+    `min_similarity`, if given, is an extra floor on the final score (0-1).
     """
-    from app.catalog_intelligence import parse_user_query_intent, extract_catalog_items_from_chunk, match_items_against_query
+    from app.catalog_intelligence import parse_user_query_intent
 
     norm_query = normalize_query_terms(query)
-    query_emb = generate_embedding(norm_query)
-    if not query_emb:
+    index = _get_index(assistant_id)
+    if not index.chunks:
         return []
-        
-    chunks = get_chunks_for_assistant(assistant_id)
-    if not chunks:
-        return []
-        
-    # Analyze query intent (catalog, budget, deal type, entity type)
+
     intent = parse_user_query_intent(norm_query)
     is_catalog_query = intent.get("is_catalog_query", False)
     effective_top_k = max(top_k, 8) if is_catalog_query else top_k
 
-    # Extract query words including numbers, price symbols, and specs
     query_lower = norm_query.lower()
-    meaningful_query_words = [
+    query_words = list(dict.fromkeys(
         w for w in re.findall(r"[a-z0-9]+", query_lower)
-        if w not in STOPWORDS and (len(w) >= 3 or w.isdigit() or any(c.isdigit() for c in w))
-    ]
+        if w not in STOPWORDS and (len(w) >= 3 or any(ch.isdigit() for ch in w))
+    ))
+    wants_legal = any(w in query_lower for w in ["privacy", "policy", "terms", "cookie", "gdpr", "legal", "data protection"])
 
-    # Pre-filter candidate chunks (filter out legal/policy unless explicitly queried)
-    user_wants_legal = any(w in query_lower for w in ["privacy", "policy", "terms", "cookie", "gdpr", "legal", "data protection"])
-    valid_chunks = []
-    chunk_tokens_list = []
-    
-    for c in chunks:
-        is_legal_chunk = any(t in (c.get("title", "") + " " + c.get("url", "")).lower() for t in [
-            "privacy policy", "terms of service", "terms & conditions", "privacy-policy",
-            "terms-of", "cookie policy", "disclaimer"
-        ])
-        if is_legal_chunk and not user_wants_legal:
+    bm25 = index.bm25(query_words) if query_words else [0.0] * len(index.chunks)
+    max_bm25 = max(bm25) if bm25 else 0.0
+    dense = index.dense(norm_query)
+    current_tag = current_embedding_tag()
+
+    scored = []
+    for i, c in enumerate(index.chunks):
+        if index.is_legal[i] and not wants_legal:
             continue
-        valid_chunks.append(c)
-        chunk_tokens_list.append(re.findall(r"[a-z0-9]+", c["content"].lower()))
+        coverage = (sum(1 for w in query_words if w in index.lower[i]) / len(query_words)) if query_words else 0.0
+        lex = bm25[i] / max_bm25 if max_bm25 > 0 else 0.0
+        sim, tag = dense[i], index.tags[i]
+        if sim is None:
+            dense_norm = 0.0
+        elif tag == PSEUDO_TAG:
+            dense_norm = sim
+        else:
+            dense_norm = min(1.0, max(0.0, (sim - DENSE_FLOOR) / (1.0 - DENSE_FLOOR)))
+        boost = _catalog_boost(index, i, intent) if is_catalog_query else 0.0
 
-    if not valid_chunks:
+        relevant = (
+            coverage >= 0.5
+            or (bm25[i] > 0 and lex >= 0.5)
+            or (sim is not None and tag == current_tag and sim >= DENSE_MIN_RELEVANT)
+            or (sim is not None and tag == PSEUDO_TAG and sim >= PSEUDO_MIN_RELEVANT)
+            or boost >= 0.15
+        )
+        if not relevant:
+            continue
+        score = 0.5 * dense_norm + 0.3 * lex + 0.2 * coverage + boost
+        if min_similarity is not None and score < min_similarity:
+            continue
+        scored.append((score, i))
+
+    if not scored:
         return []
+    scored.sort(reverse=True)
+    best = scored[0][0]
 
-    # 1. Compute BM25 lexical scores
-    bm25_scores = compute_bm25_scores(meaningful_query_words, chunk_tokens_list)
-    bm25_indexed = sorted(range(len(valid_chunks)), key=lambda i: bm25_scores[i], reverse=True)
-    bm25_ranks = {orig_idx: rank + 1 for rank, orig_idx in enumerate(bm25_indexed)}
-
-    # 2. Compute Dense vector cosine similarities
-    dense_sims = [cosine_similarity(query_emb, c["embedding"]) for c in valid_chunks]
-    dense_indexed = sorted(range(len(valid_chunks)), key=lambda i: dense_sims[i], reverse=True)
-    dense_ranks = {orig_idx: rank + 1 for rank, orig_idx in enumerate(dense_indexed)}
-
-    # 3. Fuse via Reciprocal Rank Fusion (RRF) with constant k=60
-    has_dense_client = get_genai_client() is not None
-    scored_chunks = []
-    for i, c in enumerate(valid_chunks):
-        r_bm25 = bm25_ranks[i]
-        r_dense = dense_ranks[i]
-        bm25_val = bm25_scores[i]
-        dense_val = dense_sims[i]
-
-        # RRF formula
-        rrf = (1.0 / (60.0 + r_bm25)) + (1.0 / (60.0 + r_dense))
-        
-        # Base effective similarity scaled from RRF + dense baseline
-        content_lower = c["content"].lower()
-        keyword_hits = sum(1 for w in meaningful_query_words if w in content_lower) if meaningful_query_words else 0
-        effective_sim = dense_val + (rrf * 12.0) + (keyword_hits * 0.15)
-
-        # Catalog & Budget Intelligence Boost
-        if is_catalog_query:
-            items = extract_catalog_items_from_chunk(
-                c["content"],
-                chunk_index=c.get("chunk_index", 1),
-                url=c.get("url", ""),
-                title=c.get("title", "")
-            )
-            if items:
-                matched_items = match_items_against_query(items, intent)
-                has_fitting = any(it.get("within_budget", False) for it in matched_items)
-                
-                if has_fitting:
-                    # Item fits user's budget and criteria! Massive priority boost
-                    effective_sim += 0.85
-                elif matched_items:
-                    # Items match entity/category even if over budget
-                    effective_sim += 0.35
-                else:
-                    effective_sim += 0.15
-
-                # Rent vs Sale deal-type match
-                if intent.get("deal_type") == "rent" and any(it.get("deal_type") == "rent" for it in items):
-                    effective_sim += 0.30
-
-                # Bedroom count match
-                if intent.get("bedrooms") and any(it.get("bedrooms") == intent["bedrooms"] for it in items):
-                    effective_sim += 0.25
-
-                # Location match
-                if intent.get("locations") and any(any(loc in (it.get("location", "") + it.get("name", "")).lower() for loc in intent["locations"]) for it in items):
-                    effective_sim += 0.30
-            else:
-                # If chunk is not structured catalog but has pricing info or catalog tags
-                if any(tag in c["content"] for tag in ["PRODUCT SPECIFICATION", "PROPERTY LISTING", "• Price:", "Price:", "AED", "$"]):
-                    effective_sim += 0.15
-
-        # Grounding condition: require at least 1 keyword hit if using fallback pseudo-embedding
-        if not has_dense_client and meaningful_query_words and keyword_hits == 0 and bm25_val == 0.0 and not (is_catalog_query and any(p in c["content"] for p in ["• Price:", "Price:", "AED", "$"])):
-            continue
-
-        if effective_sim >= min_similarity:
-            scored_chunks.append({
-                "id": c["id"],
-                "assistant_id": c["assistant_id"],
-                "source_id": c["source_id"],
-                "chunk_index": c["chunk_index"],
-                "title": c["title"],
-                "url": c["url"],
-                "content": c["content"],
-                "similarity": round(effective_sim, 4),
-                "bm25_score": round(bm25_val, 4)
-            })
-            
-    scored_chunks.sort(key=lambda x: x["similarity"], reverse=True)
-
-    # Crawls often store the same boilerplate (service lists, footers, repeated
-    # sections) under many URLs. Keep only the best-scoring copy so duplicates
-    # don't crowd distinct, relevant passages out of the top-k.
-    unique_chunks = []
+    results = []
     seen_fingerprints = set()
-    for sc in scored_chunks:
-        fingerprint = re.sub(r"\s+", " ", sc["content"].lower()).strip()[:300]
+    for score, i in scored:
+        if score < best * RELATIVE_CUTOFF:
+            break
+        c = index.chunks[i]
+        # Crawls often store the same boilerplate under many URLs; keep the best copy only.
+        fingerprint = re.sub(r"\s+", " ", index.lower[i]).strip()[:300]
         if fingerprint in seen_fingerprints:
             continue
         seen_fingerprints.add(fingerprint)
-        unique_chunks.append(sc)
-        if len(unique_chunks) >= effective_top_k:
+        results.append({
+            "id": c["id"],
+            "assistant_id": c["assistant_id"],
+            "source_id": c["source_id"],
+            "chunk_index": c["chunk_index"],
+            "title": c["title"],
+            "url": c["url"],
+            "content": c["content"],
+            "similarity": round(score, 4),
+            "bm25_score": round(bm25[i], 4),
+        })
+        if len(results) >= effective_top_k:
             break
-    return unique_chunks
+    return results
 
 
+def reindex_assistant(assistant_id: str, max_chunks: int = 200, after_id: Optional[int] = None) -> Dict[str, Any]:
+    """Re-embed up to `max_chunks` chunks with the current model. Call again with
+    `next_after_id` until `done` is true (keeps each request short on serverless hosts).
+
+    Without `after_id`, only chunks made by another model are processed. With it, a
+    full rebuild continues from that chunk id (pass 0 to start one).
+    """
+    from app.db import list_chunks_to_reindex, update_chunk_embeddings, get_embedding_status
+    tag = current_embedding_tag()
+    if not get_genai_client():
+        return {"processed": 0, "upgraded": 0, "next_after_id": None, "done": True,
+                "error": "Add a Gemini API key in Settings to use semantic embeddings.",
+                **get_embedding_status(assistant_id, tag)}
+
+    rows = list_chunks_to_reindex(assistant_id, tag, max_chunks, after_id=after_id)
+    vectors = generate_embeddings_batch([r["content"] for r in rows], titles=[r.get("title") or "" for r in rows])
+    update_chunk_embeddings(assistant_id, [(r["id"], v, embedding_tag(v)) for r, v in zip(rows, vectors)])
+    upgraded = sum(1 for v in vectors if embedding_tag(v) == tag)
+    status = get_embedding_status(assistant_id, tag)
+
+    if after_id is not None:
+        next_after_id = rows[-1]["id"] if len(rows) == max_chunks else None
+        done = next_after_id is None
+    else:
+        next_after_id = None
+        # Chunks that failed to embed stay stale; stop rather than retry them forever.
+        done = status["stale_chunks"] == 0 or upgraded < len(rows)
+    result = {"processed": len(rows), "upgraded": upgraded, "next_after_id": next_after_id, "done": done, **status}
+    if upgraded < len(rows):
+        result["error"] = f"{len(rows) - upgraded} chunk(s) could not be embedded (rate limit or API error). Try again later."
+    return result

@@ -306,11 +306,12 @@ def _provider_stream(provider: str, messages: List[Message], temperature: float,
 
 
 def stream_chat(messages: List[Message], temperature: float = 0.5, max_tokens: int = 900,
-                providers: Optional[List[str]] = None) -> Iterator[str]:
+                providers: Optional[List[str]] = None, meta: Optional[Dict[str, Any]] = None) -> Iterator[str]:
     """Yield reply text as it is generated, failing over between providers.
 
     Failover only happens before the first token; once text has reached the
     visitor, an error mid-stream is raised rather than restarting elsewhere.
+    If `meta` is given, meta["provider"] is set to the provider that answered.
     """
     order = providers if providers is not None else available_providers()
     if not order:
@@ -323,10 +324,14 @@ def stream_chat(messages: List[Message], temperature: float = 0.5, max_tokens: i
             for piece in _provider_stream(provider, messages, temperature, max_tokens):
                 visible = think.feed(piece)
                 if visible:
+                    if not produced and meta is not None:
+                        meta["provider"] = provider
                     produced = True
                     yield visible
             tail = think.flush()
             if tail:
+                if not produced and meta is not None:
+                    meta["provider"] = provider
                 produced = True
                 yield tail
             if produced:
@@ -341,9 +346,9 @@ def stream_chat(messages: List[Message], temperature: float = 0.5, max_tokens: i
 
 
 def chat(messages: List[Message], temperature: float = 0.5, max_tokens: int = 900,
-         providers: Optional[List[str]] = None) -> str:
+         providers: Optional[List[str]] = None, meta: Optional[Dict[str, Any]] = None) -> str:
     """Return the full reply, with the same provider failover as stream_chat."""
-    return clean_model_text("".join(stream_chat(messages, temperature, max_tokens, providers)))
+    return clean_model_text("".join(stream_chat(messages, temperature, max_tokens, providers, meta)))
 
 
 def complete_with_provider(provider: str, api_key: str, prompt: str, system_prompt: str,

@@ -668,7 +668,46 @@ LISTINGS, PRODUCTS AND PRICES
 """
 
 
-def build_system_prompt(org_name: str, asst_name: Optional[str] = None) -> str:
+# Personality presets the team can pick per assistant (dashboard > Assistant settings).
+ASSISTANT_TONES = {
+    "friendly": "Warm, upbeat and approachable, like a helpful colleague.",
+    "professional": "Polished and courteous. Contractions are fine, but no slang or emoji.",
+    "casual": "Relaxed and conversational, like texting a friend who knows the business. An occasional emoji is fine.",
+    "enthusiastic": "Energetic and positive, without overselling or exaggerating.",
+    "concise": "Brief and to the point. Short sentences, no small talk unless the visitor starts it.",
+}
+REPLY_LENGTHS = {
+    "short": "Keep replies to 1-2 sentences unless the visitor asks for detail.",
+    "balanced": "",  # the default guidance in HOW YOU TALK already covers this
+    "detailed": "When it helps, give fuller explanations with specifics and examples, still without padding.",
+}
+
+
+def _personality_section(asst: Optional[Dict[str, Any]], org: str) -> str:
+    """Team-configured voice and rules. They shape style and scope, never the grounding rules."""
+    asst = asst or {}
+    lines = []
+    tone = ASSISTANT_TONES.get((asst.get("tone") or "friendly").strip())
+    if tone and asst.get("tone") not in (None, "", "friendly"):
+        lines.append(f"- Tone: {tone}")
+    length = REPLY_LENGTHS.get((asst.get("reply_length") or "balanced").strip())
+    if length:
+        lines.append(f"- Length: {length}")
+    avoid = (asst.get("avoid_topics") or "").strip()
+    if avoid:
+        lines.append(f"- Don't discuss these topics; if asked, politely say it's not something you can help with here: {avoid}")
+    extra = (asst.get("custom_instructions") or "").strip()
+    if extra:
+        rules = "\n".join(f"  {l.strip()}" for l in extra.splitlines() if l.strip())
+        lines.append(f"- Instructions from the {org} team:\n{rules}")
+    if not lines:
+        return ""
+    header = (f"\nSETTINGS FROM THE {org.upper()} TEAM\n"
+              "Follow these. If one conflicts with the rules about facts, links or ground rules above, those rules win.\n")
+    return header + "\n".join(lines) + "\n"
+
+
+def build_system_prompt(org_name: str, asst_name: Optional[str] = None, asst: Optional[Dict[str, Any]] = None) -> str:
     org = team_name(org_name) if (org_name or "").strip() else "this company"
     return CHAT_SYSTEM_PROMPT_TEMPLATE.format(
         asst_name=(asst_name or org_name or f"{org}'s assistant").strip(),
@@ -676,7 +715,7 @@ def build_system_prompt(org_name: str, asst_name: Optional[str] = None) -> str:
         today=datetime.now().strftime("%A, %d %B %Y"),
         gap_tag=GAP_TAG,
         lead_tag=LEAD_TAG,
-    )
+    ) + _personality_section(asst, org)
 
 
 # Kept for callers that import the constant.
@@ -736,12 +775,13 @@ def _prepare_turn(query: str, assistant_id: str, conversation_history: Optional[
 
     injection_reply = detect_prompt_injection(norm_query, asst_name=org)
     if injection_reply:
-        return {"final": {"answer": injection_reply, "sources": [], "lead_prompted": False, "knowledge_gap": False}}
+        return {"final": {"answer": injection_reply, "sources": [], "lead_prompted": False, "knowledge_gap": False, "provider": "guardrail"}}
 
     if not llm.is_configured():
         chunks = search_relevant_chunks(norm_query, assistant_id=assistant_id, top_k=top_k)
         result = generate_local_extractive_answer(norm_query, chunks, assistant_id=assistant_id)
         result.setdefault("knowledge_gap", _UNKNOWN_MARKER in (result.get("answer") or "").lower())
+        result.setdefault("provider", "local")
         return {"final": result}
 
     history_turns = history_to_messages(conversation_history, org)
@@ -759,7 +799,7 @@ def _prepare_turn(query: str, assistant_id: str, conversation_history: Optional[
         f"Visitor's message: {query}",
     ] if p)
 
-    messages = [{"role": "system", "content": build_system_prompt(asst_name, asst_name)}]
+    messages = [{"role": "system", "content": build_system_prompt(asst_name, asst_name, asst)}]
     messages += history_turns
     messages.append({"role": "user", "content": user_content})
 
@@ -808,6 +848,7 @@ def _local_fallback(plan: Dict[str, Any]) -> Dict[str, Any]:
     chunks = plan["chunks"] or search_relevant_chunks(plan["search_query"], assistant_id=plan["assistant_id"])
     result = generate_local_extractive_answer(plan["norm_query"], chunks, assistant_id=plan["assistant_id"])
     result.setdefault("knowledge_gap", _UNKNOWN_MARKER in (result.get("answer") or "").lower())
+    result.setdefault("provider", "local")
     return result
 
 
@@ -821,12 +862,13 @@ def generate_grounded_response(
     plan = _prepare_turn(query, assistant_id, conversation_history, top_k)
     if "final" in plan:
         return plan["final"]
+    meta: Dict[str, Any] = {}
     try:
-        raw = llm.chat(plan["messages"], temperature=ANSWER_TEMPERATURE, max_tokens=ANSWER_MAX_TOKENS)
+        raw = llm.chat(plan["messages"], temperature=ANSWER_TEMPERATURE, max_tokens=ANSWER_MAX_TOKENS, meta=meta)
     except Exception as e:
         print(f"All LLM providers failed: {e}. Falling back to local extractor.")
         return _local_fallback(plan)
-    return _finalize(raw, plan)
+    return {**_finalize(raw, plan), "provider": meta.get("provider", "")}
 
 
 def _visible_text(raw: str) -> str:
@@ -855,8 +897,9 @@ def stream_grounded_response(
         return
 
     raw, shown = "", ""
+    meta: Dict[str, Any] = {}
     try:
-        for piece in llm.stream_chat(plan["messages"], temperature=ANSWER_TEMPERATURE, max_tokens=ANSWER_MAX_TOKENS):
+        for piece in llm.stream_chat(plan["messages"], temperature=ANSWER_TEMPERATURE, max_tokens=ANSWER_MAX_TOKENS, meta=meta):
             raw += piece
             visible = _visible_text(raw)
             if visible.startswith(shown) and len(visible) > len(shown):
@@ -869,7 +912,7 @@ def stream_grounded_response(
             yield {"type": "token", "token": result["answer"]}
             yield {"type": "done", **result}
             return
-    yield {"type": "done", **_finalize(raw, plan)}
+    yield {"type": "done", **_finalize(raw, plan), "provider": meta.get("provider", "")}
 
 
 CALL_PREP_SYSTEM_PROMPT = """You are a sales-intelligence assistant. Read this website chat between a prospect and our assistant and write a short call-prep brief for the sales rep who will follow up.

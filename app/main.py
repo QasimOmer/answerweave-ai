@@ -77,6 +77,11 @@ from app.db import (
     touch_user_presence,
     count_operators_online,
     list_waiting_conversations,
+    set_message_feedback,
+    get_answer_quality,
+    get_embedding_status,
+    log_unanswered_question,
+    is_trivial_or_conversational,
 )
 from app.notify import notify_human_requested, send_email, email_provider
 from app.config import (
@@ -84,11 +89,13 @@ from app.config import (
     update_bot_settings,
     get_api_key,
     DEFAULT_GEMINI_MODEL,
-    FALLBACK_GEMINI_MODEL
+    FALLBACK_GEMINI_MODEL,
+    EMBEDDING_MODEL
 )
 from app.ingestion import fetch_url, crawl_website, crawl_sitemap, parse_uploaded_file, chunk_text
-from app.embeddings import generate_embeddings_batch
+from app.embeddings import generate_embeddings_batch, current_embedding_tag, reindex_assistant
 from app.rag import (
+    ASSISTANT_TONES,
     generate_grounded_response,
     stream_grounded_response,
     generate_call_prep_brief,
@@ -206,6 +213,17 @@ class UpdateAssistantRequest(BaseModel):
     exit_intent: Optional[bool] = None
     hide_on_mobile: Optional[bool] = None
     custom_css: Optional[str] = None
+    tone: Optional[str] = None
+    reply_length: Optional[str] = None
+    custom_instructions: Optional[str] = None
+    avoid_topics: Optional[str] = None
+
+class ReindexRequest(BaseModel):
+    full: bool = False              # re-embed everything, not just chunks from older models
+    after_id: Optional[int] = None  # continue a batch run from this chunk id
+
+class FeedbackRequest(BaseModel):
+    rating: int  # 1 = helpful, -1 = not helpful, 0 = clear
 
 class IngestUrlRequest(BaseModel):
     url: str
@@ -434,7 +452,7 @@ def api_create_assistant(req: CreateAssistantRequest, request: Request):
                 src_id = add_source(asst_id, "url", p["title"], p["url"], p["content"])
                 chunks = chunk_text(p["content"])
                 if chunks:
-                    embs = generate_embeddings_batch(chunks)
+                    embs = generate_embeddings_batch(chunks, titles=[p["title"]] * len(chunks))
                     for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
                         add_chunk(asst_id, src_id, idx, c_text, p["title"], p["url"], emb)
                     update_source_chunk_count(src_id, len(chunks))
@@ -593,6 +611,13 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
         data["launcher_icon"] = "chat"
     if "custom_css" in data and data["custom_css"] is not None:
         data["custom_css"] = data["custom_css"][:8000]
+    if "tone" in data and data["tone"] not in ASSISTANT_TONES:
+        data["tone"] = "friendly"
+    if "reply_length" in data and data["reply_length"] not in ("short", "balanced", "detailed"):
+        data["reply_length"] = "balanced"
+    for key, limit in (("custom_instructions", 2000), ("avoid_topics", 1000)):
+        if key in data:
+            data[key] = (data[key] or "").strip()[:limit]
     success = update_assistant(asst_id, data)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to update assistant")
@@ -611,6 +636,23 @@ def api_delete_assistant(asst_id: str):
 def api_get_assistant_analytics(asst_id: str):
     return get_assistant_analytics(asst_id)
 
+@app.get("/api/assistants/{asst_id}/answer-quality")
+def api_get_answer_quality(asst_id: str, days: int = 30):
+    """Reply speed, answer coverage, visitor ratings and provider usage."""
+    return get_answer_quality(asst_id, days=max(1, min(365, days)))
+
+@app.get("/api/assistants/{asst_id}/embeddings")
+def api_get_embedding_status(asst_id: str):
+    status = get_embedding_status(asst_id, current_embedding_tag())
+    return {**status, "model": EMBEDDING_MODEL, "semantic_enabled": bool(get_api_key("gemini"))}
+
+@app.post("/api/assistants/{asst_id}/reindex")
+def api_reindex_assistant(asst_id: str, req: Optional[ReindexRequest] = None):
+    """Re-embeds knowledge with the current model in batches; call again with next_after_id until done."""
+    req = req or ReindexRequest()
+    after_id = req.after_id if req.after_id is not None else (0 if req.full else None)
+    return reindex_assistant(asst_id, max_chunks=200, after_id=after_id)
+
 # ----------------- Knowledge Ingestion (URLs, Files, Sitemaps) -----------------
 @app.post("/api/assistants/{asst_id}/sources/upload")
 async def api_upload_file(asst_id: str, file: UploadFile = File(...)):
@@ -622,7 +664,7 @@ async def api_upload_file(asst_id: str, file: UploadFile = File(...)):
         src_id = add_source(asst_id, "file", parsed["title"], f"File: {file.filename}", parsed["content"])
         chunks = chunk_text(parsed["content"])
         if chunks:
-            embs = generate_embeddings_batch(chunks)
+            embs = generate_embeddings_batch(chunks, titles=[parsed["title"]] * len(chunks))
             for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
                 add_chunk(asst_id, src_id, idx, c_text, parsed["title"], f"File: {file.filename}", emb)
             update_source_chunk_count(src_id, len(chunks))
@@ -652,7 +694,7 @@ def api_ingest_sitemap(asst_id: str, req: IngestSitemapRequest):
             src_id = add_source(asst_id, "url", page["title"], u, page["content"])
             chunks = chunk_text(page["content"])
             if chunks:
-                embs = generate_embeddings_batch(chunks)
+                embs = generate_embeddings_batch(chunks, titles=[page["title"]] * len(chunks))
                 for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
                     add_chunk(asst_id, src_id, idx, c_text, page["title"], u, emb)
                 update_source_chunk_count(src_id, len(chunks))
@@ -716,7 +758,7 @@ def api_ingest_url(asst_id: str, req: IngestUrlRequest):
         src_id = add_source(asst_id, "url", p["title"], p["url"], p["content"])
         chunks = chunk_text(p["content"])
         if chunks:
-            embs = generate_embeddings_batch(chunks)
+            embs = generate_embeddings_batch(chunks, titles=[p["title"]] * len(chunks))
             for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
                 add_chunk(asst_id, src_id, idx, c_text, p["title"], p["url"], emb)
             update_source_chunk_count(src_id, len(chunks))
@@ -739,7 +781,7 @@ def api_ingest_text(asst_id: str, req: IngestTextRequest):
     src_id = add_source(asst_id, "text", req.title, req.url or "Text Document", req.content)
     chunks = chunk_text(req.content)
     if chunks:
-        embs = generate_embeddings_batch(chunks)
+        embs = generate_embeddings_batch(chunks, titles=[req.title] * len(chunks))
         for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
             add_chunk(asst_id, src_id, idx, c_text, req.title, req.url or "Text Document", emb)
         update_source_chunk_count(src_id, len(chunks))
@@ -808,7 +850,7 @@ def api_sync_assistant_knowledge(asst_id: str):
                 delete_source(src_id)
 
             new_src_id = add_source(asst_id, "url", title, u, content)
-            embs = generate_embeddings_batch(chunks)
+            embs = generate_embeddings_batch(chunks, titles=[title] * len(chunks))
             for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
                 add_chunk(asst_id, new_src_id, idx, c_text, title, u, emb)
             update_source_chunk_count(new_src_id, len(chunks))
@@ -946,7 +988,7 @@ def api_resolve_gap(asst_id: str, gap_id: int, req: ResolveGapRequest):
     src_id = add_source(asst_id, "faq", title, "Knowledge Gap Resolution", body)
     chunks = chunk_text(body)
     if chunks:
-        embs = generate_embeddings_batch(chunks)
+        embs = generate_embeddings_batch(chunks, titles=[title] * len(chunks))
         for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
             add_chunk(asst_id, src_id, idx, c_text, title, "Knowledge Gap Resolution", emb)
         update_source_chunk_count(src_id, len(chunks))
@@ -974,7 +1016,7 @@ def api_add_custom_qa(asst_id: str, req: CreateCustomQARequest):
     src_id = add_source(asst_id, "faq", title, "Custom Knowledge FAQ", body)
     chunks = chunk_text(body)
     if chunks:
-        embs = generate_embeddings_batch(chunks)
+        embs = generate_embeddings_batch(chunks, titles=[title] * len(chunks))
         for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
             add_chunk(asst_id, src_id, idx, c_text, title, "Custom Knowledge FAQ", emb)
         update_source_chunk_count(src_id, len(chunks))
@@ -1068,19 +1110,26 @@ def handle_human_request(asst: Dict[str, Any], conv_id: str, message: str, reque
 CHAT_HISTORY_LIMIT = 12
 
 
-def store_assistant_reply(asst_id: str, conv_id: str, result: Dict[str, Any]):
-    add_message(
+def store_assistant_reply(asst_id: str, conv_id: str, result: Dict[str, Any], started: float) -> Optional[int]:
+    """Saves the reply with its answer analytics and returns the message id (used for visitor feedback)."""
+    message_id = add_message(
         conv_id,
         "assistant",
         result["answer"],
         assistant_id=asst_id,
         sources=result["sources"],
-        lead_prompted=result["lead_prompted"]
+        lead_prompted=result["lead_prompted"],
+        response_ms=int((time.time() - started) * 1000),
+        provider=result.get("provider") or ("handoff" if result.get("human_requested") else ""),
+        knowledge_gap=bool(result.get("knowledge_gap")),
     )
+    result["message_id"] = message_id
+    return message_id
 
 
 def answer_visitor_message(asst: Dict[str, Any], conv_id: str, message: str, request: Request) -> Dict[str, Any]:
     """Store the visitor's message, produce the reply (AI or human hand-off) and store it."""
+    started = time.time()
     asst_id = asst["id"]
     history = get_conversation_history(conv_id, limit=CHAT_HISTORY_LIMIT)
     add_message(conv_id, "user", message, assistant_id=asst_id)
@@ -1092,12 +1141,13 @@ def answer_visitor_message(asst: Dict[str, Any], conv_id: str, message: str, req
         result.setdefault("human_requested", False)
         result.setdefault("operators_online", None)
 
-    store_assistant_reply(asst_id, conv_id, result)
+    store_assistant_reply(asst_id, conv_id, result, started)
     return result
 
 
 def stream_visitor_message(asst: Dict[str, Any], conv_id: str, message: str, request: Request) -> Iterator[Dict[str, Any]]:
     """Streaming version of answer_visitor_message: yields token events, then a final 'done' event."""
+    started = time.time()
     asst_id = asst["id"]
     history = get_conversation_history(conv_id, limit=CHAT_HISTORY_LIMIT)
     add_message(conv_id, "user", message, assistant_id=asst_id)
@@ -1116,7 +1166,7 @@ def stream_visitor_message(asst: Dict[str, Any], conv_id: str, message: str, req
         result.setdefault("human_requested", False)
         result.setdefault("operators_online", None)
 
-    store_assistant_reply(asst_id, conv_id, result)
+    store_assistant_reply(asst_id, conv_id, result, started)
     yield {"type": "done", **result}
 
 
@@ -1157,6 +1207,7 @@ def api_chat(req: ChatRequest, request: Request):
         "answer": result["answer"],
         "sources": result["sources"],
         "lead_prompted": result["lead_prompted"],
+        "message_id": result.get("message_id"),
         "operator_active": False,
         "human_requested": result.get("human_requested", False),
         "operators_online": result.get("operators_online")
@@ -1212,6 +1263,7 @@ def api_chat_stream(req: ChatRequest, request: Request):
                     "answer": event["answer"],
                     "sources": event["sources"],
                     "lead_prompted": event["lead_prompted"],
+                    "message_id": event.get("message_id"),
                     "conversation_id": conv_id,
                     "human_requested": event.get("human_requested", False),
                     "operators_online": event.get("operators_online"),
@@ -1227,6 +1279,22 @@ def api_chat_stream(req: ChatRequest, request: Request):
             "X-Accel-Buffering": "no"
         }
     )
+
+@app.post("/api/conversations/{conv_id}/messages/{message_id}/feedback")
+def api_message_feedback(conv_id: str, message_id: int, req: FeedbackRequest, request: Request):
+    """Visitor rates a bot reply. Not-helpful replies send their question to the knowledge-gaps tab."""
+    check_rate_limit(request)
+    rating = 1 if req.rating > 0 else (-1 if req.rating < 0 else 0)
+    rated = set_message_feedback(conv_id, message_id, rating)
+    if not rated:
+        raise HTTPException(status_code=404, detail="Message not found in this conversation")
+    question = (rated.get("question") or "").strip()
+    if rating == -1 and len(question) >= 4 and not is_trivial_or_conversational(question):
+        try:
+            log_unanswered_question(rated["assistant_id"], question)
+        except Exception as e:
+            print(f"Could not log disliked answer as a knowledge gap: {e}")
+    return {"status": "success", "message_id": message_id, "rating": rating}
 
 # ----------------- Leads & Call-Prep -----------------
 @app.post("/api/leads")

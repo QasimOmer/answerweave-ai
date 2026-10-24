@@ -18,7 +18,7 @@ import time
 import uuid
 import hashlib
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 
 # Automatically load environment variables from .env.local or .env if present
@@ -254,6 +254,20 @@ def _default_admin_password() -> str:
     return generated
 
 
+# Columns for embedding versioning, answer analytics and per-assistant personality.
+AI_QUALITY_COLUMNS = [
+    ("chunks", "embedding_model", "TEXT DEFAULT ''"),
+    ("messages", "feedback", "INTEGER DEFAULT 0"),
+    ("messages", "response_ms", "INTEGER DEFAULT 0"),
+    ("messages", "provider", "TEXT DEFAULT ''"),
+    ("messages", "knowledge_gap", "INTEGER DEFAULT 0"),
+    ("assistants", "tone", "TEXT DEFAULT 'friendly'"),
+    ("assistants", "reply_length", "TEXT DEFAULT 'balanced'"),
+    ("assistants", "custom_instructions", "TEXT DEFAULT ''"),
+    ("assistants", "avoid_topics", "TEXT DEFAULT ''"),
+]
+
+
 def init_db():
     if USE_POSTGRES:
         conn = get_db()
@@ -407,6 +421,13 @@ def init_db():
         except Exception:
             pass
         conn.commit();
+        # One statement per transaction, so a failure can't skip the rest.
+        for table, col, col_def in AI_QUALITY_COLUMNS:
+            try:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_def};")
+                conn.commit()
+            except Exception:
+                conn.rollback()
 
         # Check if assistants table in Postgres has data
         cursor.execute("SELECT count(*) as cnt FROM assistants;")
@@ -646,7 +667,7 @@ def init_db():
         ("users", "last_seen_epoch", "INTEGER DEFAULT 0"),
         ("conversations", "operator_name", "TEXT DEFAULT ''"),
         ("conversations", "unread_operator_msgs", "INTEGER DEFAULT 0")
-    ]
+    ] + AI_QUALITY_COLUMNS
     for tbl, col, col_def in tables_to_migrate:
         try:
             cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_def};")
@@ -999,7 +1020,8 @@ def update_assistant(assistant_id: str, data: Dict[str, Any]) -> bool:
         "theme_mode", "widget_subtitle", "launcher_text", "launcher_style",
         "teaser_message", "lead_title", "lead_fields", "sound_enabled", "show_branding", "whatsapp_number",
         "input_placeholder", "launcher_pulse", "border_radius",
-        "font_family", "widget_width", "offset_x", "offset_y", "launcher_icon", "teaser_delay", "exit_intent", "hide_on_mobile", "custom_css"
+        "font_family", "widget_width", "offset_x", "offset_y", "launcher_icon", "teaser_delay", "exit_intent", "hide_on_mobile", "custom_css",
+        "tone", "reply_length", "custom_instructions", "avoid_topics"
     ]
     updates = []
     values = []
@@ -1090,15 +1112,65 @@ def add_source(assistant_id: str, source_type: str, title: str, url: str, conten
     return source_id
 
 def add_chunk(assistant_id: str, source_id: int, chunk_index: int, content: str, title: str, url: str, embedding: List[float]):
+    from app.embeddings import embedding_tag
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO chunks (assistant_id, source_id, chunk_index, content, title, url, embedding)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (assistant_id, source_id, chunk_index, content, title, url, json.dumps(embedding)))
+        INSERT INTO chunks (assistant_id, source_id, chunk_index, content, title, url, embedding, embedding_model)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (assistant_id, source_id, chunk_index, content, title, url, json.dumps(embedding), embedding_tag(embedding)))
     conn.commit()
     conn.close()
     invalidate_chunks_cache(assistant_id)
+
+def list_chunks_to_reindex(assistant_id: str, current_tag: str, limit: int, after_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Chunks whose vectors weren't made by the current embedding model (oldest first).
+
+    With `after_id` (a full rebuild), every chunk with a larger id is returned regardless of tag.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    if after_id is not None:
+        cursor.execute("""
+            SELECT id, content, title FROM chunks
+            WHERE assistant_id = ? AND id > ?
+            ORDER BY id ASC LIMIT ?
+        """, (assistant_id, after_id, limit))
+    else:
+        cursor.execute("""
+            SELECT id, content, title FROM chunks
+            WHERE assistant_id = ? AND (embedding_model IS NULL OR embedding_model != ?)
+            ORDER BY id ASC LIMIT ?
+        """, (assistant_id, current_tag, limit))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+def update_chunk_embeddings(assistant_id: str, updates: List[tuple]):
+    """updates: [(chunk_id, embedding, tag), ...]"""
+    if not updates:
+        return
+    conn = get_db()
+    cursor = conn.cursor()
+    for chunk_id, emb, tag in updates:
+        cursor.execute("UPDATE chunks SET embedding = ?, embedding_model = ? WHERE id = ? AND assistant_id = ?",
+                       (json.dumps(emb), tag, chunk_id, assistant_id))
+    conn.commit()
+    conn.close()
+    invalidate_chunks_cache(assistant_id)
+
+def get_embedding_status(assistant_id: str, current_tag: str) -> Dict[str, int]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(CASE WHEN embedding_model = ? THEN 1 ELSE 0 END), 0) AS current_count
+        FROM chunks WHERE assistant_id = ?
+    """, (current_tag, assistant_id))
+    row = cursor.fetchone()
+    conn.close()
+    total, current = int(row["total"] or 0), int(row["current_count"] or 0)
+    return {"total_chunks": total, "current_chunks": current, "stale_chunks": total - current}
 
 def update_source_chunk_count(source_id: int, count: int):
     conn = get_db()
@@ -1147,7 +1219,7 @@ def get_chunks_for_assistant(assistant_id: str) -> List[Dict[str, Any]]:
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, assistant_id, source_id, chunk_index, content, title, url, embedding
+        SELECT id, assistant_id, source_id, chunk_index, content, title, url, embedding, embedding_model
         FROM chunks
         WHERE assistant_id = ?
     """, (assistant_id,))
@@ -1166,7 +1238,8 @@ def get_chunks_for_assistant(assistant_id: str) -> List[Dict[str, Any]]:
             "content": r["content"],
             "title": r["title"],
             "url": r["url"],
-            "embedding": emb
+            "embedding": emb,
+            "embedding_model": r["embedding_model"] or ""
         })
     _CHUNKS_CACHE[assistant_id] = {"timestamp": now, "chunks": results}
     return results
@@ -1230,19 +1303,112 @@ def add_message(
     content: str,
     assistant_id: str = "asst_default",
     sources: Optional[List[Dict[str, Any]]] = None,
-    lead_prompted: bool = False
-):
+    lead_prompted: bool = False,
+    response_ms: int = 0,
+    provider: str = "",
+    knowledge_gap: bool = False
+) -> Optional[int]:
+    """Stores a message and returns its id. The last three fields are answer analytics for bot replies."""
     ensure_conversation(conversation_id, assistant_id)
     conn = get_db()
     cursor = conn.cursor()
     sources_json = json.dumps(sources) if sources else None
     cursor.execute("""
-        INSERT INTO messages (conversation_id, assistant_id, role, content, sources_json, lead_prompted)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (conversation_id, assistant_id, role, content, sources_json, 1 if lead_prompted else 0))
+        INSERT INTO messages (conversation_id, assistant_id, role, content, sources_json, lead_prompted,
+                              response_ms, provider, knowledge_gap)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (conversation_id, assistant_id, role, content, sources_json, 1 if lead_prompted else 0,
+          int(response_ms or 0), provider or "", 1 if knowledge_gap else 0))
+    message_id = cursor.lastrowid
     cursor.execute("UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (conversation_id,))
     conn.commit()
     conn.close()
+    return message_id
+
+def set_message_feedback(conversation_id: str, message_id: int, rating: int) -> Optional[Dict[str, Any]]:
+    """Records a visitor's thumbs up (1) / down (-1) / cleared (0) on a bot reply in their own conversation.
+
+    Returns the rated reply plus the visitor question it answered, or None if the message isn't a bot reply here.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, assistant_id, content FROM messages
+        WHERE id = ? AND conversation_id = ? AND role = 'assistant'
+    """, (message_id, conversation_id))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+    cursor.execute("UPDATE messages SET feedback = ? WHERE id = ?", (rating, message_id))
+    cursor.execute("""
+        SELECT content FROM messages
+        WHERE conversation_id = ? AND id < ? AND role = 'user'
+        ORDER BY id DESC LIMIT 1
+    """, (conversation_id, message_id))
+    q = cursor.fetchone()
+    conn.commit()
+    conn.close()
+    return {"id": row["id"], "assistant_id": row["assistant_id"], "answer": row["content"],
+            "question": q["content"] if q else ""}
+
+def get_answer_quality(assistant_id: str, days: int = 30) -> Dict[str, Any]:
+    """Answer analytics for the dashboard: speed, coverage, visitor ratings and providers."""
+    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*) AS replies,
+               COALESCE(AVG(CASE WHEN response_ms > 0 THEN response_ms END), 0) AS avg_ms,
+               COALESCE(SUM(CASE WHEN knowledge_gap = 1 THEN 1 ELSE 0 END), 0) AS gaps,
+               COALESCE(SUM(CASE WHEN feedback = 1 THEN 1 ELSE 0 END), 0) AS up,
+               COALESCE(SUM(CASE WHEN feedback = -1 THEN 1 ELSE 0 END), 0) AS down
+        FROM messages
+        WHERE assistant_id = ? AND role = 'assistant' AND created_at >= ?
+    """, (assistant_id, since))
+    s = cursor.fetchone()
+    replies, gaps, up, down = int(s["replies"] or 0), int(s["gaps"] or 0), int(s["up"] or 0), int(s["down"] or 0)
+
+    cursor.execute("""
+        SELECT provider, COUNT(*) AS n
+        FROM messages
+        WHERE assistant_id = ? AND role = 'assistant' AND created_at >= ? AND provider IS NOT NULL AND provider != ''
+        GROUP BY provider
+        ORDER BY n DESC
+    """, (assistant_id, since))
+    providers = [{"provider": r["provider"], "replies": int(r["n"])} for r in cursor.fetchall()]
+
+    cursor.execute("""
+        SELECT m.id, m.conversation_id, m.content, m.created_at,
+               (SELECT u.content FROM messages u
+                 WHERE u.conversation_id = m.conversation_id AND u.id < m.id AND u.role = 'user'
+                 ORDER BY u.id DESC LIMIT 1) AS question
+        FROM messages m
+        WHERE m.assistant_id = ? AND m.role = 'assistant' AND m.feedback = -1
+        ORDER BY m.id DESC LIMIT 10
+    """, (assistant_id,))
+    disliked = []
+    for r in cursor.fetchall():
+        created = r["created_at"]
+        disliked.append({
+            "id": r["id"], "conversation_id": r["conversation_id"], "question": r["question"] or "",
+            "answer": r["content"], "created_at": created.isoformat() if hasattr(created, "isoformat") else created,
+        })
+    conn.close()
+
+    rated = up + down
+    return {
+        "days": days,
+        "replies": replies,
+        "avg_response_ms": int(round(float(s["avg_ms"] or 0))),
+        "answered_rate": round((replies - gaps) / replies * 100, 1) if replies else None,
+        "knowledge_gaps": gaps,
+        "thumbs_up": up,
+        "thumbs_down": down,
+        "satisfaction": round(up / rated * 100, 1) if rated else None,
+        "providers": providers,
+        "recent_disliked": disliked,
+    }
 
 def get_conversation_history(conversation_id: str, limit: int = 10, after_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """Returns the most recent `limit` messages in chronological order.
@@ -1254,7 +1420,7 @@ def get_conversation_history(conversation_id: str, limit: int = 10, after_id: Op
     cursor = conn.cursor()
     if after_id is not None:
         cursor.execute("""
-            SELECT id, role, content, sources_json, lead_prompted, created_at
+            SELECT id, role, content, sources_json, lead_prompted, feedback, created_at
             FROM messages
             WHERE conversation_id = ? AND id > ?
             ORDER BY id ASC
@@ -1262,8 +1428,8 @@ def get_conversation_history(conversation_id: str, limit: int = 10, after_id: Op
         """, (conversation_id, int(after_id), limit))
     else:
         cursor.execute("""
-            SELECT id, role, content, sources_json, lead_prompted, created_at FROM (
-                SELECT id, role, content, sources_json, lead_prompted, created_at
+            SELECT id, role, content, sources_json, lead_prompted, feedback, created_at FROM (
+                SELECT id, role, content, sources_json, lead_prompted, feedback, created_at
                 FROM messages
                 WHERE conversation_id = ?
                 ORDER BY id DESC
@@ -1284,6 +1450,7 @@ def get_conversation_history(conversation_id: str, limit: int = 10, after_id: Op
             "role": r["role"],
             "content": r["content"],
             "lead_prompted": bool(r["lead_prompted"]),
+            "feedback": int(r["feedback"] or 0),
             "created_at": created_at,
             "sources": json.loads(r["sources_json"]) if r["sources_json"] else []
         }

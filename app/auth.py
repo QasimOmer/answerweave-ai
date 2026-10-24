@@ -167,6 +167,7 @@ ROUTE_RULES: List[Tuple[Tuple[str, ...], "re.Pattern", str, Optional[str]]] = [
     # Visitor's own conversation: the unguessable conversation id is the capability.
     (("GET",), re.compile(r"^/api/conversations/[^/]+/(transcript|status)$"), PUBLIC, None),
     (("POST",), re.compile(r"^/api/conversations/[^/]+/clear-unread$"), PUBLIC, None),
+    (("POST",), re.compile(r"^/api/conversations/[^/]+/messages/\d+/feedback$"), PUBLIC, None),
     # Widget config (public fields only unless the caller can manage the assistant).
     (("GET",), re.compile(r"^/api/assistants/[^/]+$"), OPTIONAL, None),
     # Plan catalogue for the pricing page (usage only when signed in).

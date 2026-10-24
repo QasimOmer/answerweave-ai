@@ -8,7 +8,8 @@ from app.db import get_setting, set_setting
 
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 FALLBACK_GEMINI_MODEL = "gemini-2.5-flash-lite"
-EMBEDDING_MODEL = "text-embedding-004"
+EMBEDDING_MODEL = "gemini-embedding-001"
+EMBEDDING_DIM = 768  # gemini-embedding-001 supports 768 / 1536 / 3072; 768 keeps storage and search light
 DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
 DEFAULT_SILICONFLOW_MODEL = "deepseek-ai/DeepSeek-V3"

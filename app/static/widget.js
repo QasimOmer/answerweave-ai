@@ -805,6 +805,38 @@
             background: var(--wf-surface-hover, #f1f5f9) !important;
         }
 
+        /* Was this helpful? 👍 / 👎 on bot replies */
+        .wf-feedback {
+            display: flex !important;
+            align-items: center !important;
+            gap: 2px !important;
+            margin-top: 6px !important;
+            min-height: 22px !important;
+        }
+        .wf-feedback-btn {
+            all: unset !important;
+            cursor: pointer !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 24px !important;
+            height: 22px !important;
+            border-radius: 6px !important;
+            color: var(--wf-text-muted, #64748b) !important;
+            opacity: 0.55 !important;
+            transition: opacity 0.15s, background 0.15s, color 0.15s !important;
+        }
+        .wf-bubble-bot:hover .wf-feedback-btn { opacity: 0.9 !important; }
+        .wf-feedback-btn:hover { background: var(--wf-surface-hover, #f1f5f9) !important; opacity: 1 !important; }
+        .wf-feedback-btn:focus-visible { outline: 2px solid var(--wf-primary, #4f46e5) !important; }
+        .wf-feedback-btn[aria-pressed="true"] { opacity: 1 !important; color: var(--wf-primary, #4f46e5) !important; }
+        .wf-feedback-btn[aria-pressed="true"] svg { fill: currentColor !important; fill-opacity: 0.18 !important; }
+        .wf-feedback-thanks {
+            font-size: 10.5px !important;
+            color: var(--wf-text-muted, #64748b) !important;
+            margin-left: 4px !important;
+        }
+
         /* Real-Time Typewriter Cursor Beam */
         .wf-cursor-beam {
             display: inline-block !important;
@@ -1738,6 +1770,54 @@
         bubbleEl.appendChild(copyBtn);
     }
 
+    // Visitor rating on a bot reply; the team sees it in the dashboard, and 👎 flags the question as a knowledge gap.
+    function attachFeedback(bubbleEl, messageId, current = 0) {
+        if (!bubbleEl || !messageId || bubbleEl.querySelector('.wf-feedback')) return;
+        const thumb = (down) => `
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${down ? ' style="transform:rotate(180deg)"' : ''}>
+                <path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>
+            </svg>`;
+        const row = document.createElement('div');
+        row.className = 'wf-feedback';
+        row.innerHTML = `
+            <button type="button" class="wf-feedback-btn" data-rating="1" aria-label="Helpful" title="Helpful">${thumb(false)}</button>
+            <button type="button" class="wf-feedback-btn" data-rating="-1" aria-label="Not helpful" title="Not helpful">${thumb(true)}</button>
+            <span class="wf-feedback-thanks" aria-live="polite"></span>
+        `;
+        let rating = current;
+        const thanks = row.querySelector('.wf-feedback-thanks');
+        const paint = () => row.querySelectorAll('.wf-feedback-btn').forEach(b => {
+            b.setAttribute('aria-pressed', String(Number(b.dataset.rating) === rating));
+        });
+        paint();
+        row.querySelectorAll('.wf-feedback-btn').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                const clicked = Number(btn.dataset.rating);
+                const next = rating === clicked ? 0 : clicked; // clicking the active thumb clears it
+                const previous = rating;
+                rating = next;
+                paint();
+                thanks.textContent = next === 1 ? 'Thanks!' : (next === -1 ? "Thanks, we'll use this to improve." : '');
+                try {
+                    const res = await fetch(`${API_BASE}/api/conversations/${encodeURIComponent(conversationId)}/messages/${messageId}/feedback`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Host-Domain': currentHost },
+                        body: JSON.stringify({ rating: next })
+                    });
+                    if (!res.ok) throw new Error('Feedback ' + res.status);
+                } catch (err) {
+                    rating = previous;
+                    paint();
+                    thanks.textContent = '';
+                }
+            };
+        });
+        const citations = bubbleEl.querySelector('.wf-citations');
+        if (citations) citations.insertAdjacentElement('afterend', row);
+        else bubbleEl.appendChild(row);
+    }
+
     function applyConfig() {
         updateThemeMode();
 
@@ -2066,7 +2146,7 @@
             }
             for (const m of msgs) {
                 if (m.role === 'user') appendMsg('user', m.content);
-                else if (m.role === 'assistant') appendMsg('bot', m.content, m.sources || [], { silent: true });
+                else if (m.role === 'assistant') appendMsg('bot', m.content, m.sources || [], { silent: true, messageId: m.id, feedback: m.feedback || 0 });
                 else if (m.role === 'operator') appendOperatorMsg(m.content, data.operator_name, { silent: true });
                 else if (m.role === 'system') appendSystemNote(m.content);
                 setLastMessageId(m.id);
@@ -2440,6 +2520,7 @@
                     citeHtml += `</div>`;
                     botBubble.insertAdjacentHTML('beforeend', citeHtml);
                 }
+                if (finalData.message_id) attachFeedback(botBubble, finalData.message_id);
 
                 if (finalData.lead_prompted && botConfig.lead_capture_enabled) {
                     renderInChatLeadCard();
@@ -2472,7 +2553,7 @@
                     syncConversation();
                     return;
                 }
-                appendMsg('bot', data.answer, data.sources);
+                appendMsg('bot', data.answer, data.sources, { messageId: data.message_id });
                 if (data.lead_prompted && botConfig.lead_capture_enabled) {
                     renderInChatLeadCard();
                 }
@@ -2555,6 +2636,7 @@
         bubble.innerHTML = html;
         if (role !== 'user') {
             attachCopyButton(bubble, text);
+            if (opts.messageId) attachFeedback(bubble, opts.messageId, opts.feedback || 0);
             if (!opts.silent) playChime();
         }
         bodyEl.appendChild(bubble);
