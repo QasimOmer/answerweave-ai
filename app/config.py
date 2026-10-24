@@ -7,7 +7,7 @@ import os
 from app.db import get_setting, set_setting
 
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
-FALLBACK_GEMINI_MODEL = "gemini-1.5-flash"
+FALLBACK_GEMINI_MODEL = "gemini-2.5-flash-lite"
 EMBEDDING_MODEL = "text-embedding-004"
 DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"

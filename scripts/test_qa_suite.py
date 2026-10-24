@@ -66,7 +66,7 @@ for asst_id, asst_name, questions in test_cases:
         total_tests += 1
         res = generate_grounded_response(q, assistant_id=asst_id)
         ans = res.get("answer", "").strip()
-        is_apology = "I apologize, but I do not have enough details" in ans
+        is_apology = bool(res.get("knowledge_gap")) or "have enough details on that" in ans
         has_real_estate_in_ecom = "real estate" in ans.lower() and asst_name != "Ideal Homes"
         has_catalog_price_in_founder = "USD 25.00" in ans and "founder" in q.lower()
         

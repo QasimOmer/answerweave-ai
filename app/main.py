@@ -14,7 +14,7 @@ import uuid
 import re
 import urllib.parse
 import requests
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Iterator
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -90,6 +90,7 @@ from app.ingestion import fetch_url, crawl_website, crawl_sitemap, parse_uploade
 from app.embeddings import generate_embeddings_batch
 from app.rag import (
     generate_grounded_response,
+    stream_grounded_response,
     generate_call_prep_brief,
     call_siliconflow_llm,
     call_deepseek_llm,
@@ -1063,10 +1064,25 @@ def handle_human_request(asst: Dict[str, Any], conv_id: str, message: str, reque
     }
 
 
+# Messages of memory the assistant gets for each reply (the current message is added separately).
+CHAT_HISTORY_LIMIT = 12
+
+
+def store_assistant_reply(asst_id: str, conv_id: str, result: Dict[str, Any]):
+    add_message(
+        conv_id,
+        "assistant",
+        result["answer"],
+        assistant_id=asst_id,
+        sources=result["sources"],
+        lead_prompted=result["lead_prompted"]
+    )
+
+
 def answer_visitor_message(asst: Dict[str, Any], conv_id: str, message: str, request: Request) -> Dict[str, Any]:
     """Store the visitor's message, produce the reply (AI or human hand-off) and store it."""
     asst_id = asst["id"]
-    history = get_conversation_history(conv_id, limit=6)
+    history = get_conversation_history(conv_id, limit=CHAT_HISTORY_LIMIT)
     add_message(conv_id, "user", message, assistant_id=asst_id)
 
     if wants_human(message):
@@ -1076,15 +1092,32 @@ def answer_visitor_message(asst: Dict[str, Any], conv_id: str, message: str, req
         result.setdefault("human_requested", False)
         result.setdefault("operators_online", None)
 
-    add_message(
-        conv_id,
-        "assistant",
-        result["answer"],
-        assistant_id=asst_id,
-        sources=result["sources"],
-        lead_prompted=result["lead_prompted"]
-    )
+    store_assistant_reply(asst_id, conv_id, result)
     return result
+
+
+def stream_visitor_message(asst: Dict[str, Any], conv_id: str, message: str, request: Request) -> Iterator[Dict[str, Any]]:
+    """Streaming version of answer_visitor_message: yields token events, then a final 'done' event."""
+    asst_id = asst["id"]
+    history = get_conversation_history(conv_id, limit=CHAT_HISTORY_LIMIT)
+    add_message(conv_id, "user", message, assistant_id=asst_id)
+
+    if wants_human(message):
+        result = handle_human_request(asst, conv_id, message, request)
+        yield {"type": "token", "token": result["answer"]}
+    else:
+        result = None
+        for event in stream_grounded_response(query=message, assistant_id=asst_id, conversation_history=history):
+            if event["type"] == "done":
+                result = event
+            else:
+                yield event
+        result = {k: v for k, v in result.items() if k != "type"}
+        result.setdefault("human_requested", False)
+        result.setdefault("operators_online", None)
+
+    store_assistant_reply(asst_id, conv_id, result)
+    yield {"type": "done", **result}
 
 
 @app.post("/api/chat")
@@ -1167,17 +1200,23 @@ def api_chat_stream(req: ChatRequest, request: Request):
             }
         )
 
-    result = answer_visitor_message(asst, conv_id, req.message, request)
-
     def event_stream():
         yield f"data: {json.dumps({'type': 'start', 'conversation_id': conv_id, 'assistant_id': asst_id})}\n\n"
-        full_text = result["answer"]
-        tokens = re.split(r'(\s+)', full_text)
-        for t in tokens:
-            if t:
-                yield f"data: {json.dumps({'type': 'token', 'token': t})}\n\n"
-                time.sleep(0.012)
-        yield f"data: {json.dumps({'type': 'done', 'answer': full_text, 'sources': result['sources'], 'lead_prompted': result['lead_prompted'], 'conversation_id': conv_id, 'human_requested': result.get('human_requested', False), 'operators_online': result.get('operators_online')})}\n\n"
+        # Tokens are forwarded as the model writes them; 'done' carries the final, cleaned answer.
+        for event in stream_visitor_message(asst, conv_id, req.message, request):
+            if event["type"] == "token":
+                yield f"data: {json.dumps({'type': 'token', 'token': event['token']})}\n\n"
+            else:
+                done = {
+                    "type": "done",
+                    "answer": event["answer"],
+                    "sources": event["sources"],
+                    "lead_prompted": event["lead_prompted"],
+                    "conversation_id": conv_id,
+                    "human_requested": event.get("human_requested", False),
+                    "operators_online": event.get("operators_online"),
+                }
+                yield f"data: {json.dumps(done)}\n\n"
 
     return StreamingResponse(
         event_stream(),

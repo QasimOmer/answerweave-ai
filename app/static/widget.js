@@ -2367,14 +2367,16 @@
             const decoder = new TextDecoder('utf-8');
             let buffer = '';
 
-            typingEl.remove();
-
-            // Create streaming bot bubble
-            botBubble = document.createElement('div');
-            botBubble.className = 'wf-bubble wf-bubble-bot';
-            contentDiv = document.createElement('div');
-            botBubble.appendChild(contentDiv);
-            bodyEl.appendChild(botBubble);
+            // Keep the typing dots up while the assistant looks things up; swap to a bubble on the first token.
+            const ensureBubble = () => {
+                if (botBubble) return;
+                if (typingEl.parentNode) typingEl.remove();
+                botBubble = document.createElement('div');
+                botBubble.className = 'wf-bubble wf-bubble-bot';
+                contentDiv = document.createElement('div');
+                botBubble.appendChild(contentDiv);
+                bodyEl.appendChild(botBubble);
+            };
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -2389,6 +2391,7 @@
                     try {
                         const jsonPayload = JSON.parse(trimmed.substring(5).trim());
                         if (jsonPayload.type === 'token') {
+                            ensureBubble();
                             accumulatedText += jsonPayload.token;
                             contentDiv.innerHTML = formatMessageText(accumulatedText) + '<span class="wf-cursor-beam"></span>';
                             bodyEl.scrollTop = bodyEl.scrollHeight;
@@ -2401,12 +2404,22 @@
 
             // A person has taken over: there's no bot reply, the operator answers live.
             if (finalData && finalData.operator_active && !accumulatedText.trim()) {
-                botBubble.remove();
+                if (typingEl.parentNode) typingEl.remove();
+                if (botBubble) botBubble.remove();
                 applyLiveStatus('human', finalData.operator_name);
                 syncConversation();
                 return;
             }
 
+            // The server's final answer is authoritative (links checked, internal tags removed).
+            if (finalData && typeof finalData.answer === 'string' && finalData.answer.trim()) {
+                accumulatedText = finalData.answer;
+            }
+            if (!accumulatedText.trim()) {
+                // The message already reached the server, so don't resend it through the fallback.
+                accumulatedText = "Sorry, I lost my train of thought there. Could you send that again?";
+            }
+            ensureBubble();
             contentDiv.innerHTML = formatMessageText(accumulatedText);
             attachCopyButton(botBubble, accumulatedText);
             playChime();
@@ -2465,7 +2478,7 @@
                 }
                 handleHumanRequestResult(data);
             } catch (fallbackErr) {
-                appendMsg('bot', "I apologize, but I am having trouble connecting to the service right now. Please try again in a moment.");
+                appendMsg('bot', "Sorry, I'm having trouble connecting right now. Could you try that again in a moment?");
             }
         }
     }
