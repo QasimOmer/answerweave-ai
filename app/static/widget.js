@@ -1835,6 +1835,8 @@
         if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.vercel.app') || host === 'vercel.app') {
             return true;
         }
+        // Previews inside the AnswerWeave app itself (dashboard, onboarding) are always allowed.
+        try { if (host === new URL(API_BASE).hostname.toLowerCase()) return true; } catch (e) {}
         const patterns = allowedPattern.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
         for (let pat of patterns) {
             if (pat === '*') return true;
@@ -1884,6 +1886,10 @@
         applyConfig();
         mountWidget();
         restoreConversation();
+        // data-open="true" opens the chat on load (used by the onboarding preview).
+        if (currentScript && currentScript.getAttribute('data-open') === 'true' && !isOpen) {
+            setTimeout(() => { if (!isOpen) toggleChat(); }, 350);
+        }
     })
     .catch(err => {
         console.warn(`[AnswerWeave] Widget blocked: ${err.message}`);

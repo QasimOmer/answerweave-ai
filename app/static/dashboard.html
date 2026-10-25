@@ -2305,7 +2305,11 @@
                 <i data-lucide="plus-circle" class="w-4 h-4 text-brand-400"></i>
                 Create Website Project
             </h3>
-            <p class="text-xs text-slate-400 mb-5">Provision an isolated knowledge base and embeddable widget for your website.</p>
+            <p class="text-xs text-slate-400 mb-3">Provision an isolated knowledge base and embeddable widget for your website.</p>
+            <a href="/onboarding?new=1" class="mb-5 flex items-center justify-between gap-3 rounded-xl border border-brand-500/30 bg-brand-500/10 px-3.5 py-2.5 text-xs text-brand-200 hover:bg-brand-500/15 transition">
+                <span><span class="font-semibold text-white">Prefer a guided setup?</span> Website, test, style and install in five quick steps.</span>
+                <i data-lucide="arrow-right" class="w-4 h-4 shrink-0"></i>
+            </a>
 
             <form id="createAssistantForm" class="space-y-4">
                 <div>
@@ -2697,7 +2701,8 @@
                 if (!assistantsList.length) {
                     currentAssistantId = '';
                     selector.innerHTML = '<option value="">No assistants yet</option>';
-                    if (window.workspaceRole !== 'agent') setTimeout(openNewAssistantModal, 400);
+                    // A new workspace starts with the guided setup.
+                    if (window.workspaceRole !== 'agent') window.location.replace('/onboarding?new=1');
                     return;
                 }
 
@@ -3729,7 +3734,7 @@
                 if (currentAssistantId !== assistantId) break;
                 let job;
                 try {
-                    const res = await fetch(`/api/assistants/${assistantId}/jobs/${jobId}/step`, { method: 'POST' });
+                    const res = await fetch(`/api/assistants/${assistantId}/jobs/${jobId}/step?budget=3`, { method: 'POST' });
                     if (!res.ok) break;
                     job = await res.json();
                 } catch (err) {

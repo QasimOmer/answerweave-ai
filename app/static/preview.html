@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Assistant preview · AnswerWeave</title>
+    <style>
+        :root { color-scheme: light; }
+        html, body { margin: 0; height: 100%; background: #f4f5f7; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+        /* A neutral "your website" backdrop so the widget is seen in context. */
+        .site { max-width: 760px; margin: 0 auto; padding: 28px 24px; color: #9aa0aa; }
+        .bar { height: 14px; border-radius: 7px; background: #e3e6ea; margin-bottom: 12px; }
+        .hero { height: 150px; border-radius: 14px; background: linear-gradient(135deg, #e7eaef, #eef0f3); margin: 22px 0; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .card { height: 90px; border-radius: 12px; background: #e9ecf0; }
+        .label { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 14px; }
+    </style>
+</head>
+<body>
+    <div class="site" aria-hidden="true">
+        <div class="label">Your website</div>
+        <div class="bar" style="width: 38%"></div>
+        <div class="bar" style="width: 62%"></div>
+        <div class="hero"></div>
+        <div class="grid"><div class="card"></div><div class="card"></div><div class="card"></div></div>
+    </div>
+    <script>
+        // Loads the real widget for ?assistant_id=..., already open.
+        (function () {
+            const id = new URLSearchParams(location.search).get('assistant_id') || '';
+            if (!/^asst_[A-Za-z0-9_-]+$/.test(id)) return;
+            const s = document.createElement('script');
+            s.src = '/static/widget.js?v=' + Date.now();  // always the latest settings while customizing
+            s.defer = true;
+            s.setAttribute('data-assistant-id', id);
+            s.setAttribute('data-api-url', location.origin);
+            s.setAttribute('data-open', 'true');
+            document.body.appendChild(s);
+        })();
+    </script>
+</body>
+</html>

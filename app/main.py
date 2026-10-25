@@ -290,6 +290,9 @@ class CrawlJobRequest(BaseModel):
     url: Optional[str] = None
     max_pages: int = 50
 
+class VerifyInstallRequest(BaseModel):
+    url: Optional[str] = None  # page to check; defaults to the assistant's website
+
 class FeedbackRequest(BaseModel):
     rating: int  # 1 = helpful, -1 = not helpful, 0 = clear
 
@@ -370,6 +373,16 @@ def get_root():
 @app.get("/dashboard")
 def get_dashboard_page():
     return FileResponse(os.path.join(STATIC_DIR, "dashboard.html"))
+
+@app.get("/onboarding")
+def get_onboarding_page():
+    """Guided setup: website -> crawl -> test -> customize -> install."""
+    return FileResponse(os.path.join(STATIC_DIR, "onboarding.html"))
+
+@app.get("/preview")
+def get_preview_page():
+    """The real widget for ?assistant_id=..., opened, on a neutral page (used by onboarding)."""
+    return FileResponse(os.path.join(STATIC_DIR, "preview.html"))
 
 @app.get("/account")
 def get_account_page():
@@ -934,6 +947,43 @@ def api_get_answer_quality(asst_id: str, days: int = 30):
     """Reply speed, answer coverage, visitor ratings and provider usage."""
     return get_answer_quality(asst_id, days=max(1, min(365, days)))
 
+@app.post("/api/assistants/{asst_id}/verify-install")
+def api_verify_install(asst_id: str, req: VerifyInstallRequest):
+    """Loads the customer's page and checks the widget script for this assistant is on it."""
+    asst = get_assistant(asst_id)
+    if not asst:
+        raise HTTPException(status_code=404, detail="Assistant not found")
+    url = (req.url or asst.get("crawl_root_url") or "").strip()
+    if not url:
+        domain = (asst.get("domain") or "").split(",")[0].strip()
+        url = domain if domain and "*" not in domain else ""
+    if not url:
+        raise HTTPException(status_code=400, detail="Enter the address of the page where you added the code.")
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    try:
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; AnswerWeaveInstallCheck/1.0)"},
+                            timeout=10, allow_redirects=True)
+        html = resp.text if resp.ok else ""
+    except requests.RequestException as e:
+        return {"installed": False, "checked_url": url, "reason": f"We couldn't load {url}: {str(e)[:120]}"}
+    if not resp.ok:
+        return {"installed": False, "checked_url": url, "reason": f"{url} returned HTTP {resp.status_code}."}
+    has_script = "widget.js" in html
+    has_id = asst_id in html
+    installed = has_script and has_id
+    if installed:
+        update_assistant(asst_id, {"installed_epoch": int(time.time()), "installed_url": resp.url[:500]})
+        reason = "The widget is live on your site."
+    elif has_script:
+        reason = "We found a widget script, but it's for a different assistant. Check data-assistant-id matches."
+    else:
+        reason = ("We couldn't find the widget code on that page yet. If you just added it, publish your changes "
+                  "and clear any page cache, then check again. Sites that add scripts with a tag manager can't be "
+                  "detected this way; open your site and look for the chat bubble instead.")
+    return {"installed": installed, "checked_url": resp.url, "found_script": has_script, "found_assistant": has_id,
+            "reason": reason}
+
 @app.get("/api/assistants/{asst_id}/catalog")
 def api_get_catalog(asst_id: str, limit: int = 24):
     """Listings and products the assistant found in its knowledge, as the widget would show them."""
@@ -1071,12 +1121,12 @@ def api_get_crawl_job(asst_id: str, job_id: str):
     return _job_for(asst_id, job_id)
 
 @app.post("/api/assistants/{asst_id}/jobs/{job_id}/step")
-def api_step_crawl_job(asst_id: str, job_id: str):
+def api_step_crawl_job(asst_id: str, job_id: str, budget: float = 8):
     """Runs a few seconds of the crawl. The dashboard calls this while showing progress, so crawls
-    move forward even on hosts without a background worker."""
+    move forward even on hosts without a background worker. A smaller `budget` gives snappier updates."""
     job = _job_for(asst_id, job_id)
     if job["status"] in ("queued", "running"):
-        job = crawl_jobs.run_job_step(job_id, budget_seconds=8) or job
+        job = crawl_jobs.run_job_step(job_id, budget_seconds=max(1.0, min(8.0, budget))) or job
     return job
 
 @app.post("/api/assistants/{asst_id}/jobs/{job_id}/cancel")

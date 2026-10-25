@@ -260,6 +260,8 @@ SCHEMA_COLUMNS = [
     ("assistants", "workspace_id", "TEXT DEFAULT ''"),
     ("assistants", "industry", "TEXT DEFAULT 'auto'"),
     ("assistants", "recrawl_frequency", "TEXT DEFAULT 'off'"),
+    ("assistants", "installed_epoch", "INTEGER DEFAULT 0"),
+    ("assistants", "installed_url", "TEXT DEFAULT ''"),
     ("assistants", "crawl_root_url", "TEXT DEFAULT ''"),
     ("assistants", "crawl_max_pages", "INTEGER DEFAULT 50"),
     ("assistants", "last_recrawl_epoch", "INTEGER DEFAULT 0"),
@@ -1036,7 +1038,7 @@ def update_assistant(assistant_id: str, data: Dict[str, Any]) -> bool:
         "input_placeholder", "launcher_pulse", "border_radius",
         "font_family", "widget_width", "offset_x", "offset_y", "launcher_icon", "teaser_delay", "exit_intent", "hide_on_mobile", "custom_css",
         "tone", "reply_length", "custom_instructions", "avoid_topics", "industry",
-        "recrawl_frequency", "crawl_root_url", "crawl_max_pages"
+        "recrawl_frequency", "crawl_root_url", "crawl_max_pages", "installed_epoch", "installed_url"
     ]
     updates = []
     values = []

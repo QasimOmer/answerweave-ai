@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set up your assistant · AnswerWeave</title>
+    <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#0b0c0e">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f5cf6'/%3E%3Cpath d='M8 11h16M8 16h16M8 21h10' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: {
+                fontFamily: { sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'], mono: ['"Geist Mono"', 'ui-monospace', 'monospace'] },
+                colors: { brand: { 300: '#90b8ff', 400: '#6b9bff', 500: '#4677ff', 600: '#2f5cf6' } },
+            } }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #0b0c0e; --surface: #121316; --line: rgba(255,255,255,.07); --line-strong: rgba(255,255,255,.12);
+            --accent: #2f5cf6; --accent-hover: #4677ff; color-scheme: dark;
+        }
+        html, body { background: var(--bg); }
+        body { color: #ededef; -webkit-font-smoothing: antialiased; }
+        :focus-visible { outline: 2px solid rgba(70,119,255,.6); outline-offset: 2px; border-radius: 8px; }
+        .card { background: var(--surface); border: 1px solid var(--line); }
+        .field { background: #0e0f12; border: 1px solid var(--line-strong); color: #ededef; transition: border-color .15s, box-shadow .15s; }
+        .field::placeholder { color: #6c717c; }
+        .field:focus { outline: none; border-color: var(--accent-hover); box-shadow: 0 0 0 3px rgba(70,119,255,.18); }
+        .btn-primary { background: var(--accent); color: #fff; transition: background-color .15s, transform .1s; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:active { transform: scale(.98); }
+        .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+        .btn-ghost { border: 1px solid var(--line-strong); color: #ededef; transition: background-color .15s; }
+        .btn-ghost:hover { background: rgba(255,255,255,.05); }
+        .glow { background: radial-gradient(60% 50% at 50% 0%, rgba(47,92,246,.16) 0%, rgba(47,92,246,0) 70%); }
+
+        /* Steps */
+        .step { display: none; }
+        .step.is-active { display: block; animation: stepIn .45s cubic-bezier(.2,.8,.2,1) both; }
+        @keyframes stepIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+        .dot { width: 26px; height: 26px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
+               font-size: 12px; font-weight: 600; border: 1px solid var(--line-strong); color: #9398a3; transition: all .3s; }
+        .dot.is-current { border-color: var(--accent-hover); color: #fff; background: rgba(47,92,246,.18); box-shadow: 0 0 0 4px rgba(47,92,246,.12); }
+        .dot.is-done { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .connector { flex: 1; height: 1px; background: var(--line-strong); min-width: 16px; position: relative; overflow: hidden; }
+        .connector::after { content: ''; position: absolute; inset: 0; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform .5s; }
+        .connector.is-done::after { transform: scaleX(1); }
+
+        /* Choice cards */
+        .choice { border: 1px solid var(--line-strong); transition: border-color .15s, background .15s, transform .15s; cursor: pointer; }
+        .choice:hover { border-color: rgba(255,255,255,.22); transform: translateY(-1px); }
+        input:checked + .choice { border-color: var(--accent-hover); background: rgba(47,92,246,.10); box-shadow: 0 0 0 3px rgba(47,92,246,.12); }
+
+        /* Crawl progress ring */
+        .progress-ring { transform: rotate(-90deg); }
+        .progress-ring circle { transition: stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1); }
+        .pulse { animation: pulse 1.6s ease-in-out infinite; }
+        @keyframes pulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+        .learned-item { animation: stepIn .35s ease both; }
+
+        .swatch { width: 30px; height: 30px; border-radius: 999px; cursor: pointer; border: 2px solid transparent; transition: transform .15s; }
+        .swatch:hover { transform: scale(1.1); }
+        .swatch.is-selected { border-color: #fff; box-shadow: 0 0 0 2px var(--accent-hover); }
+        .avatar-opt { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 18px;
+                      border: 1px solid var(--line-strong); cursor: pointer; transition: all .15s; }
+        .avatar-opt.is-selected { border-color: var(--accent-hover); background: rgba(47,92,246,.14); }
+        .tab { color: #9398a3; border-bottom: 2px solid transparent; }
+        .tab.is-active { color: #fff; border-color: var(--accent-hover); }
+        .check-pop { animation: pop .5s cubic-bezier(.2,.9,.3,1.4) both; }
+        @keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+    </style>
+</head>
+<body class="min-h-screen font-sans">
+    <div class="glow fixed inset-x-0 top-0 h-[420px] pointer-events-none" aria-hidden="true"></div>
+
+    <header class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-5 flex items-center justify-between gap-4">
+        <a href="/" class="flex items-center gap-2 text-[15px] font-semibold text-white">
+            <span class="w-7 h-7 rounded-lg bg-[#2f5cf6] flex items-center justify-center" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 32 32"><path d="M8 11h16M8 16h16M8 21h10" stroke="white" stroke-width="3" stroke-linecap="round"/></svg>
+            </span>
+            AnswerWeave
+        </a>
+        <a href="/dashboard" id="skipLink" class="text-[13px] text-slate-400 hover:text-white">Skip to dashboard</a>
+    </header>
+
+    <!-- Stepper -->
+    <nav class="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 mt-8" aria-label="Setup progress">
+        <ol id="stepper" class="flex items-center gap-2 text-[12px]"></ol>
+    </nav>
+
+    <main class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+
+        <!-- 1. Website -->
+        <section class="step max-w-xl mx-auto" data-step="1" aria-labelledby="s1title">
+            <p class="text-[13px] font-medium text-brand-300">Step 1 of 5</p>
+            <h1 id="s1title" class="mt-1 text-[28px] sm:text-[32px] leading-tight font-semibold tracking-tight text-white">Let's build your website assistant</h1>
+            <p class="mt-2 text-[14.5px] text-slate-400">Tell us your website and we'll read it, so the assistant can answer visitors from your own content.</p>
+            <form id="siteForm" class="card rounded-2xl p-5 sm:p-6 mt-6 space-y-5" novalidate>
+                <div>
+                    <label for="siteUrl" class="block text-[13px] text-slate-300 mb-1.5">Website address</label>
+                    <input id="siteUrl" type="text" inputmode="url" autocomplete="url" placeholder="yourcompany.com" required class="field w-full h-11 rounded-lg px-3.5 text-[15px]">
+                    <p id="siteUrlError" class="hidden mt-1.5 text-[12.5px] text-rose-300" role="alert"></p>
+                </div>
+                <fieldset>
+                    <legend class="block text-[13px] text-slate-300 mb-2">What kind of business is it?</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <label class="block">
+                            <input type="radio" name="industry" value="real_estate" class="sr-only">
+                            <span class="choice block rounded-xl p-3.5 h-full">
+                                <span class="text-[20px]" aria-hidden="true">🏠</span>
+                                <span class="block mt-1.5 text-[13.5px] font-medium text-white">Real estate</span>
+                                <span class="block text-[12px] text-slate-500 mt-0.5">Listings, viewings, buyer questions</span>
+                            </span>
+                        </label>
+                        <label class="block">
+                            <input type="radio" name="industry" value="ecommerce" class="sr-only">
+                            <span class="choice block rounded-xl p-3.5 h-full">
+                                <span class="text-[20px]" aria-hidden="true">🛍️</span>
+                                <span class="block mt-1.5 text-[13.5px] font-medium text-white">Online store</span>
+                                <span class="block text-[12px] text-slate-500 mt-0.5">Products, sizes, shipping, returns</span>
+                            </span>
+                        </label>
+                        <label class="block">
+                            <input type="radio" name="industry" value="general" class="sr-only">
+                            <span class="choice block rounded-xl p-3.5 h-full">
+                                <span class="text-[20px]" aria-hidden="true">💼</span>
+                                <span class="block mt-1.5 text-[13.5px] font-medium text-white">Other business</span>
+                                <span class="block text-[12px] text-slate-500 mt-0.5">Services, pricing, support</span>
+                            </span>
+                        </label>
+                    </div>
+                </fieldset>
+                <div>
+                    <label for="asstName" class="block text-[13px] text-slate-300 mb-1.5">Assistant name</label>
+                    <input id="asstName" type="text" maxlength="60" placeholder="Acme Assistant" class="field w-full h-11 rounded-lg px-3.5 text-[15px]">
+                    <p class="mt-1.5 text-[12px] text-slate-500">Shown at the top of the chat. You can change it later.</p>
+                </div>
+                <button id="siteSubmit" type="submit" class="btn-primary w-full h-11 rounded-lg text-[14.5px] font-medium">Build my assistant</button>
+                <p id="siteError" class="hidden text-[13px] text-rose-300 text-center" role="alert"></p>
+            </form>
+        </section>
+
+        <!-- 2. Crawl -->
+        <section class="step max-w-xl mx-auto" data-step="2" aria-labelledby="s2title">
+            <p class="text-[13px] font-medium text-brand-300">Step 2 of 5</p>
+            <h1 id="s2title" class="mt-1 text-[28px] leading-tight font-semibold tracking-tight text-white">Learning your website</h1>
+            <p id="crawlSubtitle" class="mt-2 text-[14.5px] text-slate-400">Reading your pages so the assistant can answer from them. This usually takes a minute or two.</p>
+            <div class="card rounded-2xl p-6 mt-6">
+                <div class="flex items-center gap-5">
+                    <div class="relative w-[92px] h-[92px] shrink-0">
+                        <svg class="progress-ring" width="92" height="92" viewBox="0 0 92 92" aria-hidden="true">
+                            <circle cx="46" cy="46" r="40" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="7"/>
+                            <circle id="ringBar" cx="46" cy="46" r="40" fill="none" stroke="#4677ff" stroke-width="7" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3"/>
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span id="ringCount" class="text-[22px] font-semibold text-white">0</span>
+                            <span class="text-[10.5px] text-slate-500 -mt-0.5">pages</span>
+                        </div>
+                    </div>
+                    <div class="min-w-0">
+                        <p id="crawlState" class="text-[15px] font-medium text-white flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-brand-500 pulse"></span>Starting…</p>
+                        <p id="crawlDetail" class="mt-1 text-[12.5px] text-slate-500 truncate"></p>
+                    </div>
+                </div>
+                <div class="mt-5 border-t border-white/[0.06] pt-4">
+                    <p class="text-[11.5px] uppercase tracking-wider text-slate-500">Recently learned</p>
+                    <ul id="learnedList" class="mt-2 space-y-1.5 text-[13px] text-slate-300 min-h-[24px]"><li class="text-slate-600">Waiting for the first page…</li></ul>
+                </div>
+                <div id="crawlFailed" class="hidden mt-4 rounded-lg bg-rose-500/10 border border-rose-500/20 p-3.5 text-[13px] text-rose-200"></div>
+            </div>
+            <div class="mt-5 flex flex-col sm:flex-row gap-2.5">
+                <button id="crawlContinue" type="button" class="btn-primary flex-1 h-11 rounded-lg text-[14.5px] font-medium" disabled>Continue</button>
+                <button id="crawlBack" type="button" class="btn-ghost h-11 px-4 rounded-lg text-[14px]">Use a different address</button>
+            </div>
+            <p class="mt-3 text-[12.5px] text-slate-500 text-center">You can continue as soon as a few pages are in. The rest keeps loading in the background.</p>
+        </section>
+
+        <!-- 3. Test -->
+        <section class="step" data-step="3" aria-labelledby="s3title">
+            <div class="grid lg:grid-cols-[minmax(0,420px)_1fr] gap-8 items-start">
+                <div>
+                    <p class="text-[13px] font-medium text-brand-300">Step 3 of 5</p>
+                    <h1 id="s3title" class="mt-1 text-[28px] leading-tight font-semibold tracking-tight text-white">Try your assistant</h1>
+                    <p class="mt-2 text-[14.5px] text-slate-400">This is the real chat your visitors will see. Ask it something, or tap a question below.</p>
+                    <div id="testQuestions" class="mt-5 flex flex-col gap-2"></div>
+                    <div class="card rounded-xl p-4 mt-5 text-[13px] text-slate-400">
+                        <span class="text-slate-200 font-medium">Missing an answer?</span>
+                        Add FAQs, PDFs or more pages any time from <span class="text-slate-200">Knowledge base</span>. Unanswered questions show up in <span class="text-slate-200">Knowledge gaps</span> so you can teach it.
+                    </div>
+                    <div class="mt-6 flex gap-2.5">
+                        <button type="button" data-goto="2" class="btn-ghost h-11 px-4 rounded-lg text-[14px]">Back</button>
+                        <button type="button" data-goto="4" class="btn-primary flex-1 h-11 rounded-lg text-[14.5px] font-medium">Looks good, continue</button>
+                    </div>
+                </div>
+                <div class="preview-shell card rounded-2xl overflow-hidden h-[640px] max-h-[78vh]">
+                    <div class="h-9 border-b border-white/[0.06] flex items-center gap-1.5 px-3.5" aria-hidden="true">
+                        <span class="w-2.5 h-2.5 rounded-full bg-white/15"></span><span class="w-2.5 h-2.5 rounded-full bg-white/15"></span><span class="w-2.5 h-2.5 rounded-full bg-white/15"></span>
+                        <span id="previewHost" class="ml-3 text-[11.5px] font-mono text-slate-500 truncate"></span>
+                    </div>
+                    <iframe id="previewFrameTest" title="Assistant preview" class="w-full h-[calc(100%-36px)] bg-white" loading="lazy"></iframe>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Customize -->
+        <section class="step" data-step="4" aria-labelledby="s4title">
+            <div class="grid lg:grid-cols-[minmax(0,420px)_1fr] gap-8 items-start">
+                <div>
+                    <p class="text-[13px] font-medium text-brand-300">Step 4 of 5</p>
+                    <h1 id="s4title" class="mt-1 text-[28px] leading-tight font-semibold tracking-tight text-white">Make it yours</h1>
+                    <p class="mt-2 text-[14.5px] text-slate-400">Match your brand. Changes show in the preview straight away.</p>
+                    <form id="styleForm" class="card rounded-2xl p-5 mt-6 space-y-5">
+                        <div>
+                            <span class="block text-[13px] text-slate-300 mb-2">Brand colour</span>
+                            <div id="swatches" class="flex flex-wrap items-center gap-2.5"></div>
+                        </div>
+                        <div>
+                            <span class="block text-[13px] text-slate-300 mb-2">Avatar</span>
+                            <div id="avatars" class="flex flex-wrap gap-2"></div>
+                        </div>
+                        <div>
+                            <label for="styleName" class="block text-[13px] text-slate-300 mb-1.5">Assistant name</label>
+                            <input id="styleName" maxlength="60" class="field w-full h-10 rounded-lg px-3 text-[14px]">
+                        </div>
+                        <div>
+                            <label for="styleWelcome" class="block text-[13px] text-slate-300 mb-1.5">Greeting</label>
+                            <textarea id="styleWelcome" rows="2" maxlength="300" class="field w-full rounded-lg px-3 py-2 text-[14px] leading-relaxed"></textarea>
+                        </div>
+                        <p id="styleSaved" class="text-[12px] text-slate-500 h-4" aria-live="polite"></p>
+                    </form>
+                    <div class="mt-6 flex gap-2.5">
+                        <button type="button" data-goto="3" class="btn-ghost h-11 px-4 rounded-lg text-[14px]">Back</button>
+                        <button type="button" data-goto="5" class="btn-primary flex-1 h-11 rounded-lg text-[14.5px] font-medium">Continue to install</button>
+                    </div>
+                </div>
+                <div class="card rounded-2xl overflow-hidden h-[640px] max-h-[78vh]">
+                    <div class="h-9 border-b border-white/[0.06] flex items-center gap-1.5 px-3.5" aria-hidden="true">
+                        <span class="w-2.5 h-2.5 rounded-full bg-white/15"></span><span class="w-2.5 h-2.5 rounded-full bg-white/15"></span><span class="w-2.5 h-2.5 rounded-full bg-white/15"></span>
+                    </div>
+                    <iframe id="previewFrameStyle" title="Assistant preview with your style" class="w-full h-[calc(100%-36px)] bg-white" loading="lazy"></iframe>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Install -->
+        <section class="step max-w-2xl mx-auto" data-step="5" aria-labelledby="s5title">
+            <p class="text-[13px] font-medium text-brand-300">Step 5 of 5</p>
+            <h1 id="s5title" class="mt-1 text-[28px] leading-tight font-semibold tracking-tight text-white">Add it to your website</h1>
+            <p class="mt-2 text-[14.5px] text-slate-400">Paste this snippet once, just before <code class="font-mono text-slate-300">&lt;/body&gt;</code>, on every page you want the chat on.</p>
+
+            <div class="card rounded-2xl mt-6 overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06]">
+                    <span class="text-[12px] text-slate-500 font-mono">HTML</span>
+                    <button id="copySnippet" type="button" class="text-[12.5px] font-medium text-brand-300 hover:text-white">Copy code</button>
+                </div>
+                <pre class="p-4 text-[12.5px] leading-relaxed font-mono text-slate-200 overflow-x-auto"><code id="snippet"></code></pre>
+            </div>
+
+            <div class="card rounded-2xl mt-4">
+                <div class="flex gap-4 px-4 border-b border-white/[0.06] overflow-x-auto text-[13px]" role="tablist" id="platformTabs"></div>
+                <div id="platformBody" class="p-4 text-[13.5px] text-slate-300 leading-relaxed"></div>
+            </div>
+
+            <div class="card rounded-2xl p-5 mt-4">
+                <h2 class="text-[15px] font-semibold text-white">Check it's working</h2>
+                <p class="text-[13px] text-slate-400 mt-1">After publishing, we'll load your page and look for the widget.</p>
+                <form id="verifyForm" class="mt-3 flex flex-col sm:flex-row gap-2">
+                    <label for="verifyUrl" class="sr-only">Page address</label>
+                    <input id="verifyUrl" type="text" inputmode="url" class="field flex-1 h-10 rounded-lg px-3 text-[14px]" placeholder="https://yourcompany.com">
+                    <button id="verifyBtn" type="submit" class="btn-primary h-10 px-4 rounded-lg text-[14px] font-medium">Check installation</button>
+                </form>
+                <div id="verifyResult" class="hidden mt-3 rounded-lg p-3.5 text-[13px]" role="status"></div>
+            </div>
+
+            <div class="mt-6 flex flex-col sm:flex-row gap-2.5">
+                <button type="button" data-goto="4" class="btn-ghost h-11 px-4 rounded-lg text-[14px]">Back</button>
+                <a id="mailDev" class="btn-ghost h-11 px-4 rounded-lg text-[14px] flex items-center justify-center">Email the code to my developer</a>
+                <button id="finishBtn" type="button" class="btn-primary flex-1 h-11 rounded-lg text-[14.5px] font-medium">Go to my dashboard</button>
+            </div>
+        </section>
+
+        <!-- Done -->
+        <section class="step max-w-md mx-auto text-center" data-step="6" aria-labelledby="s6title">
+            <div class="check-pop mx-auto w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
+            <h1 id="s6title" class="mt-5 text-[28px] font-semibold tracking-tight text-white">You're live!</h1>
+            <p class="mt-2 text-[14.5px] text-slate-400">Your assistant is answering visitors on your site. Conversations, leads and answer quality show up in your dashboard.</p>
+            <a href="/dashboard#analytics" id="doneDashboard" class="btn-primary mt-6 inline-flex h-11 px-6 rounded-lg text-[14.5px] font-medium items-center justify-center">Open dashboard</a>
+        </section>
+    </main>
+
+    <script>
+        // ---------------- auth + API helpers (same session as the dashboard)
+        const store = {
+            get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
+            set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+            del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+        };
+        if (!store.get('aw_token')) window.location.replace('/?login=1');
+
+        async function api(path, options = {}) {
+            const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${store.get('aw_token')}`, ...(options.headers || {}) };
+            const ws = store.get('aw_workspace');
+            if (ws) headers['X-Workspace-Id'] = ws;
+            const res = await fetch(path, { ...options, headers });
+            if (res.status === 401) { window.location.replace('/?login=1'); throw new Error('Please sign in.'); }
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                const detail = typeof data.detail === 'string' ? data.detail : (data.detail && data.detail.message) || 'Something went wrong. Please try again.';
+                const err = new Error(detail); err.status = res.status; err.data = data; throw err;
+            }
+            return data;
+        }
+        const $ = (id) => document.getElementById(id);
+        const esc = (t) => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        // ---------------- state (resumable: ?assistant=... or saved progress)
+        const SAVE_KEY = 'aw_onboarding';
+        let state = { step: 1, assistantId: '', jobId: '', industry: 'general', url: '' };
+        try { state = { ...state, ...JSON.parse(store.get(SAVE_KEY) || '{}') }; } catch (e) {}
+        const params = new URLSearchParams(location.search);
+        if (params.get('new')) state = { step: 1, assistantId: '', jobId: '', industry: 'general', url: '' };
+        if (params.get('assistant')) { state.assistantId = params.get('assistant'); state.step = Math.max(state.step, 3); }
+        const save = () => store.set(SAVE_KEY, JSON.stringify(state));
+
+        // ---------------- stepper
+        const STEPS = ['Website', 'Learn', 'Test', 'Style', 'Install'];
+        function renderStepper() {
+            const ol = $('stepper');
+            ol.innerHTML = STEPS.map((label, i) => {
+                const n = i + 1;
+                const cls = n < state.step ? 'is-done' : (n === state.step ? 'is-current' : '');
+                const mark = n < state.step ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>' : n;
+                return `<li class="flex items-center gap-2 ${n < STEPS.length ? 'flex-1' : ''}" ${n === state.step ? 'aria-current="step"' : ''}>
+                    <span class="dot ${cls}">${mark}</span>
+                    <span class="hidden sm:inline ${n === state.step ? 'text-white' : 'text-slate-500'}">${label}</span>
+                    ${n < STEPS.length ? `<span class="connector ${n < state.step ? 'is-done' : ''}"></span>` : ''}
+                </li>`;
+            }).join('');
+            $('stepper').parentElement.classList.toggle('hidden', state.step > STEPS.length);
+        }
+
+        function goTo(step) {
+            state.step = step;
+            save();
+            document.querySelectorAll('.step').forEach(s => s.classList.toggle('is-active', Number(s.dataset.step) === step));
+            renderStepper();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (step === 2) watchCrawl();
+            if (step === 3) loadPreview('previewFrameTest');
+            if (step === 4) { loadStyle(); loadPreview('previewFrameStyle'); }
+            if (step === 5) loadInstall();
+        }
+        document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => goTo(Number(b.dataset.goto))));
+
+        // ---------------- step 1: website
+        function normalizeUrl(raw) {
+            let v = (raw || '').trim();
+            if (!v) return '';
+            if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
+            try {
+                const u = new URL(v);
+                if (!u.hostname.includes('.') || u.hostname.length < 4) return '';
+                return u.origin + (u.pathname === '/' ? '' : u.pathname.replace(/\/$/, ''));
+            } catch (e) { return ''; }
+        }
+        function suggestName(url) {
+            try {
+                const host = new URL(url).hostname.replace(/^www\./, '');
+                const base = host.split('.')[0].replace(/[-_]+/g, ' ');
+                return base.replace(/\b\w/g, c => c.toUpperCase()) + ' Assistant';
+            } catch (e) { return ''; }
+        }
+        const greetingFor = (name) => `Hi! 👋 I'm the ${name.replace(/\s+assistant$/i, '')} assistant. How can I help?`;
+        let nameTouched = false;
+        $('asstName').addEventListener('input', () => { nameTouched = true; });
+        $('siteUrl').addEventListener('input', () => {
+            $('siteUrlError').classList.add('hidden');
+            const url = normalizeUrl($('siteUrl').value);
+            if (url && !nameTouched) $('asstName').value = suggestName(url);
+        });
+        document.querySelector(`input[name="industry"][value="${state.industry}"]`)?.setAttribute('checked', '');
+        if (state.url) { $('siteUrl').value = state.url; $('asstName').value = suggestName(state.url); }
+
+        $('siteForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = normalizeUrl($('siteUrl').value);
+            if (!url) {
+                $('siteUrlError').textContent = 'Enter a website address like yourcompany.com';
+                $('siteUrlError').classList.remove('hidden');
+                $('siteUrl').focus();
+                return;
+            }
+            const industry = (document.querySelector('input[name="industry"]:checked') || {}).value || 'general';
+            const name = $('asstName').value.trim() || suggestName(url);
+            const btn = $('siteSubmit');
+            btn.disabled = true; btn.textContent = 'Setting things up…';
+            $('siteError').classList.add('hidden');
+            try {
+                if (state.assistantId && state.url !== url) {
+                    // Same assistant, new address: point it at the new site and crawl that instead.
+                    await api(`/api/assistants/${state.assistantId}`, { method: 'PATCH', body: JSON.stringify({ name, industry, domain: new URL(url).hostname, welcome_message: greetingFor(name) }) });
+                    const r = await api(`/api/assistants/${state.assistantId}/jobs`, { method: 'POST', body: JSON.stringify({ kind: 'crawl', url, max_pages: 50 }) });
+                    state.jobId = r.job.id;
+                } else if (!state.assistantId) {
+                    const created = await api('/api/assistants', { method: 'POST', body: JSON.stringify({
+                        name, website_url: url, crawl_whole_site: true, welcome_message: greetingFor(name),
+                    }) });
+                    state.assistantId = created.assistant_id;
+                    state.jobId = created.crawl_job ? created.crawl_job.id : '';
+                    await api(`/api/assistants/${state.assistantId}`, { method: 'PATCH', body: JSON.stringify({ industry }) });
+                }
+                state.url = url; state.industry = industry;
+                store.set('wf_selected_asst_id', state.assistantId);
+                save();
+                goTo(2);
+            } catch (err) {
+                $('siteError').textContent = err.status === 403 ? "Your role in this workspace can't create assistants. Ask an owner or admin." : err.message;
+                $('siteError').classList.remove('hidden');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Build my assistant';
+            }
+        });
+
+        // ---------------- step 2: crawl progress
+        let watching = false;
+        function resetCrawlView() {
+            $('crawlFailed').classList.add('hidden');
+            $('ringBar').setAttribute('stroke-dashoffset', '251.3');
+            $('ringCount').textContent = '0';
+            $('crawlState').innerHTML = '<span class="w-2 h-2 rounded-full bg-brand-500 pulse"></span>Starting…';
+            $('crawlDetail').textContent = state.url || '';
+            $('learnedList').innerHTML = '<li class="text-slate-600">Waiting for the first page…</li>';
+            $('crawlContinue').disabled = true;
+            $('crawlContinue').textContent = 'Continue';
+            $('crawlSubtitle').textContent = 'Reading your pages so the assistant can answer from them. This usually takes a minute or two.';
+        }
+
+        async function watchCrawl() {
+            if (watching || !state.assistantId) return;
+            watching = true;
+            resetCrawlView();
+            try {
+                if (!state.jobId) {
+                    const jobs = await api(`/api/assistants/${state.assistantId}/jobs`);
+                    state.jobId = jobs.active ? jobs.active.id : ((jobs.recent || [])[0] || {}).id || '';
+                    save();
+                }
+                let lastIndexed = -1;
+                while (watching && state.step === 2 && state.jobId) {
+                    const job = await api(`/api/assistants/${state.assistantId}/jobs/${state.jobId}/step?budget=2`, { method: 'POST' });
+                    const indexed = (job.pages_added || 0) + (job.pages_updated || 0) + (job.pages_unchanged || 0);
+                    const total = Math.max(1, Math.min(job.max_pages || 50, (job.pages_done || 0) + (job.queue_size || 0)));
+                    const pct = job.status === 'done' ? 1 : Math.min(0.97, (job.pages_done || 0) / total);
+                    $('ringBar').setAttribute('stroke-dashoffset', String(251.3 * (1 - pct)));
+                    $('ringCount').textContent = indexed;
+                    const active = job.status === 'queued' || job.status === 'running';
+                    $('crawlState').innerHTML = active
+                        ? '<span class="w-2 h-2 rounded-full bg-brand-500 pulse"></span>' + (job.pages_done ? 'Reading your pages…' : 'Finding your pages…')
+                        : (job.status === 'done' ? '<span class="w-2 h-2 rounded-full bg-emerald-400"></span>All done' : '<span class="w-2 h-2 rounded-full bg-rose-400"></span>We hit a problem');
+                    $('crawlDetail').textContent = active ? (job.current_url || job.start_url || '') : (job.status === 'done' ? `${indexed} page${indexed === 1 ? '' : 's'} learned` : '');
+                    $('crawlContinue').disabled = indexed < 1;
+                    if (indexed !== lastIndexed) { lastIndexed = indexed; refreshLearned(); }
+                    if (!active) {
+                        if (job.status === 'failed' || indexed === 0) {
+                            $('crawlFailed').innerHTML = `<b>We couldn't read that site.</b> ${esc(job.error || '')} Check the address is public and opens in a browser, or try a different page (for example your homepage). You can also continue and add content by hand later.`;
+                            $('crawlFailed').classList.remove('hidden');
+                            $('crawlContinue').disabled = false;
+                            $('crawlContinue').textContent = 'Continue anyway';
+                        } else {
+                            $('crawlContinue').textContent = 'Continue';
+                            $('crawlSubtitle').textContent = 'Your assistant has read your site and is ready to try.';
+                        }
+                        break;
+                    }
+                    await new Promise(r => setTimeout(r, 350));
+                }
+            } catch (err) {
+                $('crawlFailed').textContent = err.message;
+                $('crawlFailed').classList.remove('hidden');
+                $('crawlContinue').disabled = false;
+            } finally {
+                watching = false;
+            }
+        }
+        async function refreshLearned() {
+            try {
+                const sources = await api(`/api/assistants/${state.assistantId}/sources`);
+                const recent = (Array.isArray(sources) ? sources : []).slice(-5).reverse();
+                if (recent.length) {
+                    $('learnedList').innerHTML = recent.map(s => `<li class="learned-item flex items-center gap-2 min-w-0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5" class="shrink-0" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                        <span class="truncate">${esc(s.title || s.url)}</span></li>`).join('');
+                }
+            } catch (e) {}
+        }
+        $('crawlContinue').addEventListener('click', () => { watching = false; goTo(3); });
+        $('crawlBack').addEventListener('click', () => { watching = false; goTo(1); setTimeout(() => $('siteUrl').select(), 50); });
+
+        // ---------------- step 3: test with the real widget
+        const TEST_QUESTIONS = {
+            real_estate: ['Do you have 2-bedroom apartments for rent?', 'Which areas do you cover?', 'Can I book a viewing this week?'],
+            ecommerce: ['What are your best sellers?', 'Do you ship internationally?', "What's your return policy?"],
+            general: ['What services do you offer?', 'How much does it cost?', 'How can I contact you?'],
+        };
+        function renderTestQuestions() {
+            const qs = TEST_QUESTIONS[state.industry] || TEST_QUESTIONS.general;
+            $('testQuestions').innerHTML = qs.map(q => `<button type="button" class="test-q card rounded-xl px-4 py-3 text-left text-[13.5px] text-slate-200 hover:border-white/20 transition flex items-center justify-between gap-3">
+                <span>${esc(q)}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-500 shrink-0" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>`).join('');
+            $('testQuestions').querySelectorAll('.test-q').forEach(b => b.addEventListener('click', () => askInPreview(b.querySelector('span').textContent)));
+        }
+        function loadPreview(frameId) {
+            if (!state.assistantId) return;
+            const frame = $(frameId);
+            frame.src = `/preview?assistant_id=${encodeURIComponent(state.assistantId)}&t=${Date.now()}`;
+            if (frameId === 'previewFrameTest') { renderTestQuestions(); $('previewHost').textContent = state.url || ''; }
+        }
+        // The preview is same-origin, so a suggested question can be typed straight into the real widget.
+        function askInPreview(text) {
+            try {
+                const doc = $('previewFrameTest').contentDocument;
+                const host = [...doc.querySelectorAll('*')].find(el => el.shadowRoot && el.shadowRoot.querySelector('.wf-window'));
+                const root = host.shadowRoot;
+                const win = root.querySelector('.wf-window');
+                if (!win.classList.contains('wf-open')) root.querySelector('button.wf-launcher').click();
+                const input = root.getElementById('wf-input');
+                input.value = text;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                root.getElementById('wf-form').requestSubmit();
+            } catch (e) {
+                navigator.clipboard && navigator.clipboard.writeText(text);
+            }
+        }
+
+        // ---------------- step 4: style
+        const COLORS = ['#2f5cf6', '#0f172a', '#7c3aed', '#db2777', '#e11d48', '#ea580c', '#059669', '#0891b2'];
+        const AVATARS = ['⚡', '💬', '🏠', '🛍️', '✨', '🤖', '👋', '🌿'];
+        let styleTimer = null;
+        let styleState = { primary_color: COLORS[0], bot_avatar: '⚡', name: '', welcome_message: '' };
+        async function loadStyle() {
+            try {
+                const a = await api(`/api/assistants/${state.assistantId}`);
+                styleState = { primary_color: a.primary_color || COLORS[0], bot_avatar: a.bot_avatar || '⚡', name: a.name || '', welcome_message: a.welcome_message || '' };
+            } catch (e) {}
+            const colors = COLORS.includes(styleState.primary_color) ? COLORS : [styleState.primary_color, ...COLORS];
+            $('swatches').innerHTML = colors.map(c => `<button type="button" class="swatch ${c === styleState.primary_color ? 'is-selected' : ''}" style="background:${c}" data-color="${c}" aria-label="Colour ${c}"></button>`).join('')
+                + `<label class="relative swatch flex items-center justify-center border border-white/20 overflow-hidden" title="Custom colour" aria-label="Custom colour">
+                     <span class="text-[14px] text-slate-300" aria-hidden="true">+</span>
+                     <input type="color" id="customColor" class="absolute inset-0 opacity-0 cursor-pointer" value="${styleState.primary_color}"></label>`;
+            $('avatars').innerHTML = AVATARS.map(a => `<button type="button" class="avatar-opt ${a === styleState.bot_avatar ? 'is-selected' : ''}" data-avatar="${a}" aria-label="Avatar ${a}">${a}</button>`).join('');
+            $('styleName').value = styleState.name;
+            $('styleWelcome').value = styleState.welcome_message;
+            $('swatches').querySelectorAll('[data-color]').forEach(b => b.addEventListener('click', () => {
+                styleState.primary_color = b.dataset.color;
+                $('swatches').querySelectorAll('.swatch').forEach(x => x.classList.toggle('is-selected', x === b));
+                queueStyleSave();
+            }));
+            $('customColor').addEventListener('input', (e) => {
+                styleState.primary_color = e.target.value;
+                $('swatches').querySelectorAll('.swatch').forEach(x => x.classList.remove('is-selected'));
+                queueStyleSave();
+            });
+            $('avatars').querySelectorAll('[data-avatar]').forEach(b => b.addEventListener('click', () => {
+                styleState.bot_avatar = b.dataset.avatar;
+                $('avatars').querySelectorAll('.avatar-opt').forEach(x => x.classList.toggle('is-selected', x === b));
+                queueStyleSave();
+            }));
+        }
+        ['styleName', 'styleWelcome'].forEach(id => $(id).addEventListener('input', () => {
+            styleState.name = $('styleName').value; styleState.welcome_message = $('styleWelcome').value; queueStyleSave(900);
+        }));
+        function queueStyleSave(delay = 300) {
+            clearTimeout(styleTimer);
+            $('styleSaved').textContent = 'Saving…';
+            styleTimer = setTimeout(async () => {
+                const payload = { primary_color: styleState.primary_color, bot_avatar: styleState.bot_avatar, welcome_message: styleState.welcome_message.trim() };
+                if (styleState.name.trim()) payload.name = styleState.name.trim();
+                try {
+                    await api(`/api/assistants/${state.assistantId}`, { method: 'PATCH', body: JSON.stringify(payload) });
+                    $('styleSaved').textContent = 'Saved';
+                    loadPreview('previewFrameStyle');
+                } catch (err) { $('styleSaved').textContent = err.message; }
+            }, delay);
+        }
+
+        // ---------------- step 5: install
+        const PLATFORMS = {
+            'Any website': 'Paste the code just before the closing <code class="font-mono">&lt;/body&gt;</code> tag of your site template (or every page), then publish.',
+            'WordPress': 'Install the free <b>WPCode</b> plugin (or use your theme\'s "Custom code" setting). Go to <b>Code Snippets → Header &amp; Footer</b>, paste the code into <b>Footer</b>, and save.',
+            'Shopify': 'In your admin go to <b>Online Store → Themes → … → Edit code</b>, open <code class="font-mono">theme.liquid</code>, paste the code just before <code class="font-mono">&lt;/body&gt;</code>, and save.',
+            'Wix': 'Go to <b>Settings → Custom code → Add custom code</b>, paste the code, choose <b>All pages</b>, place it in <b>Body - end</b>, and apply.',
+            'Squarespace': 'Go to <b>Settings → Advanced → Code injection</b>, paste the code into <b>Footer</b>, and save.',
+            'Webflow': 'Open <b>Project settings → Custom code</b>, paste the code into <b>Footer code</b>, save, and publish your site.',
+        };
+        function snippetText() {
+            const host = location.origin;
+            return `<script defer src="${host}/static/widget.js"\n  data-assistant-id="${state.assistantId}"\n  data-api-url="${host}"><\/script>`;
+        }
+        function loadInstall() {
+            $('snippet').textContent = snippetText();
+            $('verifyUrl').value = state.url || '';
+            const tabs = Object.keys(PLATFORMS);
+            const show = (name) => {
+                $('platformTabs').querySelectorAll('.tab').forEach(t => { const on = t.dataset.p === name; t.classList.toggle('is-active', on); t.setAttribute('aria-selected', String(on)); });
+                $('platformBody').innerHTML = PLATFORMS[name];
+            };
+            $('platformTabs').innerHTML = tabs.map(t => `<button type="button" role="tab" class="tab py-3 whitespace-nowrap" data-p="${t}">${t}</button>`).join('');
+            $('platformTabs').querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => show(t.dataset.p)));
+            show(tabs[0]);
+            const body = `Hi,\n\nPlease add our website chat assistant. Paste this code just before </body> on every page:\n\n${snippetText()}\n\nThanks!`;
+            $('mailDev').href = `mailto:?subject=${encodeURIComponent('Add our AnswerWeave chat assistant to the website')}&body=${encodeURIComponent(body)}`;
+        }
+        $('copySnippet').addEventListener('click', async () => {
+            try { await navigator.clipboard.writeText(snippetText()); $('copySnippet').textContent = 'Copied!'; }
+            catch (e) { $('copySnippet').textContent = 'Select and copy'; }
+            setTimeout(() => { $('copySnippet').textContent = 'Copy code'; }, 1800);
+        });
+        $('verifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = $('verifyBtn');
+            const box = $('verifyResult');
+            btn.disabled = true; btn.textContent = 'Checking…';
+            try {
+                const r = await api(`/api/assistants/${state.assistantId}/verify-install`, { method: 'POST', body: JSON.stringify({ url: normalizeUrl($('verifyUrl').value) || undefined }) });
+                box.className = `mt-3 rounded-lg p-3.5 text-[13px] ${r.installed ? 'bg-emerald-500/10 border border-emerald-500/25 text-emerald-200' : 'bg-amber-500/10 border border-amber-500/25 text-amber-100'}`;
+                box.innerHTML = `${r.installed ? '<b>It\'s live!</b> ' : '<b>Not found yet.</b> '}${esc(r.reason)}`;
+                if (r.installed) setTimeout(() => goTo(6), 1200);
+            } catch (err) {
+                box.className = 'mt-3 rounded-lg p-3.5 text-[13px] bg-rose-500/10 border border-rose-500/20 text-rose-200';
+                box.textContent = err.message;
+            } finally {
+                box.classList.remove('hidden');
+                btn.disabled = false; btn.textContent = 'Check installation';
+            }
+        });
+        function finish() {
+            store.set('wf_selected_asst_id', state.assistantId);
+            store.del(SAVE_KEY);
+            window.location.href = '/dashboard#analytics';
+        }
+        $('finishBtn').addEventListener('click', finish);
+        $('doneDashboard').addEventListener('click', (e) => { e.preventDefault(); finish(); });
+        $('skipLink').addEventListener('click', () => { if (state.assistantId) store.set('wf_selected_asst_id', state.assistantId); });
+
+        // ---------------- start
+        if (state.step > 1 && !state.assistantId) state.step = 1;
+        goTo(Math.min(Math.max(1, state.step), 6));
+    </script>
+</body>
+</html>

@@ -743,7 +743,8 @@
                     // A new account starts in its own workspace; on sign-in the server picks the first one.
                     if (data.workspace_id) localStorage.setItem('aw_workspace', data.workspace_id);
                     else localStorage.removeItem('aw_workspace');
-                    window.location.href = '/dashboard';
+                    // New accounts go through the guided setup; returning users go to their dashboard.
+                    window.location.href = isLogin ? '/dashboard' : '/onboarding?new=1';
                     return;
                 }
                 errEl.textContent = (typeof data.detail === 'string' && data.detail) || (isLogin ? 'Incorrect email or password.' : 'Could not create your account.');
