@@ -969,6 +969,14 @@
             border-color: #93c5fd !important;
             color: #1d4ed8 !important;
         }
+        /* FAQs and documents: informative, not clickable */
+        .wf-citation-pill.wf-citation-static,
+        .wf-citation-pill.wf-citation-static:hover {
+            color: var(--wf-text-muted, #64748b) !important;
+            background: var(--wf-input-field-bg, #f8fafc) !important;
+            border-color: var(--wf-card-border, #cbd5e1) !important;
+            cursor: default !important;
+        }
 
         /* In-chat Lead Capture Card */
         .wf-lead-card {
@@ -1102,7 +1110,7 @@
             border-color: var(--wf-primary, #818cf8) !important;
             box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25) !important;
         }
-        input.wf-field {
+        .wf-field {
             all: unset !important;
             flex: 1 !important;
             border: none !important;
@@ -1114,7 +1122,7 @@
             padding: 8px 4px !important;
             box-sizing: border-box !important;
         }
-        input.wf-field::placeholder { color: var(--wf-text-subtle, #94a3b8) !important; }
+        .wf-field::placeholder { color: var(--wf-text-subtle, #94a3b8) !important; }
 
         button.wf-mic-btn {
             all: unset !important;
@@ -1398,7 +1406,7 @@
                 padding: 10px 14px max(14px, env(safe-area-inset-bottom, 14px)) 14px !important;
                 gap: 8px !important;
             }
-            input.wf-field {
+            .wf-field {
                 font-size: 16px !important;
                 padding: 7px 4px !important;
             }
@@ -1697,6 +1705,160 @@
         .wf-lcard-btn-ghost { border: 1px solid var(--wf-card-border, #e2e8f0) !important; color: var(--wf-text, #0f172a) !important; }
         .wf-lcard-btn-ghost:hover { background: var(--wf-surface-hover, #f1f5f9) !important; }
 
+        /* ================= DESIGN SYSTEM LAYER ================= */
+        .wf-sr-only { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; white-space: nowrap !important; }
+
+        /* Messages: readable type, avatar beside replies, grouped rhythm */
+        .wf-chat-body { gap: 10px !important; padding: 18px 16px 12px !important; }
+        .wf-bubble { font-size: 14px !important; line-height: 1.6 !important; }
+        .wf-msg-p { margin: 0 0 8px 0 !important; line-height: 1.6 !important; }
+        .wf-bubble-user + .wf-bubble-bot, .wf-bubble-bot + .wf-bubble-user { margin-top: 6px !important; }
+        .wf-bubble-user {
+            max-width: 82% !important;
+            padding: 10px 14px !important;
+            border-radius: 18px 18px 6px 18px !important;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12) !important;
+        }
+        .wf-bubble-bot:not(.wf-bubble-operator) {
+            margin-left: 34px !important;
+            max-width: calc(100% - 40px) !important;
+            padding: 12px 15px !important;
+            border-radius: 6px 18px 18px 18px !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+            overflow: visible !important;
+        }
+        .wf-bubble-bot:not(.wf-bubble-operator)::before {
+            content: var(--wf-bot-avatar-text, "") !important;
+            position: absolute !important;
+            left: -34px !important;
+            top: 0 !important;
+            width: 26px !important;
+            height: 26px !important;
+            border-radius: 999px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 13px !important;
+            line-height: 1 !important;
+            background: color-mix(in srgb, var(--wf-primary, #6366f1) 14%, var(--wf-card-bg, #fff)) !important;
+            background-image: var(--wf-bot-avatar-img, none) !important;
+            background-size: cover !important;
+            background-position: center !important;
+            border: 1px solid var(--wf-card-border, #e2e8f0) !important;
+        }
+        /* Only the first reply in a run shows the avatar */
+        .wf-bubble-bot:not(.wf-bubble-operator) + .wf-bubble-bot:not(.wf-bubble-operator)::before { visibility: hidden !important; }
+        .wf-bubble-error { border-color: rgba(239, 68, 68, 0.35) !important; }
+        button.wf-retry-btn {
+            all: unset !important;
+            display: inline-flex !important; align-items: center !important; gap: 6px !important;
+            margin-top: 8px !important; padding: 6px 10px !important; border-radius: 8px !important;
+            font-size: 12.5px !important; font-weight: 600 !important; cursor: pointer !important;
+            color: var(--wf-text, #0f172a) !important; border: 1px solid var(--wf-card-border, #e2e8f0) !important;
+        }
+        button.wf-retry-btn:hover { background: var(--wf-surface-hover, #f1f5f9) !important; }
+        button.wf-retry-btn svg { width: 14px !important; height: 14px !important; }
+
+        /* Inline citation badges */
+        .wf-citation-inline {
+            display: inline-flex !important; align-items: center !important; justify-content: center !important;
+            min-width: 16px !important; height: 16px !important; padding: 0 4px !important; margin: 0 1px 0 2px !important;
+            border-radius: 999px !important; font-size: 10px !important; font-weight: 700 !important; line-height: 1 !important;
+            vertical-align: 2px !important; cursor: help !important;
+            background: color-mix(in srgb, var(--wf-primary, #6366f1) 12%, transparent) !important;
+            color: color-mix(in srgb, var(--wf-primary, #4338ca) 85%, var(--wf-text, #0f172a)) !important;
+        }
+        .wf-dark .wf-citation-inline { background: rgba(255, 255, 255, 0.10) !important; color: #c7d2fe !important; }
+
+        /* Sources row */
+        .wf-citations {
+            display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 6px !important;
+            margin-top: 10px !important; padding: 10px 0 0 0 !important; background: transparent !important;
+            border-top: 1px solid var(--wf-card-border, #eef2f7) !important;
+        }
+        .wf-src-label { font-size: 11px !important; font-weight: 600 !important; letter-spacing: 0.02em !important; color: var(--wf-text-subtle, #94a3b8) !important; margin-right: 2px !important; }
+        .wf-citation-pill, .wf-citation-pill:hover {
+            display: inline-flex !important; align-items: center !important; gap: 5px !important;
+            max-width: 100% !important; padding: 3px 9px 3px 4px !important; border-radius: 999px !important;
+            font-size: 11.5px !important; font-weight: 500 !important; text-decoration: none !important;
+            background: var(--wf-surface, #f8fafc) !important; border: 1px solid var(--wf-card-border, #e2e8f0) !important;
+            color: var(--wf-text, #0f172a) !important; transition: border-color 0.15s, background 0.15s !important;
+        }
+        a.wf-citation-pill:hover { border-color: color-mix(in srgb, var(--wf-primary, #6366f1) 45%, transparent) !important; background: var(--wf-card-bg, #fff) !important; }
+        .wf-citation-pill.wf-citation-static, .wf-citation-pill.wf-citation-static:hover { color: var(--wf-text-muted, #64748b) !important; cursor: default !important; }
+        .wf-citation-pill svg { width: 11px !important; height: 11px !important; flex-shrink: 0 !important; opacity: 0.6 !important; }
+        .wf-src-num {
+            display: inline-flex !important; align-items: center !important; justify-content: center !important;
+            min-width: 16px !important; height: 16px !important; border-radius: 999px !important; font-size: 10px !important; font-weight: 700 !important;
+            background: color-mix(in srgb, var(--wf-primary, #6366f1) 12%, transparent) !important;
+            color: color-mix(in srgb, var(--wf-primary, #4338ca) 85%, var(--wf-text, #0f172a)) !important;
+        }
+        .wf-src-title { overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; max-width: 160px !important; }
+        .wf-src-extra { display: none !important; }
+        .wf-src-expanded .wf-src-extra { display: inline-flex !important; }
+        button.wf-src-more {
+            all: unset !important; font-size: 11.5px !important; font-weight: 600 !important; cursor: pointer !important;
+            padding: 3px 8px !important; border-radius: 999px !important; color: var(--wf-text-muted, #64748b) !important;
+        }
+        button.wf-src-more:hover { background: var(--wf-surface-hover, #f1f5f9) !important; color: var(--wf-text, #0f172a) !important; }
+        .wf-dark .wf-citation-pill, .wf-dark .wf-citation-pill:hover { background: rgba(255, 255, 255, 0.04) !important; border-color: rgba(255, 255, 255, 0.10) !important; color: #e2e8f0 !important; }
+        .wf-dark .wf-src-num { background: rgba(255, 255, 255, 0.10) !important; color: #c7d2fe !important; }
+        .wf-dark .wf-citations { border-top-color: rgba(255, 255, 255, 0.08) !important; }
+
+        /* Action row: helpful / not helpful / copy */
+        .wf-feedback { margin-top: 8px !important; gap: 2px !important; }
+        .wf-feedback button.wf-copy-btn {
+            all: unset !important; cursor: pointer !important;
+            display: inline-flex !important; align-items: center !important; justify-content: center !important;
+            width: 26px !important; height: 24px !important; border-radius: 7px !important;
+            color: var(--wf-text-muted, #64748b) !important; opacity: 0.55 !important;
+            transition: opacity 0.15s, background 0.15s, color 0.15s !important;
+        }
+        .wf-feedback button.wf-copy-btn svg { width: 13px !important; height: 13px !important; }
+        .wf-bubble-bot:hover .wf-feedback button.wf-copy-btn { opacity: 0.9 !important; }
+        .wf-feedback button.wf-copy-btn:hover { background: var(--wf-surface-hover, #f1f5f9) !important; opacity: 1 !important; }
+        .wf-feedback button.wf-copy-btn.wf-copied { color: #059669 !important; opacity: 1 !important; }
+        .wf-feedback button.wf-copy-btn:focus-visible, .wf-feedback-btn:focus-visible { outline: 2px solid var(--wf-primary, #6366f1) !important; outline-offset: 1px !important; }
+        button.wf-copy-btn:not(.wf-feedback *) svg { width: 11px !important; height: 11px !important; }
+        @media (hover: none) {
+            .wf-feedback-btn, .wf-feedback button.wf-copy-btn { opacity: 0.8 !important; }
+        }
+
+        /* Composer */
+        .wf-field-container { align-items: flex-end !important; border-radius: 22px !important; padding: 4px 6px 4px 14px !important; position: relative !important; }
+        textarea.wf-field {
+            resize: none !important; display: block !important; width: 100% !important;
+            min-height: 22px !important; max-height: 120px !important; overflow-y: auto !important;
+            line-height: 1.45 !important; padding: 8px 4px !important; white-space: pre-wrap !important;
+            scrollbar-width: thin !important;
+        }
+        button.wf-mic-btn { margin-bottom: 3px !important; }
+        form.wf-input-wrap { align-items: flex-end !important; }
+        button.wf-send-btn { margin-bottom: 2px !important; }
+        .wf-char-count {
+            position: absolute !important; right: 46px !important; top: -18px !important;
+            font-size: 10.5px !important; font-weight: 600 !important; color: var(--wf-text-subtle, #94a3b8) !important;
+        }
+        .wf-char-count.wf-char-limit { color: #dc2626 !important; }
+
+        /* Jump to latest */
+        button.wf-jump-btn {
+            all: unset !important; position: absolute !important; left: 50% !important; bottom: 92px !important;
+            width: 34px !important; height: 34px !important; border-radius: 999px !important; cursor: pointer !important;
+            display: flex !important; align-items: center !important; justify-content: center !important;
+            background: var(--wf-card-bg, #fff) !important; color: var(--wf-text, #0f172a) !important;
+            border: 1px solid var(--wf-card-border, #e2e8f0) !important; box-shadow: 0 8px 22px -6px rgba(15, 23, 42, 0.3) !important;
+            opacity: 0 !important; pointer-events: none !important; transform: translate(-50%, 8px) !important;
+            transition: opacity 0.2s, transform 0.2s !important; z-index: 6 !important;
+        }
+        button.wf-jump-btn.wf-jump-visible { opacity: 1 !important; pointer-events: auto !important; transform: translate(-50%, 0) !important; }
+        button.wf-jump-btn svg { width: 16px !important; height: 16px !important; }
+
+        /* Focus rings for keyboard users */
+        button.wf-launcher:focus-visible, button.wf-send-btn:focus-visible, button.wf-question-card:focus-visible, .wf-citation-pill:focus-visible {
+            outline: 2px solid var(--wf-primary, #6366f1) !important; outline-offset: 2px !important;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             .wf-root *, .wf-root *::before, .wf-root *::after {
                 animation-duration: 0.01ms !important;
@@ -1713,7 +1875,7 @@
     root.id = 'wf-widget-root';
     root.innerHTML = `
         <!-- Main Chat Window -->
-        <div class="wf-window" id="wf-window">
+        <div class="wf-window" id="wf-window" role="dialog" aria-modal="false" aria-label="Chat with our assistant">
             <!-- Header Bar -->
             <div class="wf-header" id="wf-header">
                 <div class="wf-header-left">
@@ -1775,7 +1937,7 @@
             </div>
 
             <!-- Chat Canvas Body -->
-            <div class="wf-chat-body" id="wf-body">
+            <div class="wf-chat-body" id="wf-body" role="log" aria-label="Conversation">
                 <!-- Welcome Bubble -->
                 <div class="wf-welcome-bubble" id="wf-welcome-msg">
                     ${botConfig.welcome_message}
@@ -1819,7 +1981,7 @@
             <!-- Input Bar -->
             <form class="wf-input-wrap" id="wf-form">
                 <div class="wf-field-container">
-                    <input type="text" class="wf-field" id="wf-input" placeholder="Ask a question..." autocomplete="off" />
+                    <textarea class="wf-field" id="wf-input" rows="1" placeholder="Ask a question..." autocomplete="off" maxlength="4000" aria-label="Type your message"></textarea>
                     <button type="button" class="wf-mic-btn" id="wf-mic-btn" title="Speak question">
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>
@@ -1833,6 +1995,10 @@
                 </button>
             </form>
             <div class="wf-footer" id="wf-footer">Powered by AnswerWeave</div>
+            <button type="button" class="wf-jump-btn" id="wf-jump-btn" aria-label="Jump to latest message" tabindex="-1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+            </button>
+            <div class="wf-sr-only" id="wf-announcer" aria-live="polite" aria-atomic="true"></div>
         </div>
 
         <!-- Floating Launcher Button Wrap -->
@@ -1892,12 +2058,66 @@
     // Initial render of cards
     renderPopularCards();
 
-    // Input activate state
-    inputEl.addEventListener('input', () => {
-        if (inputEl.value.trim().length > 0) {
-            sendBtn.classList.add('wf-send-active');
-        } else {
-            sendBtn.classList.remove('wf-send-active');
+    // Follow new text only while the visitor is at the bottom; otherwise offer a jump button.
+    const jumpBtn = $('wf-jump-btn');
+    let atBottom = true;
+    const nearBottom = () => bodyEl.scrollHeight - bodyEl.scrollTop - bodyEl.clientHeight < 80;
+    function followLatest() {
+        if (atBottom) bodyEl.scrollTop = bodyEl.scrollHeight;
+        else jumpBtn.classList.add('wf-jump-visible');
+    }
+    bodyEl.addEventListener('scroll', () => {
+        atBottom = nearBottom();
+        if (atBottom) jumpBtn.classList.remove('wf-jump-visible');
+    }, { passive: true });
+    jumpBtn.addEventListener('click', () => {
+        bodyEl.scrollTo({ top: bodyEl.scrollHeight, behavior: 'smooth' });
+        jumpBtn.classList.remove('wf-jump-visible');
+        atBottom = true;
+    });
+
+    // Screen readers hear each finished reply once (not every streamed word).
+    const announcer = $('wf-announcer');
+    function announce(text) {
+        if (!announcer || !text) return;
+        announcer.textContent = '';
+        setTimeout(() => { announcer.textContent = String(text).replace(/\[(\d+)\]/g, '').replace(/[*#_`]/g, '').slice(0, 600); }, 60);
+    }
+
+    // Escape closes the chat (the menu handler closes an open menu first).
+    shadow.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isOpen && !(menuEl && menuEl.classList.contains('wf-menu-open'))) {
+            toggleChat();
+            triggerBtn.focus();
+        }
+    });
+
+    // Composer: grows with the text (up to ~5 lines), Enter sends, Shift+Enter adds a line.
+    const MAX_CHARS = 4000;
+    function resizeInput() {
+        // The widget's reset uses `all: unset !important`, so inline sizes need !important too.
+        inputEl.style.setProperty('height', 'auto', 'important');
+        inputEl.style.setProperty('height', Math.min(inputEl.scrollHeight, 120) + 'px', 'important');
+        const len = inputEl.value.length;
+        sendBtn.classList.toggle('wf-send-active', inputEl.value.trim().length > 0);
+        let counter = formEl.querySelector('.wf-char-count');
+        if (len > MAX_CHARS - 500) {
+            if (!counter) {
+                counter = document.createElement('span');
+                counter.className = 'wf-char-count';
+                formEl.querySelector('.wf-field-container').appendChild(counter);
+            }
+            counter.textContent = `${len}/${MAX_CHARS}`;
+            counter.classList.toggle('wf-char-limit', len >= MAX_CHARS);
+        } else if (counter) {
+            counter.remove();
+        }
+    }
+    inputEl.addEventListener('input', resizeInput);
+    inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+            e.preventDefault();
+            formEl.requestSubmit ? formEl.requestSubmit() : submitQuery();
         }
     });
 
@@ -2021,34 +2241,23 @@
         const copyBtn = document.createElement('button');
         copyBtn.type = 'button';
         copyBtn.className = 'wf-copy-btn';
-        copyBtn.title = 'Copy response';
-        copyBtn.innerHTML = `
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-            </svg>
-            <span>Copy</span>
-        `;
+        copyBtn.title = 'Copy';
+        copyBtn.setAttribute('aria-label', 'Copy reply');
+        const COPY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+        copyBtn.innerHTML = COPY_ICON;
         copyBtn.onclick = async (e) => {
             e.stopPropagation();
             try {
                 const clean = rawText.replace(/<[^>]+>/g, '').replace(/(?:📸\s*)?!\[.*?\]\(.*?\)/g, '').trim();
-                await navigator.clipboard.writeText(clean);
-                copyBtn.innerHTML = `
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    <span style="color:#10b981;">Copied!</span>
-                `;
+                await navigator.clipboard.writeText(clean.replace(/\s?\[\d+\]/g, ''));
+                copyBtn.classList.add('wf-copied');
+                copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+                copyBtn.title = 'Copied';
                 setTimeout(() => {
-                    copyBtn.innerHTML = `
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                        </svg>
-                        <span>Copy</span>
-                    `;
-                }, 1800);
+                    copyBtn.classList.remove('wf-copied');
+                    copyBtn.innerHTML = COPY_ICON;
+                    copyBtn.title = 'Copy';
+                }, 1600);
             } catch (err) {}
         };
         bubbleEl.appendChild(copyBtn);
@@ -2100,6 +2309,9 @@
         const citations = bubbleEl.querySelector('.wf-citations');
         if (citations) citations.insertAdjacentElement('afterend', row);
         else bubbleEl.appendChild(row);
+        // One quiet action row: helpful, not helpful, copy.
+        const copyBtn = bubbleEl.querySelector(':scope > .wf-copy-btn');
+        if (copyBtn) row.insertBefore(copyBtn, thanks);
     }
 
     // Property / product cards under a reply: photo, price, key facts and one-tap next steps.
@@ -2201,10 +2413,19 @@
         if (statusEl) statusEl.innerText = botConfig.widget_subtitle || "Online";
 
         // Avatar
+        // Small avatar beside every bot message (emoji or image).
+        const av = String(botConfig.bot_avatar || '⚡');
+        if (/^(https?:|data:image)/i.test(av)) {
+            root.style.setProperty('--wf-bot-avatar-img', `url("${av.replace(/["\\\n]/g, '')}")`);
+            root.style.setProperty('--wf-bot-avatar-text', '""');
+        } else {
+            root.style.setProperty('--wf-bot-avatar-img', 'none');
+            root.style.setProperty('--wf-bot-avatar-text', `"${Array.from(av).slice(0, 2).join('').replace(/["\\]/g, '')}"`);
+        }
         const avatarBox = $('wf-avatar-box');
         if (avatarBox) {
             if (botConfig.bot_avatar && (botConfig.bot_avatar.startsWith('http') || botConfig.bot_avatar.startsWith('data:image'))) {
-                avatarBox.innerHTML = `<img src="${botConfig.bot_avatar}" alt="Avatar" style="width:100% !important; height:100% !important; object-fit:cover !important; border-radius:50% !important; display:block !important;" />`;
+                avatarBox.innerHTML = `<img src="${escapeHtml(botConfig.bot_avatar)}" alt="" style="width:100% !important; height:100% !important; object-fit:cover !important; border-radius:50% !important; display:block !important;" />`;
             } else {
                 avatarBox.innerText = botConfig.bot_avatar || "⚡";
             }
@@ -2598,6 +2819,8 @@
 
     function toggleChat() {
         isOpen = !isOpen;
+        triggerBtn.setAttribute('aria-expanded', String(isOpen));
+        triggerBtn.setAttribute('aria-label', isOpen ? 'Close chat' : 'Open chat');
         const btnLabel = $('wf-btn-label');
         if (isOpen) {
             unreadCount = 0;
@@ -2660,6 +2883,14 @@
             teaserBubble.style.display = 'none';
         });
     }
+
+    bodyEl.addEventListener('click', (e) => {
+        const more = e.target.closest && e.target.closest('.wf-src-more');
+        if (!more) return;
+        const row = more.closest('.wf-citations');
+        row.classList.add('wf-src-expanded');
+        more.remove();
+    });
 
     // Header "more" menu
     const moreBtn = $('wf-more-btn');
@@ -2747,6 +2978,7 @@
         recognition.onresult = (e) => {
             const transcript = e.results[0][0].transcript;
             inputEl.value = transcript;
+            resizeInput();
             sendBtn.classList.add('wf-send-active');
             isRecording = false;
             micBtn.classList.remove('wf-mic-active');
@@ -2783,7 +3015,7 @@
         if (!query) return;
 
         inputEl.value = '';
-        sendBtn.classList.remove('wf-send-active');
+        resizeInput();
 
         // Hide popular questions once chat starts
         const popSec = $('wf-popular-section');
@@ -2857,7 +3089,7 @@
                             ensureBubble();
                             accumulatedText += jsonPayload.token;
                             contentDiv.innerHTML = formatMessageText(accumulatedText) + '<span class="wf-cursor-beam"></span>';
-                            bodyEl.scrollTop = bodyEl.scrollHeight;
+                            followLatest();
                         } else if (jsonPayload.type === 'done') {
                             finalData = jsonPayload;
                         }
@@ -2891,19 +3123,10 @@
             // Finalize with formatted citations & lead card
             if (finalData) {
                 if (finalData.sources && finalData.sources.length > 0) {
-                    let citeHtml = `<div class="wf-citations">`;
-                    finalData.sources.forEach(s => {
-                        const safeHref = /^https?:\/\//i.test(s.url || '') ? escapeHtml(s.url) : '#';
-                        citeHtml += `
-                            <a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="wf-citation-pill" title="${escapeHtml(s.snippet || '')}">
-                                <span>📚</span>
-                                <span>[${s.index}] ${escapeHtml(s.title || 'Source')} ↗</span>
-                            </a>
-                        `;
-                    });
-                    citeHtml += `</div>`;
-                    botBubble.insertAdjacentHTML('beforeend', citeHtml);
+                    botBubble.insertAdjacentHTML('beforeend', citationsHtml(finalData.sources));
+                    decorateCitations(botBubble, finalData.sources);
                 }
+                announce(accumulatedText);
                 if (finalData.message_id) attachFeedback(botBubble, finalData.message_id);
                 if (finalData.cards && finalData.cards.length) renderCards(botBubble, finalData.cards);
 
@@ -2944,7 +3167,21 @@
                 }
                 handleHumanRequestResult(data);
             } catch (fallbackErr) {
-                appendMsg('bot', "Sorry, I'm having trouble connecting right now. Could you try that again in a moment?");
+                appendMsg('bot', "Sorry, I couldn't reach the server just now.");
+                const errBubble = bodyEl.lastElementChild;
+                errBubble.classList.add('wf-bubble-error');
+                const retry = document.createElement('button');
+                retry.type = 'button';
+                retry.className = 'wf-retry-btn';
+                retry.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Try again</span>';
+                retry.onclick = () => {
+                    const userBubble = errBubble.previousElementSibling;
+                    errBubble.remove();
+                    if (userBubble && userBubble.classList.contains('wf-bubble-user')) userBubble.remove();
+                    sendSuggested(query);
+                };
+                errBubble.appendChild(retry);
+                announce("Sorry, I couldn't reach the server just now.");
             }
         }
     }
@@ -2995,6 +3232,52 @@
         return formatted || escaped;
     }
 
+    // Sources under a reply: a quiet row with up to three chips and "+N more". Web pages open in a new
+    // tab; FAQs and uploaded documents have no address, so they're plain labels (never links to "#").
+    const SOURCE_ICONS = {
+        link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+        doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+    };
+    function cleanSourceTitle(title) {
+        // "Services - Ecomalign" -> "Services": the site name repeats on every chip.
+        const t = String(title || 'Source').trim();
+        const parts = t.split(/\s+[-|–—]\s+/);
+        return (parts.length > 1 && parts[0].length >= 3 ? parts[0] : t).slice(0, 80);
+    }
+    function citationsHtml(sources) {
+        const seen = new Set();
+        const unique = sources.filter(s => {
+            const key = (/^https?:\/\//i.test(s.url || '') ? s.url : s.title || '').toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+        const chip = (s, hidden) => {
+            const isLink = /^https?:\/\//i.test(s.url || '');
+            const inner = `<span class="wf-src-num">${escapeHtml(String(s.index))}</span>${isLink ? SOURCE_ICONS.link : SOURCE_ICONS.doc}<span class="wf-src-title">${escapeHtml(cleanSourceTitle(s.title))}</span>`;
+            const tip = escapeHtml(`${s.title || 'Source'}${s.snippet ? ' — ' + s.snippet : ''}`);
+            const cls = `wf-citation-pill${isLink ? '' : ' wf-citation-static'}${hidden ? ' wf-src-extra' : ''}`;
+            return isLink
+                ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer" class="${cls}" title="${tip}">${inner}</a>`
+                : `<span class="${cls}" title="${tip}">${inner}</span>`;
+        };
+        const shown = unique.slice(0, 3).map(s => chip(s, false)).join('');
+        const extra = unique.slice(3).map(s => chip(s, true)).join('');
+        const more = unique.length > 3 ? `<button type="button" class="wf-src-more" aria-expanded="false">+${unique.length - 3} more</button>` : '';
+        return `<div class="wf-citations"><span class="wf-src-label">Sources</span>${shown}${extra}${more}</div>`;
+    }
+    // Inline [n] markers become small badges that name their source on hover.
+    function decorateCitations(bubbleEl, sources) {
+        const byIndex = {};
+        sources.forEach(s => { byIndex[String(s.index)] = s; });
+        bubbleEl.querySelectorAll('.wf-citation-inline').forEach(el => {
+            const n = el.textContent.replace(/[\[\]]/g, '');
+            const src = byIndex[n];
+            el.textContent = n;
+            if (src) el.title = src.title || 'Source';
+        });
+    }
+
     function appendMsg(role, text, sources = [], opts = {}) {
         const bubble = document.createElement('div');
         bubble.className = `wf-bubble ${role === 'user' ? 'wf-bubble-user' : 'wf-bubble-bot'}`;
@@ -3004,20 +3287,11 @@
             : `<div>${formatMessageText(text)}</div>`;
 
         if (sources && sources.length > 0) {
-            html += `<div class="wf-citations">`;
-            sources.forEach(s => {
-                const safeHref = /^https?:\/\//i.test(s.url || '') ? escapeHtml(s.url) : '#';
-                html += `
-                    <a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="wf-citation-pill" title="${escapeHtml(s.snippet || '')}">
-                        <span>📚</span>
-                        <span>[${s.index}] ${escapeHtml(s.title || 'Source')} ↗</span>
-                    </a>
-                `;
-            });
-            html += `</div>`;
+            html += citationsHtml(sources);
         }
 
         bubble.innerHTML = html;
+        if (role !== 'user' && sources && sources.length) decorateCitations(bubble, sources);
         if (role !== 'user') {
             attachCopyButton(bubble, text);
             if (opts.messageId) attachFeedback(bubble, opts.messageId, opts.feedback || 0);
