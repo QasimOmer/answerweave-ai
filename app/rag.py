@@ -20,6 +20,7 @@ from app.config import (
     DEFAULT_OPENROUTER_MODEL
 )
 from app.embeddings import search_relevant_chunks
+from app import verticals
 from app.db import log_unanswered_question, get_assistant, is_trivial_or_conversational
 
 # Re-exported for callers that used the Groq helpers from this module.
@@ -562,7 +563,8 @@ LEAD_TAG = "[LEAD_TRIGGER]"
 GAP_TAG = "[NO_ANSWER]"
 _CONTROL_TAG_RE = re.compile(r"\s*\[(?:LEAD_TRIGGER|NO_ANSWER)\]\s*", re.IGNORECASE)
 _LEAD_INTENT_RE = re.compile(
-    r"\b(?:contact|speak to (?:a )?human|sales|call me|reach out|email me|support ticket|quote|demo|book(?:ing)? a call)\b"
+    r"\b(?:contact|speak to (?:a )?human|sales|call me|reach out|email me|support ticket|quote|demo|book(?:ing)? a call|"
+    r"book(?:ing)? a (?:viewing|visit|tour)|schedule a (?:viewing|visit|tour)|arrange a viewing|site visit)\b"
 )
 
 
@@ -785,6 +787,10 @@ def _prepare_turn(query: str, assistant_id: str, conversation_history: Optional[
         result = generate_local_extractive_answer(norm_query, chunks, assistant_id=assistant_id)
         result.setdefault("knowledge_gap", _UNKNOWN_MARKER in (result.get("answer") or "").lower())
         result.setdefault("provider", "local")
+        industry = verticals.resolve_industry(asst, assistant_id)
+        if verticals.wants_catalog(norm_query, industry):
+            _, items, _ = verticals.find_matches(assistant_id, norm_query, industry)
+            result["cards"] = [verticals.to_card(it) for it in items]
         return {"final": result}
 
     history_turns = history_to_messages(conversation_history, org)
@@ -796,13 +802,25 @@ def _prepare_turn(query: str, assistant_id: str, conversation_history: Optional[
         search_query = normalize_query_terms(contextualize_query(norm_query, history_turns, org, workspace_id))
         chunks = search_relevant_chunks(search_query, assistant_id=assistant_id, top_k=top_k)
 
+    # Property / product searches: rank the whole catalog, give the model the best matches and show them as cards.
+    industry = verticals.resolve_industry(asst, assistant_id)
+    items, listings = [], ""
+    if chunks is not None and search_query and not (is_trivial_or_conversational(norm_query)) and verticals.wants_catalog(search_query, industry):
+        intent, items, exact = verticals.find_matches(assistant_id, search_query, industry)
+        listings = verticals.listings_block(items, exact, intent)
+
     user_content = "\n\n".join(p for p in [
         _knowledge_block(chunks),
-        _catalog_hint(search_query),
+        listings,
+        "" if listings else _catalog_hint(search_query),
         f"Visitor's message: {query}",
     ] if p)
 
-    messages = [{"role": "system", "content": build_system_prompt(asst_name, asst_name, asst)}]
+    system_prompt = build_system_prompt(asst_name, asst_name, asst) + verticals.industry_prompt(industry, org, LEAD_TAG)
+    if listings:
+        system_prompt += ("\nLISTING CARDS\n- Items in <listings> are displayed as cards under your reply. Refer to them by name, "
+                          "don't paste image links or markdown images, and keep the reply short since the cards carry the details.\n")
+    messages = [{"role": "system", "content": system_prompt}]
     messages += history_turns
     messages.append({"role": "user", "content": user_content})
 
@@ -815,6 +833,7 @@ def _prepare_turn(query: str, assistant_id: str, conversation_history: Optional[
         "norm_query": norm_query,
         "search_query": search_query,
         "workspace_id": workspace_id,
+        "cards": [verticals.to_card(it) for it in items],
     }
 
 
@@ -839,13 +858,15 @@ def _finalize(raw_answer: str, plan: Dict[str, Any]) -> Dict[str, Any]:
         lead_trigger = True
 
     verified_urls = get_verified_assistant_urls(plan["assistant_id"], plan["chunks"])
+    verified_urls |= {c["url"] for c in plan.get("cards", []) if c.get("url")}
     text = sanitize_hallucinated_urls(text, verified_urls)
 
     # Show only the sources the reply actually cites; numbers stay aligned with the [n] markers.
     cited = {int(n) for n in re.findall(r"\[(\d+)\]", text)}
     sources = [s for s in plan["sources"] if s["index"] in cited]
 
-    return {"answer": text, "sources": sources, "lead_prompted": lead_trigger, "knowledge_gap": knowledge_gap}
+    return {"answer": text, "sources": sources, "lead_prompted": lead_trigger, "knowledge_gap": knowledge_gap,
+            "cards": plan.get("cards", [])}
 
 
 def _local_fallback(plan: Dict[str, Any]) -> Dict[str, Any]:

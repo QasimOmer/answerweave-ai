@@ -1430,6 +1430,209 @@
         .wf-pulse-once {
             animation: wf-pulse 0.8s ease 2 !important;
         }
+
+        /* ================= PREMIUM LAYER: depth, motion and listing cards ================= */
+        .wf-header {
+            background: linear-gradient(135deg, var(--wf-primary, #0f172a) 0%, color-mix(in srgb, var(--wf-primary, #0f172a) 70%, #6366f1) 100%) !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+        .wf-header::after {
+            content: '' !important;
+            position: absolute !important;
+            inset: 0 !important;
+            background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.16) 50%, transparent 65%) !important;
+            transform: translateX(-120%) !important;
+            pointer-events: none !important;
+        }
+        .wf-window.wf-open .wf-header::after {
+            animation: wfSheen 1.6s 0.25s cubic-bezier(0.4, 0, 0.2, 1) 1 !important;
+        }
+        @keyframes wfSheen {
+            from { transform: translateX(-120%); }
+            to { transform: translateX(120%); }
+        }
+        .wf-window.wf-open {
+            animation: wfWindowIn 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.12) !important;
+        }
+        @keyframes wfWindowIn {
+            from { opacity: 0; transform: translateY(18px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .wf-bubble-bot { animation: wfBotIn 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both !important; }
+        .wf-bubble-user { animation: wfUserIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both !important; }
+        @keyframes wfBotIn {
+            from { opacity: 0; transform: translate(-6px, 10px) scale(0.98); }
+            to { opacity: 1; transform: none; }
+        }
+        @keyframes wfUserIn {
+            from { opacity: 0; transform: translate(6px, 10px) scale(0.98); }
+            to { opacity: 1; transform: none; }
+        }
+        button.wf-question-card { animation: wfFadeUp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both !important; }
+        button.wf-question-card:nth-child(2) { animation-delay: 0.07s !important; }
+        button.wf-question-card:nth-child(3) { animation-delay: 0.14s !important; }
+        button.wf-question-card:nth-child(4) { animation-delay: 0.21s !important; }
+        .wf-dot-pulse { background: var(--wf-primary, #6366f1) !important; opacity: 0.7 !important; }
+        .wf-typing-bubble { box-shadow: var(--wf-bot-bubble-shadow) !important; animation: wfBotIn 0.3s ease both !important; }
+        button.wf-send-btn { transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease !important; }
+        button.wf-send-btn:active { transform: scale(0.9) !important; }
+        button.wf-launcher { transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.25, 1.2), box-shadow 0.3s ease !important; }
+        button.wf-launcher:hover { box-shadow: 0 14px 34px -8px color-mix(in srgb, var(--wf-primary, #0f172a) 70%, transparent) !important; }
+
+        /* Property & product cards */
+        .wf-cards {
+            display: flex !important;
+            gap: 10px !important;
+            overflow-x: auto !important;
+            scroll-snap-type: x mandatory !important;
+            padding: 4px 2px 8px !important;
+            margin: 10px -2px 0 !important;
+            scrollbar-width: none !important;
+            -webkit-mask-image: linear-gradient(to right, #000 86%, transparent) !important;
+            mask-image: linear-gradient(to right, #000 86%, transparent) !important;
+        }
+        .wf-cards.wf-cards-end { -webkit-mask-image: none !important; mask-image: none !important; }
+        .wf-cards::-webkit-scrollbar { display: none !important; }
+        .wf-lcard {
+            flex: 0 0 212px !important;
+            scroll-snap-align: start !important;
+            background: var(--wf-card-bg, #ffffff) !important;
+            border: 1px solid var(--wf-card-border, #e2e8f0) !important;
+            border-radius: 16px !important;
+            overflow: hidden !important;
+            display: flex !important;
+            flex-direction: column !important;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+            transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease !important;
+            animation: wfCardIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both !important;
+            animation-delay: calc(var(--wf-i, 0) * 80ms) !important;
+        }
+        .wf-lcard:hover {
+            transform: translateY(-3px) !important;
+            box-shadow: 0 14px 30px -6px rgba(15, 23, 42, 0.18) !important;
+            border-color: var(--wf-card-border-hover, #cbd5e1) !important;
+        }
+        @keyframes wfCardIn {
+            from { opacity: 0; transform: translateX(14px) scale(0.97); }
+            to { opacity: 1; transform: none; }
+        }
+        .wf-lcard-media {
+            position: relative !important;
+            height: 120px !important;
+            overflow: hidden !important;
+            background: linear-gradient(135deg, color-mix(in srgb, var(--wf-primary, #6366f1) 22%, #e2e8f0), #f8fafc) !important;
+        }
+        .wf-dark .wf-lcard-media { background: linear-gradient(135deg, color-mix(in srgb, var(--wf-primary, #6366f1) 35%, #0f1624), #0b0f17) !important; }
+        .wf-lcard-media img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease !important;
+            opacity: 0 !important;
+        }
+        .wf-lcard-media img.wf-loaded { opacity: 1 !important; }
+        .wf-lcard:hover .wf-lcard-media img { transform: scale(1.07) !important; }
+        .wf-lcard-ph {
+            position: absolute !important;
+            inset: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            color: color-mix(in srgb, var(--wf-primary, #6366f1) 55%, #94a3b8) !important;
+        }
+        .wf-lcard-ph svg { width: 34px !important; height: 34px !important; stroke: currentColor !important; fill: none !important; opacity: 0.8 !important; }
+        .wf-lcard-tag {
+            position: absolute !important;
+            top: 8px !important;
+            left: 8px !important;
+            background: rgba(15, 23, 42, 0.62) !important;
+            backdrop-filter: blur(8px) !important;
+            color: #ffffff !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.04em !important;
+            text-transform: uppercase !important;
+            padding: 3px 8px !important;
+            border-radius: 999px !important;
+        }
+        .wf-lcard-price {
+            position: absolute !important;
+            bottom: 8px !important;
+            left: 8px !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: #0f172a !important;
+            font-size: 12.5px !important;
+            font-weight: 800 !important;
+            padding: 4px 10px !important;
+            border-radius: 999px !important;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18) !important;
+            max-width: calc(100% - 16px) !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+        .wf-lcard-price small { font-weight: 600 !important; color: #64748b !important; font-size: 10.5px !important; }
+        .wf-lcard-body { padding: 10px 12px 12px !important; display: flex !important; flex-direction: column !important; flex: 1 !important; }
+        .wf-lcard-title {
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            line-height: 1.35 !important;
+            color: var(--wf-text, #0f172a) !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+        }
+        .wf-lcard-meta {
+            font-size: 11.5px !important;
+            color: var(--wf-text-muted, #64748b) !important;
+            margin-top: 3px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+        .wf-lcard-chips { display: flex !important; flex-wrap: wrap !important; gap: 4px !important; margin-top: 8px !important; }
+        .wf-chip {
+            font-size: 10.5px !important;
+            font-weight: 600 !important;
+            padding: 2px 7px !important;
+            border-radius: 999px !important;
+            background: var(--wf-surface-hover, #f1f5f9) !important;
+            color: var(--wf-text-muted, #64748b) !important;
+            border: 1px solid var(--wf-card-border, #e2e8f0) !important;
+        }
+        .wf-chip-ok { color: #059669 !important; background: rgba(16, 185, 129, 0.1) !important; border-color: rgba(16, 185, 129, 0.25) !important; }
+        .wf-chip-warn { color: #b45309 !important; background: rgba(245, 158, 11, 0.1) !important; border-color: rgba(245, 158, 11, 0.28) !important; }
+        .wf-lcard-actions { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 6px !important; margin-top: auto !important; padding-top: 10px !important; }
+        .wf-lcard-actions > :only-child { grid-column: 1 / -1 !important; }
+        .wf-lcard-btn {
+            all: unset !important;
+            box-sizing: border-box !important;
+            text-align: center !important;
+            font-size: 11.5px !important;
+            font-weight: 700 !important;
+            padding: 7px 4px !important;
+            border-radius: 10px !important;
+            cursor: pointer !important;
+            transition: filter 0.2s ease, background 0.2s ease, transform 0.15s ease !important;
+            white-space: nowrap !important;
+        }
+        .wf-lcard-btn:active { transform: scale(0.96) !important; }
+        .wf-lcard-btn:focus-visible { outline: 2px solid var(--wf-primary, #6366f1) !important; outline-offset: 2px !important; }
+        .wf-lcard-btn-primary { background: var(--wf-primary, #0f172a) !important; color: #ffffff !important; }
+        .wf-lcard-btn-primary:hover { filter: brightness(1.15) !important; }
+        .wf-lcard-btn-ghost { border: 1px solid var(--wf-card-border, #e2e8f0) !important; color: var(--wf-text, #0f172a) !important; }
+        .wf-lcard-btn-ghost:hover { background: var(--wf-surface-hover, #f1f5f9) !important; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .wf-root *, .wf-root *::before, .wf-root *::after {
+                animation-duration: 0.01ms !important;
+                animation-delay: 0s !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
     `;
     shadow.appendChild(style);
 
@@ -1818,6 +2021,92 @@
         else bubbleEl.appendChild(row);
     }
 
+    // Property / product cards under a reply: photo, price, key facts and one-tap next steps.
+    const CARD_ICONS = {
+        property: '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg>',
+        product: '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1 13H7L6 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>',
+    };
+
+    function sendSuggested(text) {
+        inputEl.value = text;
+        submitQuery();
+    }
+
+    function renderCards(bubbleEl, cards) {
+        if (!bubbleEl || !Array.isArray(cards) || !cards.length || bubbleEl.querySelector('.wf-cards')) return;
+        const safeUrl = (u) => /^https?:\/\//i.test(u || '') ? u : '';
+        const row = document.createElement('div');
+        row.className = 'wf-cards';
+        row.setAttribute('role', 'list');
+        cards.slice(0, 6).forEach((c, i) => {
+            const isProperty = c.kind === 'property';
+            const card = document.createElement('div');
+            card.className = 'wf-lcard';
+            card.setAttribute('role', 'listitem');
+            card.style.setProperty('--wf-i', String(i));
+
+            const tag = isProperty ? (c.deal === 'rent' ? 'For rent' : (c.deal === 'sale' ? 'For sale' : 'Property')) : (c.category || c.brand || '');
+            const freq = c.frequency ? ` <small>/ ${escapeHtml(c.frequency)}</small>` : '';
+            const price = c.price && !/inquire/i.test(c.price) ? `<span class="wf-lcard-price">${escapeHtml(c.price.replace(/\s*\/\s*(month|year|day)\s*$/i, ''))}${freq}</span>` : '';
+            const meta = isProperty ? (c.location || '') : (tag === c.brand ? '' : (c.brand || ''));
+
+            const chips = [];
+            if (isProperty) {
+                if (c.bedrooms) chips.push(c.bedrooms === 'Studio' ? 'Studio' : `${c.bedrooms} bed`);
+                if (c.bathrooms) chips.push(`${c.bathrooms} bath`);
+                if (c.size) chips.push(c.size);
+            } else if (c.availability) {
+                const inStock = /instock|in stock|available/i.test(c.availability.replace(/\s/g, ''));
+                const out = /out ?of ?stock|soldout|sold out/i.test(c.availability);
+                chips.push({ text: out ? 'Out of stock' : (inStock ? 'In stock' : c.availability), cls: out ? 'wf-chip-warn' : (inStock ? 'wf-chip-ok' : '') });
+            }
+            if (c.within_budget === false) chips.push({ text: 'Over budget', cls: 'wf-chip-warn' });
+
+            const url = safeUrl(c.url);
+            const askText = isProperty ? `I'd like to book a viewing for "${c.name}"` : `Tell me more about "${c.name}"`;
+            card.innerHTML = `
+                <div class="wf-lcard-media">
+                    <div class="wf-lcard-ph" aria-hidden="true">${CARD_ICONS[isProperty ? 'property' : 'product']}</div>
+                    ${tag ? `<span class="wf-lcard-tag">${escapeHtml(tag)}</span>` : ''}
+                    ${price}
+                </div>
+                <div class="wf-lcard-body">
+                    <div class="wf-lcard-title">${escapeHtml(c.name || 'Listing')}</div>
+                    ${meta ? `<div class="wf-lcard-meta">${escapeHtml(meta)}</div>` : ''}
+                    ${chips.length ? `<div class="wf-lcard-chips">${chips.map(ch => typeof ch === 'string'
+                        ? `<span class="wf-chip">${escapeHtml(ch)}</span>`
+                        : `<span class="wf-chip ${ch.cls}">${escapeHtml(ch.text)}</span>`).join('')}</div>` : ''}
+                    <div class="wf-lcard-actions">
+                        ${url ? `<a class="wf-lcard-btn wf-lcard-btn-ghost" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">View</a>` : ''}
+                        <button type="button" class="wf-lcard-btn wf-lcard-btn-primary">${isProperty ? 'Book viewing' : 'Ask about it'}</button>
+                    </div>
+                </div>`;
+
+            const imgUrl = safeUrl(c.image);
+            if (imgUrl) {
+                const img = document.createElement('img');
+                img.alt = '';
+                img.loading = 'lazy';
+                img.decoding = 'async';
+                img.referrerPolicy = 'no-referrer';
+                img.onload = () => { img.classList.add('wf-loaded'); const ph = card.querySelector('.wf-lcard-ph'); if (ph) ph.remove(); };
+                img.onerror = () => img.remove();
+                img.src = imgUrl;
+                card.querySelector('.wf-lcard-media').prepend(img);
+            }
+            card.querySelector('.wf-lcard-btn-primary').onclick = (e) => { e.stopPropagation(); sendSuggested(askText); };
+            row.appendChild(card);
+        });
+        // Drop the edge fade once the visitor scrolls to the last card.
+        const updateFade = () => row.classList.toggle('wf-cards-end', row.scrollLeft + row.clientWidth >= row.scrollWidth - 4);
+        row.addEventListener('scroll', updateFade, { passive: true });
+        const anchor = bubbleEl.querySelector('.wf-citations') || bubbleEl.querySelector('.wf-feedback');
+        if (anchor) anchor.insertAdjacentElement('beforebegin', row);
+        else bubbleEl.appendChild(row);
+        requestAnimationFrame(updateFade);
+        bodyEl.scrollTop = bodyEl.scrollHeight;
+    }
+
     function applyConfig() {
         updateThemeMode();
 
@@ -2146,7 +2435,7 @@
             }
             for (const m of msgs) {
                 if (m.role === 'user') appendMsg('user', m.content);
-                else if (m.role === 'assistant') appendMsg('bot', m.content, m.sources || [], { silent: true, messageId: m.id, feedback: m.feedback || 0 });
+                else if (m.role === 'assistant') appendMsg('bot', m.content, m.sources || [], { silent: true, messageId: m.id, feedback: m.feedback || 0, cards: m.cards || [] });
                 else if (m.role === 'operator') appendOperatorMsg(m.content, data.operator_name, { silent: true });
                 else if (m.role === 'system') appendSystemNote(m.content);
                 setLastMessageId(m.id);
@@ -2521,6 +2810,7 @@
                     botBubble.insertAdjacentHTML('beforeend', citeHtml);
                 }
                 if (finalData.message_id) attachFeedback(botBubble, finalData.message_id);
+                if (finalData.cards && finalData.cards.length) renderCards(botBubble, finalData.cards);
 
                 if (finalData.lead_prompted && botConfig.lead_capture_enabled) {
                     renderInChatLeadCard();
@@ -2553,7 +2843,7 @@
                     syncConversation();
                     return;
                 }
-                appendMsg('bot', data.answer, data.sources, { messageId: data.message_id });
+                appendMsg('bot', data.answer, data.sources, { messageId: data.message_id, cards: data.cards || [] });
                 if (data.lead_prompted && botConfig.lead_capture_enabled) {
                     renderInChatLeadCard();
                 }
@@ -2637,6 +2927,7 @@
         if (role !== 'user') {
             attachCopyButton(bubble, text);
             if (opts.messageId) attachFeedback(bubble, opts.messageId, opts.feedback || 0);
+            if (opts.cards && opts.cards.length) renderCards(bubble, opts.cards);
             if (!opts.silent) playChime();
         }
         bodyEl.appendChild(bubble);

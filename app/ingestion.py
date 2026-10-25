@@ -126,6 +126,15 @@ def extract_structured_metadata(soup: BeautifulSoup, base_url: str = "") -> str:
                     if beds: specs.append(f"• Bedrooms: {beds}")
                     if baths: specs.append(f"• Bathrooms: {baths}")
                     if area: specs.append(f"• Size: {area}")
+                    if is_prod:
+                        offer0 = offers[0] if isinstance(offers, list) and offers and isinstance(offers[0], dict) else (offers if isinstance(offers, dict) else {})
+                        availability = str(offer0.get("availability") or "").rsplit("/", 1)[-1]
+                        if availability: specs.append(f"• Availability: {availability}")
+                        brand = item.get("brand")
+                        brand = brand.get("name") if isinstance(brand, dict) else brand
+                        if isinstance(brand, str) and brand.strip(): specs.append(f"• Brand: {brand.strip()}")
+                        category = item.get("category")
+                        if isinstance(category, str) and category.strip(): specs.append(f"• Category: {category.strip()[:80]}")
                     if desc: specs.append(f"• Description: {desc[:300]}")
                     if image_url: specs.append(f"• Image URL: {image_url}")
                     if base_url: specs.append(f"• Direct URL: {base_url}")

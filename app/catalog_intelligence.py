@@ -277,6 +277,11 @@ def extract_price_and_currency(text: str) -> Tuple[Optional[float], Optional[str
         r'\$\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)',
         # "450 USD", "450 $"
         r'([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*(?:usd|\$)',
+        # "USD 450" (how schema.org offers usually come out: priceCurrency then price)
+        r'\busd\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)',
+        # "SAR 450", "450 SAR", "INR 450", "450 INR"
+        r'\b(?:sar|inr)\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)',
+        r'([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*(?:sar|inr)\b',
         # "€ 450", "450 €", "450 EUR"
         r'(?:€|eur)\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)',
         r'([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*(?:€|eur)',
@@ -294,7 +299,21 @@ def extract_price_and_currency(text: str) -> Tuple[Optional[float], Optional[str
             try:
                 num = float(num_str)
                 # Determine currency
-                curr = "USD" if "$" in match.group(0) else ("AED" if re.search(r'aed|dhs', match.group(0), re.I) else ("EUR" if "€" in match.group(0) or "eur" in match.group(0).lower() else ("GBP" if "£" in match.group(0) or "gbp" in match.group(0).lower() else "AED")))
+                matched = match.group(0).lower()
+                if "$" in matched or "usd" in matched:
+                    curr = "USD"
+                elif re.search(r'aed|dhs|dirham', matched):
+                    curr = "AED"
+                elif "€" in matched or "eur" in matched:
+                    curr = "EUR"
+                elif "£" in matched or "gbp" in matched:
+                    curr = "GBP"
+                elif "sar" in matched:
+                    curr = "SAR"
+                elif "inr" in matched:
+                    curr = "INR"
+                else:
+                    curr = "AED"
                 return num, curr, frequency
             except ValueError:
                 pass
@@ -345,7 +364,7 @@ def extract_catalog_items_from_chunk(
 
         # Clean name of any remaining prefixes or emoji markers
         name = re.sub(r'^(?:🏷️|🏠)?\s*(?:PRODUCT SPECIFICATION|PROPERTY LISTING|STRUCTURED ITEM SPECIFICATION)(?:\s*\([^)]*\))?:\s*', '', name, flags=re.I).strip()
-        name = re.sub(r'^(?:Item Name|Product|Property):\s*', '', name, flags=re.I).strip()
+        name = re.sub(r'^[•\-\*\s]*(?:Item Name|Product|Property):\s*', '', name, flags=re.I).strip()
 
         # Price extraction
         price_num = None
@@ -418,6 +437,16 @@ def extract_catalog_items_from_chunk(
         if desc_match:
             desc = desc_match.group(1).strip()
 
+        def _field(label_pattern: str) -> str:
+            m = re.search(r'(?:•\s*)?(?:' + label_pattern + r'):\s*([^\n]+)', b, re.I)
+            return m.group(1).strip() if m else ""
+
+        bathrooms = _field("Bathrooms|Baths")
+        size = _field("Size|Area|Floor Size|Built-up Area")
+        availability = _field("Availability|Stock|In Stock")
+        brand = _field("Brand")
+        category = _field("Category")
+
         items.append({
             "name": name or title or "Featured Item",
             "entity_type": entity_type,
@@ -432,6 +461,13 @@ def extract_catalog_items_from_chunk(
             "description": desc,
             "url": direct_url,
             "image_url": image_url,
+            # True for listings from schema data, catalog CSVs or "Item Name:" blocks; False for prose with a price in it.
+            "structured": bool(name_match) or any(m in b for m in ("PRODUCT SPECIFICATION", "PROPERTY LISTING", "STRUCTURED")),
+            "bathrooms": bathrooms,
+            "size": size,
+            "availability": availability,
+            "brand": brand,
+            "category": category,
             "chunk_index": chunk_index,
             "title": title
         })

@@ -258,6 +258,8 @@ def _default_admin_password() -> str:
 # per-assistant personality, and workspace tenancy.
 SCHEMA_COLUMNS = [
     ("assistants", "workspace_id", "TEXT DEFAULT ''"),
+    ("assistants", "industry", "TEXT DEFAULT 'auto'"),
+    ("messages", "cards_json", "TEXT"),
     ("users", "email_verified", "INTEGER DEFAULT 0"),
     ("chunks", "embedding_model", "TEXT DEFAULT ''"),
     ("messages", "feedback", "INTEGER DEFAULT 0"),
@@ -1028,7 +1030,7 @@ def update_assistant(assistant_id: str, data: Dict[str, Any]) -> bool:
         "teaser_message", "lead_title", "lead_fields", "sound_enabled", "show_branding", "whatsapp_number",
         "input_placeholder", "launcher_pulse", "border_radius",
         "font_family", "widget_width", "offset_x", "offset_y", "launcher_icon", "teaser_delay", "exit_intent", "hide_on_mobile", "custom_css",
-        "tone", "reply_length", "custom_instructions", "avoid_topics"
+        "tone", "reply_length", "custom_instructions", "avoid_topics", "industry"
     ]
     updates = []
     values = []
@@ -1317,7 +1319,8 @@ def add_message(
     lead_prompted: bool = False,
     response_ms: int = 0,
     provider: str = "",
-    knowledge_gap: bool = False
+    knowledge_gap: bool = False,
+    cards: Optional[List[Dict[str, Any]]] = None
 ) -> Optional[int]:
     """Stores a message and returns its id. The last three fields are answer analytics for bot replies."""
     ensure_conversation(conversation_id, assistant_id)
@@ -1326,10 +1329,10 @@ def add_message(
     sources_json = json.dumps(sources) if sources else None
     cursor.execute("""
         INSERT INTO messages (conversation_id, assistant_id, role, content, sources_json, lead_prompted,
-                              response_ms, provider, knowledge_gap)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                              response_ms, provider, knowledge_gap, cards_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (conversation_id, assistant_id, role, content, sources_json, 1 if lead_prompted else 0,
-          int(response_ms or 0), provider or "", 1 if knowledge_gap else 0))
+          int(response_ms or 0), provider or "", 1 if knowledge_gap else 0, json.dumps(cards) if cards else None))
     message_id = cursor.lastrowid
     cursor.execute("UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (conversation_id,))
     conn.commit()
@@ -1431,7 +1434,7 @@ def get_conversation_history(conversation_id: str, limit: int = 10, after_id: Op
     cursor = conn.cursor()
     if after_id is not None:
         cursor.execute("""
-            SELECT id, role, content, sources_json, lead_prompted, feedback, created_at
+            SELECT id, role, content, sources_json, lead_prompted, feedback, cards_json, created_at
             FROM messages
             WHERE conversation_id = ? AND id > ?
             ORDER BY id ASC
@@ -1439,8 +1442,8 @@ def get_conversation_history(conversation_id: str, limit: int = 10, after_id: Op
         """, (conversation_id, int(after_id), limit))
     else:
         cursor.execute("""
-            SELECT id, role, content, sources_json, lead_prompted, feedback, created_at FROM (
-                SELECT id, role, content, sources_json, lead_prompted, feedback, created_at
+            SELECT id, role, content, sources_json, lead_prompted, feedback, cards_json, created_at FROM (
+                SELECT id, role, content, sources_json, lead_prompted, feedback, cards_json, created_at
                 FROM messages
                 WHERE conversation_id = ?
                 ORDER BY id DESC
@@ -1462,6 +1465,7 @@ def get_conversation_history(conversation_id: str, limit: int = 10, after_id: Op
             "content": r["content"],
             "lead_prompted": bool(r["lead_prompted"]),
             "feedback": int(r["feedback"] or 0),
+            "cards": json.loads(r["cards_json"]) if r["cards_json"] else [],
             "created_at": created_at,
             "sources": json.loads(r["sources_json"]) if r["sources_json"] else []
         }

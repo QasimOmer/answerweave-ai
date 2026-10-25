@@ -568,6 +568,22 @@
                         </div>
                     </div>
 
+                    <!-- Listings & products the assistant can recommend -->
+                    <div id="catalogPanel" class="glass-panel rounded-xl overflow-hidden hidden">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-5 py-4 border-b border-white/7">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="layout-grid" class="w-4 h-4 text-brand-400"></i>
+                                    <h2 class="text-[14px] font-semibold text-white">Catalog</h2>
+                                    <span id="catalogModeBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-white/5 text-slate-400"></span>
+                                </div>
+                                <p id="catalogSummary" class="text-[12.5px] text-slate-500 mt-1"></p>
+                            </div>
+                            <span id="catalogHealth" class="text-[12px] text-slate-500"></span>
+                        </div>
+                        <div id="catalogGrid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 p-4"></div>
+                    </div>
+
                     <!-- Semantic search index health -->
                     <div class="glass-panel rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div class="min-w-0">
@@ -1338,6 +1354,17 @@
                                     <div class="flex items-center gap-2 text-xs font-semibold text-white uppercase tracking-wider mb-1">
                                         <i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-400"></i>
                                         <span>AI Personality</span>
+                                    </div>
+
+                                    <div>
+                                        <label for="asstIndustry" class="block text-xs font-semibold text-slate-300 mb-1">Business type</label>
+                                        <select id="asstIndustry" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <option value="auto">Detect automatically</option>
+                                            <option value="real_estate">Real estate (listings, viewings, buyer qualification)</option>
+                                            <option value="ecommerce">E-commerce (product recommendations, comparisons)</option>
+                                            <option value="general">General business</option>
+                                        </select>
+                                        <p class="text-[11.5px] text-slate-500 mt-1">Real estate and e-commerce modes show listings as photo cards and tailor how the assistant sells.</p>
                                     </div>
 
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2711,6 +2738,7 @@
             setVal('asstLeadTitle', asst.lead_title || '');
             setVal('asstCustomCss', asst.custom_css || '');
             setVal('asstTone', asst.tone || 'friendly');
+            setVal('asstIndustry', asst.industry || 'auto');
             setVal('asstReplyLength', asst.reply_length || 'balanced');
             setVal('asstInstructions', asst.custom_instructions || '');
             setVal('asstAvoidTopics', asst.avoid_topics || '');
@@ -3537,8 +3565,47 @@
                 renderSourcesTable(sourcesData);
                 renderKnowledgeStats(sourcesData);
                 loadEmbeddingStatus();
+                loadCatalog();
             } catch (err) {
                 console.error("Error loading sources:", err);
+            }
+        }
+
+        async function loadCatalog() {
+            const panel = document.getElementById('catalogPanel');
+            if (!panel || !currentAssistantId) return;
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/catalog?limit=12`);
+                if (!res.ok) return;
+                const cat = await res.json();
+                panel.classList.toggle('hidden', !cat.total);
+                if (!cat.total) return;
+                const labels = { real_estate: 'Real estate mode', ecommerce: 'E-commerce mode', general: 'General mode' };
+                const mode = cat.industry === 'auto' ? cat.detected_industry : cat.industry;
+                document.getElementById('catalogModeBadge').innerText = (labels[mode] || 'General mode') + (cat.industry === 'auto' ? ' · detected' : '');
+                const parts = [];
+                if (cat.properties) parts.push(`${cat.properties.toLocaleString()} propert${cat.properties === 1 ? 'y' : 'ies'}`);
+                if (cat.products) parts.push(`${cat.products.toLocaleString()} product${cat.products === 1 ? '' : 's'}`);
+                document.getElementById('catalogSummary').innerText = `${parts.join(' and ')} found in your knowledge. The assistant filters these by budget, size and location and shows them as cards.`;
+                const pct = (n) => Math.round(n / cat.total * 100);
+                document.getElementById('catalogHealth').innerText = `${pct(cat.with_images)}% have photos · ${pct(cat.with_prices)}% have prices`;
+                document.getElementById('catalogGrid').innerHTML = cat.items.map(c => {
+                    const img = /^https?:\/\//i.test(c.image || '') ? `<img src="${escapeHtml(c.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full h-full object-cover" onerror="this.remove()">` : '';
+                    const facts = c.kind === 'property'
+                        ? [c.bedrooms ? (c.bedrooms === 'Studio' ? 'Studio' : `${c.bedrooms} bed`) : '', c.location].filter(Boolean).join(' · ')
+                        : [c.brand, c.availability].filter(Boolean).join(' · ');
+                    return `<div class="rounded-lg overflow-hidden border border-white/7 bg-white/[0.02]">
+                        <div class="h-20 bg-white/[0.04] flex items-center justify-center text-slate-600">${img || '<i data-lucide="' + (c.kind === 'property' ? 'home' : 'shopping-bag') + '" class="w-5 h-5"></i>'}</div>
+                        <div class="p-2.5 min-w-0">
+                            <div class="text-[12px] font-medium text-slate-100 truncate" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</div>
+                            <div class="text-[11.5px] text-brand-300 truncate">${escapeHtml(c.price || 'No price')}</div>
+                            ${facts ? `<div class="text-[11px] text-slate-500 truncate">${escapeHtml(facts)}</div>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+                refreshIcons();
+            } catch (err) {
+                console.error('Catalog load error:', err);
             }
         }
 
@@ -4770,6 +4837,7 @@
                 lead_title: document.getElementById('asstLeadTitle').value.trim(),
                 custom_css: document.getElementById('asstCustomCss').value,
                 tone: document.getElementById('asstTone').value,
+                industry: document.getElementById('asstIndustry').value,
                 reply_length: document.getElementById('asstReplyLength').value,
                 custom_instructions: document.getElementById('asstInstructions').value.trim(),
                 avoid_topics: document.getElementById('asstAvoidTopics').value.trim()

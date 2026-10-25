@@ -270,6 +270,7 @@ class UpdateAssistantRequest(BaseModel):
     reply_length: Optional[str] = None
     custom_instructions: Optional[str] = None
     avoid_topics: Optional[str] = None
+    industry: Optional[str] = None  # auto | general | real_estate | ecommerce
 
 class ReindexRequest(BaseModel):
     full: bool = False              # re-embed everything, not just chunks from older models
@@ -898,6 +899,8 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
         data["tone"] = "friendly"
     if "reply_length" in data and data["reply_length"] not in ("short", "balanced", "detailed"):
         data["reply_length"] = "balanced"
+    if "industry" in data and data["industry"] not in ("auto", "general", "real_estate", "ecommerce"):
+        data["industry"] = "auto"
     for key, limit in (("custom_instructions", 2000), ("avoid_topics", 1000)):
         if key in data:
             data[key] = (data[key] or "").strip()[:limit]
@@ -924,6 +927,24 @@ def api_get_assistant_analytics(asst_id: str):
 def api_get_answer_quality(asst_id: str, days: int = 30):
     """Reply speed, answer coverage, visitor ratings and provider usage."""
     return get_answer_quality(asst_id, days=max(1, min(365, days)))
+
+@app.get("/api/assistants/{asst_id}/catalog")
+def api_get_catalog(asst_id: str, limit: int = 24):
+    """Listings and products the assistant found in its knowledge, as the widget would show them."""
+    from app import verticals
+    asst = get_assistant(asst_id)
+    items = verticals.all_catalog_items(asst_id)
+    properties = sum(1 for it in items if it.get("entity_type") == "property")
+    return {
+        "industry": (asst or {}).get("industry") or "auto",
+        "detected_industry": verticals.resolve_industry({**(asst or {}), "industry": "auto"}, asst_id),
+        "total": len(items),
+        "properties": properties,
+        "products": len(items) - properties,
+        "with_images": sum(1 for it in items if it.get("image_url")),
+        "with_prices": sum(1 for it in items if it.get("price_num") is not None),
+        "items": [verticals.to_card(it) for it in items[:max(1, min(60, limit))]],
+    }
 
 @app.get("/api/assistants/{asst_id}/embeddings")
 def api_get_embedding_status(asst_id: str):
@@ -1406,6 +1427,7 @@ def store_assistant_reply(asst_id: str, conv_id: str, result: Dict[str, Any], st
         response_ms=int((time.time() - started) * 1000),
         provider=result.get("provider") or ("handoff" if result.get("human_requested") else ""),
         knowledge_gap=bool(result.get("knowledge_gap")),
+        cards=result.get("cards") or None,
     )
     result["message_id"] = message_id
     return message_id
@@ -1492,6 +1514,7 @@ def api_chat(req: ChatRequest, request: Request):
         "sources": result["sources"],
         "lead_prompted": result["lead_prompted"],
         "message_id": result.get("message_id"),
+        "cards": result.get("cards") or [],
         "operator_active": False,
         "human_requested": result.get("human_requested", False),
         "operators_online": result.get("operators_online")
@@ -1548,6 +1571,7 @@ def api_chat_stream(req: ChatRequest, request: Request):
                     "sources": event["sources"],
                     "lead_prompted": event["lead_prompted"],
                     "message_id": event.get("message_id"),
+                    "cards": event.get("cards") or [],
                     "conversation_id": conv_id,
                     "human_requested": event.get("human_requested", False),
                     "operators_online": event.get("operators_online"),
