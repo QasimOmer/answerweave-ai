@@ -28,6 +28,10 @@ from app.auth import (
     can_access_assistant,
     is_admin,
     public_assistant_view,
+    create_purpose_token,
+    read_purpose_token,
+    RESET_TTL_SECONDS,
+    VERIFY_TTL_SECONDS,
 )
 from app.db import (
     init_db,
@@ -82,6 +86,28 @@ from app.db import (
     get_embedding_status,
     log_unanswered_question,
     is_trivial_or_conversational,
+    create_workspace,
+    get_workspace,
+    update_workspace,
+    delete_workspace,
+    list_user_workspaces,
+    list_all_workspaces,
+    get_member_role,
+    add_workspace_member,
+    remove_workspace_member,
+    count_workspace_owners,
+    list_workspace_members,
+    set_member_assistants,
+    visible_assistant_ids,
+    list_assistants_in_workspace,
+    assistant_workspace_id,
+    create_invite,
+    list_pending_invites,
+    revoke_invite,
+    get_invite_by_token,
+    accept_invite,
+    set_email_verified,
+    WORKSPACE_ROLES,
 )
 from app.notify import notify_human_requested, send_email, email_provider
 from app.config import (
@@ -146,6 +172,33 @@ class AuthSignupRequest(BaseModel):
     email: str
     password: str
     name: str
+    invite_token: Optional[str] = None   # signing up from a team invite joins that workspace
+    workspace_name: Optional[str] = None
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+class CreateWorkspaceRequest(BaseModel):
+    name: str
+
+class UpdateWorkspaceRequest(BaseModel):
+    name: Optional[str] = None
+    use_platform_keys: Optional[bool] = None
+
+class InviteRequest(BaseModel):
+    email: str
+    role: str = "agent"
+
+class UpdateMemberRequest(BaseModel):
+    role: Optional[str] = None
+    assistant_ids: Optional[List[str]] = None  # agents only; empty = all assistants in the workspace
 
 class AuthLoginRequest(BaseModel):
     email: str
@@ -278,6 +331,9 @@ class OperatorMessageRequest(BaseModel):
     assistant_id: Optional[str] = ""
 
 class GlobalSettingsRequest(BaseModel):
+    scope: Optional[str] = None  # "platform" (platform admin only) edits the shared fallback keys
+    clear_keys: Optional[List[str]] = None
+    use_platform_keys: Optional[bool] = None
     llm_provider: Optional[str] = None
     gemini_api_key: Optional[str] = None
     groq_api_key: Optional[str] = None
@@ -300,6 +356,11 @@ def get_root():
 def get_dashboard_page():
     return FileResponse(os.path.join(STATIC_DIR, "dashboard.html"))
 
+@app.get("/account")
+def get_account_page():
+    """Password reset, email confirmation and team invite links land here."""
+    return FileResponse(os.path.join(STATIC_DIR, "account.html"))
+
 @app.get("/demo")
 def get_demo_page():
     return FileResponse(os.path.join(STATIC_DIR, "demo.html"))
@@ -309,17 +370,107 @@ def get_widget_js():
     return FileResponse(os.path.join(STATIC_DIR, "widget.js"), media_type="application/javascript")
 
 # ----------------- Admin Auth Endpoints -----------------
+def app_base_url(request: Request) -> str:
+    """Public URL for links in emails (APP_BASE_URL in production, else the request's host)."""
+    return (os.environ.get("APP_BASE_URL") or str(request.base_url)).rstrip("/")
+
+
+def send_account_email(to: str, subject: str, intro: str, link: str, button: str) -> bool:
+    """Best-effort account email. Without an email provider the link is logged for local development."""
+    text = f"{intro}\n\n{button}: {link}\n\nIf you didn't expect this email, you can ignore it."
+    body = (f"<p>{intro}</p><p><a href=\"{link}\" style=\"display:inline-block;padding:10px 16px;background:#4f46e5;"
+            f"color:#fff;border-radius:8px;text-decoration:none\">{button}</a></p>"
+            f"<p style=\"color:#64748b;font-size:13px\">If you didn't expect this email, you can ignore it.</p>")
+    if not email_provider():
+        print(f"[AnswerWeave] No email provider configured. {subject} for {to}: {link}")
+        return False
+    ok, detail = send_email([to], subject, text, body)
+    if not ok:
+        print(f"[AnswerWeave] Could not send '{subject}' to {to}: {detail}")
+    return ok
+
+
+def send_verification_email(user: Dict[str, Any], request: Request) -> bool:
+    token = create_purpose_token(user["id"], "verify", VERIFY_TTL_SECONDS)
+    link = f"{app_base_url(request)}/account?verify={token}"
+    return send_account_email(user["email"], "Confirm your email for AnswerWeave",
+                              f"Hi {user.get('name') or 'there'}, please confirm your email address.", link, "Confirm email")
+
+
+def workspaces_payload(user: Dict[str, Any], current_id: Optional[str]) -> Dict[str, Any]:
+    if is_admin(user):
+        mine = {w["id"]: w["role"] for w in list_user_workspaces(user["id"])}
+        items = [{**w, "role": mine.get(w["id"], "owner")} for w in list_all_workspaces()]
+    else:
+        items = list_user_workspaces(user["id"])
+    return {"workspaces": items, "current_workspace_id": current_id}
+
+
 @app.post("/api/auth/signup")
-def api_signup(req: AuthSignupRequest):
+def api_signup(req: AuthSignupRequest, request: Request):
     if len(req.password) < 8:
         raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
     if "@" not in (req.email or ""):
         raise HTTPException(status_code=400, detail="Please enter a valid email address.")
-    # Self-service signups are regular members: they only see assistants they create.
+    invite = get_invite_by_token(req.invite_token) if req.invite_token else None
+    if req.invite_token and not invite:
+        raise HTTPException(status_code=400, detail="This invite link has expired or was already used.")
+    if invite and invite["email"] != req.email.strip().lower():
+        raise HTTPException(status_code=400, detail=f"This invite was sent to {invite['email']}. Sign up with that address.")
     user = create_user(req.email, req.password, req.name, role="member")
     if not user:
         raise HTTPException(status_code=400, detail="An account with this email already exists.")
-    return {"status": "success", "user": user, "token": create_token(user["id"])}
+    if invite:
+        accept_invite(req.invite_token, user["id"], user["email"])
+        set_email_verified(user["id"])  # the invite link already proved they own this inbox
+        workspace_id = invite["workspace_id"]
+    else:
+        label = (req.workspace_name or "").strip() or f"{(req.name or req.email.split('@')[0]).strip()}'s workspace"
+        workspace_id = create_workspace(label, user["id"])["id"]
+        send_verification_email(user, request)
+    return {"status": "success", "user": get_user_by_id(user["id"]), "token": create_token(user["id"]),
+            "workspace_id": workspace_id}
+
+@app.post("/api/auth/forgot-password")
+def api_forgot_password(req: ForgotPasswordRequest, request: Request):
+    check_rate_limit(request, limit=10, window=900)
+    row = get_user_by_email(req.email or "")
+    if row:
+        token = create_purpose_token(row["id"], "reset", RESET_TTL_SECONDS)
+        send_account_email(row["email"], "Reset your AnswerWeave password",
+                           "Someone asked to reset the password for this account. The link works for one hour.",
+                           f"{app_base_url(request)}/account?reset={token}", "Choose a new password")
+    # Same answer either way, so the form can't be used to find out who has an account.
+    return {"status": "success", "message": "If that email has an account, a reset link is on its way."}
+
+@app.post("/api/auth/reset-password")
+def api_reset_password(req: ResetPasswordRequest, request: Request):
+    check_rate_limit(request, limit=20, window=900)
+    user = read_purpose_token(req.token, "reset")
+    if not user:
+        raise HTTPException(status_code=400, detail="This reset link has expired or was already used. Request a new one.")
+    if len(req.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+    set_user_password_hash(user["id"], hash_password(req.new_password))
+    set_email_verified(user["id"])  # they proved they can read this inbox
+    return {"status": "success", "user": get_user_by_id(user["id"]), "token": create_token(user["id"])}
+
+@app.post("/api/auth/verify-email")
+def api_verify_email(req: VerifyEmailRequest):
+    user = read_purpose_token(req.token, "verify")
+    if not user:
+        raise HTTPException(status_code=400, detail="This confirmation link has expired. Sign in and request a new one.")
+    set_email_verified(user["id"])
+    return {"status": "success", "email": user["email"]}
+
+@app.post("/api/auth/resend-verification")
+def api_resend_verification(request: Request):
+    check_rate_limit(request, limit=5, window=900)
+    me = get_user_by_id(request.state.user["id"])
+    if me.get("email_verified"):
+        return {"status": "success", "already_verified": True}
+    sent = send_verification_email(me, request)
+    return {"status": "success", "sent": sent}
 
 @app.post("/api/auth/login")
 def api_login(req: AuthLoginRequest):
@@ -333,7 +484,135 @@ def api_get_me(request: Request):
     user = get_user_by_id(request.state.user["id"])
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
-    return user
+    return {**user, **workspaces_payload(user, request.state.workspace_id),
+            "workspace_role": request.state.workspace_role, "is_platform_admin": is_admin(user)}
+
+# ----------------- Workspaces & Team -----------------
+@app.get("/api/workspaces")
+def api_list_workspaces(request: Request):
+    return workspaces_payload(request.state.user, request.state.workspace_id)
+
+@app.post("/api/workspaces")
+def api_create_workspace(req: CreateWorkspaceRequest, request: Request):
+    if not (req.name or "").strip():
+        raise HTTPException(status_code=400, detail="Give the workspace a name.")
+    ws = create_workspace(req.name, request.state.user["id"])
+    return {"status": "success", "workspace": ws}
+
+@app.get("/api/workspace")
+def api_get_current_workspace(request: Request):
+    ws = get_workspace(request.state.workspace_id)
+    return {**ws, "role": request.state.workspace_role,
+            "subscription": get_subscription_info(request.state.workspace_id)}
+
+@app.patch("/api/workspace")
+def api_update_current_workspace(req: UpdateWorkspaceRequest, request: Request):
+    update_workspace(request.state.workspace_id, name=req.name, use_platform_keys=req.use_platform_keys)
+    return {"status": "success", "workspace": get_workspace(request.state.workspace_id)}
+
+@app.delete("/api/workspace")
+def api_delete_current_workspace(request: Request):
+    me = request.state.user
+    if not is_admin(me) and len(list_user_workspaces(me["id"])) <= 1:
+        raise HTTPException(status_code=400, detail="This is your only workspace. Create another one before deleting it.")
+    delete_workspace(request.state.workspace_id)
+    return {"status": "success"}
+
+@app.get("/api/workspace/members")
+def api_list_members(request: Request):
+    return {"members": list_workspace_members(request.state.workspace_id), "my_role": request.state.workspace_role}
+
+@app.patch("/api/workspace/members/{user_id}")
+def api_update_member(user_id: str, req: UpdateMemberRequest, request: Request):
+    ws_id, my_role = request.state.workspace_id, request.state.workspace_role
+    target_role = get_member_role(ws_id, user_id)
+    if not target_role:
+        raise HTTPException(status_code=404, detail="That person isn't in this workspace.")
+    if my_role not in ("owner", "admin"):
+        raise HTTPException(status_code=403, detail="Only owners and admins can change roles.")
+    if req.role is not None:
+        if req.role not in WORKSPACE_ROLES:
+            raise HTTPException(status_code=400, detail="Role must be owner, admin or agent.")
+        # Only owners can create owners or change an owner.
+        if (req.role == "owner" or target_role == "owner") and my_role != "owner":
+            raise HTTPException(status_code=403, detail="Only an owner can change owners.")
+        if target_role == "owner" and req.role != "owner" and count_workspace_owners(ws_id) <= 1:
+            raise HTTPException(status_code=400, detail="A workspace needs at least one owner.")
+        add_workspace_member(ws_id, user_id, req.role)
+    if req.assistant_ids is not None:
+        set_member_assistants(ws_id, user_id, req.assistant_ids)
+    return {"status": "success", "members": list_workspace_members(ws_id)}
+
+@app.delete("/api/workspace/members/{user_id}")
+def api_remove_member(user_id: str, request: Request):
+    ws_id, my_role, me = request.state.workspace_id, request.state.workspace_role, request.state.user
+    target_role = get_member_role(ws_id, user_id)
+    if not target_role:
+        raise HTTPException(status_code=404, detail="That person isn't in this workspace.")
+    leaving = user_id == me["id"]
+    if not leaving:
+        if my_role not in ("owner", "admin"):
+            raise HTTPException(status_code=403, detail="Only owners and admins can remove people.")
+        if target_role == "owner" and my_role != "owner":
+            raise HTTPException(status_code=403, detail="Only an owner can remove an owner.")
+    if target_role == "owner" and count_workspace_owners(ws_id) <= 1:
+        raise HTTPException(status_code=400, detail="A workspace needs at least one owner. Make someone else an owner first.")
+    remove_workspace_member(ws_id, user_id)
+    return {"status": "success"}
+
+@app.get("/api/workspace/invites")
+def api_list_invites(request: Request):
+    return {"invites": list_pending_invites(request.state.workspace_id)}
+
+@app.post("/api/workspace/invites")
+def api_invite_member(req: InviteRequest, request: Request):
+    check_rate_limit(request, limit=30, window=3600)
+    email = (req.email or "").strip().lower()
+    if "@" not in email:
+        raise HTTPException(status_code=400, detail="Please enter a valid email address.")
+    if req.role not in WORKSPACE_ROLES:
+        raise HTTPException(status_code=400, detail="Role must be owner, admin or agent.")
+    if req.role == "owner" and request.state.workspace_role != "owner":
+        raise HTTPException(status_code=403, detail="Only an owner can invite another owner.")
+    ws = get_workspace(request.state.workspace_id)
+    existing = get_user_by_email(email)
+    if existing and get_member_role(ws["id"], existing["id"]):
+        raise HTTPException(status_code=400, detail=f"{email} is already in this workspace.")
+    invite = create_invite(ws["id"], email, req.role, request.state.user["id"])
+    link = f"{app_base_url(request)}/account?invite={invite['token']}"
+    inviter = request.state.user.get("name") or request.state.user["email"]
+    sent = send_account_email(email, f"{inviter} invited you to {ws['name']} on AnswerWeave",
+                              f"{inviter} invited you to join the {ws['name']} workspace as {'an' if req.role[0] in 'aeiou' else 'a'} {req.role}. The invite expires in 7 days.",
+                              link, "Accept invite")
+    # The inviter can share the link themselves if email isn't set up (or lands in spam).
+    return {"status": "success", "invite": {k: invite[k] for k in ("id", "email", "role")},
+            "invite_link": link, "email_sent": sent}
+
+@app.delete("/api/workspace/invites/{invite_id}")
+def api_revoke_invite(invite_id: str, request: Request):
+    if not revoke_invite(request.state.workspace_id, invite_id):
+        raise HTTPException(status_code=404, detail="Invite not found.")
+    return {"status": "success"}
+
+@app.get("/api/invites/{token}")
+def api_get_invite(token: str):
+    invite = get_invite_by_token(token)
+    if not invite:
+        raise HTTPException(status_code=404, detail="This invite link has expired or was already used.")
+    return {"workspace_name": invite["workspace_name"], "email": invite["email"], "role": invite["role"],
+            "has_account": bool(get_user_by_email(invite["email"]))}
+
+@app.post("/api/invites/{token}/accept")
+def api_accept_invite(token: str, request: Request):
+    me = request.state.user
+    invite = get_invite_by_token(token)
+    if not invite:
+        raise HTTPException(status_code=404, detail="This invite link has expired or was already used.")
+    if invite["email"] != me["email"]:
+        raise HTTPException(status_code=403, detail=f"This invite was sent to {invite['email']}. Sign in with that account to accept it.")
+    accept_invite(token, me["id"], me["email"])
+    set_email_verified(me["id"])
+    return {"status": "success", "workspace_id": invite["workspace_id"], "workspace_name": invite["workspace_name"]}
 
 @app.post("/api/auth/change-password")
 def api_change_password(req: ChangePasswordRequest, request: Request):
@@ -356,7 +635,7 @@ def api_presence(request: Request):
 @app.get("/api/inbox/waiting")
 def api_waiting_conversations(request: Request):
     """Visitors waiting for a person, across every assistant the user can access."""
-    return list_waiting_conversations(accessible_assistant_ids(request.state.user))
+    return list_waiting_conversations(accessible_assistant_ids(request.state.user, request.state.workspace_id))
 
 @app.post("/api/assistants/{asst_id}/alerts/test")
 def api_test_alert(asst_id: str):
@@ -389,6 +668,11 @@ def api_create_user(req: CreateUserRequest):
     )
     if not user:
         raise HTTPException(status_code=400, detail="User with this email already exists.")
+    # Platform-created users join the workspaces of the assistants they're given, as agents.
+    for asst_id in req.assigned_assistant_ids or []:
+        ws_id = assistant_workspace_id(asst_id)
+        if ws_id and not get_member_role(ws_id, user["id"]):
+            add_workspace_member(ws_id, user["id"], "agent")
     return {"status": "success", "user": user}
 
 @app.put("/api/users/{user_id}")
@@ -414,7 +698,8 @@ def api_delete_user(user_id: str):
 # ----------------- Multi-Assistant SaaS Endpoints -----------------
 @app.get("/api/assistants")
 def api_list_assistants(request: Request):
-    return list_assistants_for_user(request.state.user["id"])
+    ws_id, role, me = request.state.workspace_id, request.state.workspace_role, request.state.user
+    return list_assistants_in_workspace(ws_id, only_ids=visible_assistant_ids(ws_id, me["id"], role))
 
 @app.post("/api/assistants")
 def api_create_assistant(req: CreateAssistantRequest, request: Request):
@@ -433,11 +718,9 @@ def api_create_assistant(req: CreateAssistantRequest, request: Request):
         welcome_message=req.welcome_message or f"Hello! 👋 Welcome to {req.name}. How can I assist you today?",
         suggested_questions=req.suggested_questions or "What services do you provide?\nHow does pricing work?\nHow can I speak to someone?",
         bot_avatar=req.bot_avatar or "⚡",
-        widget_subtitle=req.widget_subtitle or "Online • AI Assistant"
+        widget_subtitle=req.widget_subtitle or "Online • AI Assistant",
+        workspace_id=request.state.workspace_id
     )
-
-    if not is_admin(request.state.user):
-        add_user_assistant(request.state.user["id"], asst_id)
 
     pages_indexed = 0
     total_chunks = 0
@@ -452,7 +735,7 @@ def api_create_assistant(req: CreateAssistantRequest, request: Request):
                 src_id = add_source(asst_id, "url", p["title"], p["url"], p["content"])
                 chunks = chunk_text(p["content"])
                 if chunks:
-                    embs = generate_embeddings_batch(chunks, titles=[p["title"]] * len(chunks))
+                    embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[p["title"]] * len(chunks))
                     for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
                         add_chunk(asst_id, src_id, idx, c_text, p["title"], p["url"], emb)
                     update_source_chunk_count(src_id, len(chunks))
@@ -625,11 +908,12 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
 
 @app.delete("/api/assistants/{asst_id}")
 def api_delete_assistant(asst_id: str):
+    ws_id = assistant_workspace_id(asst_id)
     delete_assistant(asst_id)
-    remaining = list_assistants()
+    remaining = list_assistants_in_workspace(ws_id) if ws_id else []
     active_id = remaining[0]["id"] if remaining else None
     if not remaining:
-        active_id = create_assistant("New Website Project", "*")
+        active_id = create_assistant("New Website Project", "*", workspace_id=ws_id)
     return {"status": "success", "deleted_id": asst_id, "active_id": active_id}
 
 @app.get("/api/assistants/{asst_id}/analytics")
@@ -644,7 +928,7 @@ def api_get_answer_quality(asst_id: str, days: int = 30):
 @app.get("/api/assistants/{asst_id}/embeddings")
 def api_get_embedding_status(asst_id: str):
     status = get_embedding_status(asst_id, current_embedding_tag())
-    return {**status, "model": EMBEDDING_MODEL, "semantic_enabled": bool(get_api_key("gemini"))}
+    return {**status, "model": EMBEDDING_MODEL, "semantic_enabled": bool(get_api_key("gemini", assistant_workspace_id(asst_id)))}
 
 @app.post("/api/assistants/{asst_id}/reindex")
 def api_reindex_assistant(asst_id: str, req: Optional[ReindexRequest] = None):
@@ -664,7 +948,7 @@ async def api_upload_file(asst_id: str, file: UploadFile = File(...)):
         src_id = add_source(asst_id, "file", parsed["title"], f"File: {file.filename}", parsed["content"])
         chunks = chunk_text(parsed["content"])
         if chunks:
-            embs = generate_embeddings_batch(chunks, titles=[parsed["title"]] * len(chunks))
+            embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[parsed["title"]] * len(chunks))
             for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
                 add_chunk(asst_id, src_id, idx, c_text, parsed["title"], f"File: {file.filename}", emb)
             update_source_chunk_count(src_id, len(chunks))
@@ -694,7 +978,7 @@ def api_ingest_sitemap(asst_id: str, req: IngestSitemapRequest):
             src_id = add_source(asst_id, "url", page["title"], u, page["content"])
             chunks = chunk_text(page["content"])
             if chunks:
-                embs = generate_embeddings_batch(chunks, titles=[page["title"]] * len(chunks))
+                embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[page["title"]] * len(chunks))
                 for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
                     add_chunk(asst_id, src_id, idx, c_text, page["title"], u, emb)
                 update_source_chunk_count(src_id, len(chunks))
@@ -758,7 +1042,7 @@ def api_ingest_url(asst_id: str, req: IngestUrlRequest):
         src_id = add_source(asst_id, "url", p["title"], p["url"], p["content"])
         chunks = chunk_text(p["content"])
         if chunks:
-            embs = generate_embeddings_batch(chunks, titles=[p["title"]] * len(chunks))
+            embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[p["title"]] * len(chunks))
             for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
                 add_chunk(asst_id, src_id, idx, c_text, p["title"], p["url"], emb)
             update_source_chunk_count(src_id, len(chunks))
@@ -781,7 +1065,7 @@ def api_ingest_text(asst_id: str, req: IngestTextRequest):
     src_id = add_source(asst_id, "text", req.title, req.url or "Text Document", req.content)
     chunks = chunk_text(req.content)
     if chunks:
-        embs = generate_embeddings_batch(chunks, titles=[req.title] * len(chunks))
+        embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[req.title] * len(chunks))
         for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
             add_chunk(asst_id, src_id, idx, c_text, req.title, req.url or "Text Document", emb)
         update_source_chunk_count(src_id, len(chunks))
@@ -850,7 +1134,7 @@ def api_sync_assistant_knowledge(asst_id: str):
                 delete_source(src_id)
 
             new_src_id = add_source(asst_id, "url", title, u, content)
-            embs = generate_embeddings_batch(chunks, titles=[title] * len(chunks))
+            embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[title] * len(chunks))
             for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
                 add_chunk(asst_id, new_src_id, idx, c_text, title, u, emb)
             update_source_chunk_count(new_src_id, len(chunks))
@@ -988,7 +1272,7 @@ def api_resolve_gap(asst_id: str, gap_id: int, req: ResolveGapRequest):
     src_id = add_source(asst_id, "faq", title, "Knowledge Gap Resolution", body)
     chunks = chunk_text(body)
     if chunks:
-        embs = generate_embeddings_batch(chunks, titles=[title] * len(chunks))
+        embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[title] * len(chunks))
         for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
             add_chunk(asst_id, src_id, idx, c_text, title, "Knowledge Gap Resolution", emb)
         update_source_chunk_count(src_id, len(chunks))
@@ -1016,7 +1300,7 @@ def api_add_custom_qa(asst_id: str, req: CreateCustomQARequest):
     src_id = add_source(asst_id, "faq", title, "Custom Knowledge FAQ", body)
     chunks = chunk_text(body)
     if chunks:
-        embs = generate_embeddings_batch(chunks, titles=[title] * len(chunks))
+        embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[title] * len(chunks))
         for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
             add_chunk(asst_id, src_id, idx, c_text, title, "Custom Knowledge FAQ", emb)
         update_source_chunk_count(src_id, len(chunks))
@@ -1314,7 +1598,7 @@ def api_capture_lead(req: LeadRequest, request: Request):
 
     history = get_conversation_history(req.conversation_id, limit=10) if req.conversation_id else []
 
-    call_prep_brief = generate_call_prep_brief(history)
+    call_prep_brief = generate_call_prep_brief(history, assistant_id=asst_id)
     summary = f"Inquired about: {history[-1]['content'] if history else 'General contact'}"
 
     lead_id = add_lead(
@@ -1467,36 +1751,53 @@ def api_test_assistant_webhook(asst_id: str):
 # ----------------- Subscription & Tier Plans -----------------
 @app.get("/api/subscription")
 def api_get_subscription(request: Request):
-    info = get_subscription_info()
-    if getattr(request.state, "user", None):
+    ws_id = getattr(request.state, "workspace_id", None)
+    info = get_subscription_info(ws_id)
+    if getattr(request.state, "user", None) and ws_id:
         return info
     return {"all_plans": info.get("all_plans", {})}
 
 @app.post("/api/subscription/upgrade")
-def api_upgrade_plan(req: UpgradePlanRequest):
-    update_subscription_plan(req.plan_key)
-    return {"status": "success", "subscription": get_subscription_info()}
+def api_upgrade_plan(req: UpgradePlanRequest, request: Request):
+    # Platform admin only (see auth rules) until self-serve billing is connected.
+    update_subscription_plan(req.plan_key, request.state.workspace_id)
+    return {"status": "success", "subscription": get_subscription_info(request.state.workspace_id)}
 
 # ----------------- Global Settings -----------------
 @app.get("/api/config")
 @app.get("/api/settings")
-def api_get_config():
-    return get_bot_settings()
+def api_get_config(request: Request, scope: Optional[str] = None):
+    """AI engine settings for the current workspace (platform admins can pass scope=platform)."""
+    if scope == "platform":
+        if not is_admin(request.state.user):
+            raise HTTPException(status_code=403, detail="Admin access required.")
+        return {**get_bot_settings(), "scope": "platform"}
+    return {**get_bot_settings(request.state.workspace_id), "scope": "workspace",
+            "can_edit_platform": is_admin(request.state.user)}
 
 @app.post("/api/config")
 @app.post("/api/settings")
-def api_update_config(req: GlobalSettingsRequest):
-    update_bot_settings(req.dict(exclude_unset=True))
-    return {"status": "success", "settings": get_bot_settings()}
+def api_update_config(req: GlobalSettingsRequest, request: Request):
+    data = req.dict(exclude_unset=True)
+    if data.pop("scope", None) == "platform":
+        if not is_admin(request.state.user):
+            raise HTTPException(status_code=403, detail="Admin access required.")
+        update_bot_settings(data)
+        return {"status": "success", "settings": get_bot_settings()}
+    ws_id = request.state.workspace_id
+    if "use_platform_keys" in data:
+        update_workspace(ws_id, use_platform_keys=data.pop("use_platform_keys"))
+    update_bot_settings(data, ws_id)
+    return {"status": "success", "settings": get_bot_settings(ws_id)}
 
 @app.post("/api/settings/test-llm")
-def api_test_llm(req: TestLLMRequest):
+def api_test_llm(req: TestLLMRequest, request: Request):
     """
     Test connectivity for the chosen provider using an explicit key or saved key.
     Useful for validating Chinese model API keys (SiliconFlow, DeepSeek, Qwen) or standard keys.
     """
     provider = req.provider.lower().strip()
-    key = (req.api_key or "").strip() or get_api_key(provider)
+    key = (req.api_key or "").strip() or get_api_key(provider, request.state.workspace_id)
 
     if provider == "local":
         return {

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your account · AnswerWeave</title>
+    <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#0b0c0e">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f5cf6'/%3E%3Cpath d='M8 11h16M8 16h16M8 21h10' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Geist', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'] } } }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #0b0c0e;
+            --surface: #121316;
+            --line: rgba(255, 255, 255, 0.07);
+            --line-strong: rgba(255, 255, 255, 0.12);
+            --accent: #2f5cf6;
+            --accent-hover: #4677ff;
+            color-scheme: dark;
+        }
+        html, body { background: var(--bg); }
+        body { color: #ededef; -webkit-font-smoothing: antialiased; }
+        :focus-visible { outline: 2px solid rgba(70, 119, 255, .55); outline-offset: 2px; border-radius: 6px; }
+        .card { background: var(--surface); border: 1px solid var(--line); }
+        .btn-primary { background: var(--accent); color: #fff; transition: background-color .15s ease; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+        .btn-secondary { border: 1px solid var(--line-strong); color: #ededef; transition: background-color .15s ease; }
+        .btn-secondary:hover { background: rgba(255,255,255,.05); }
+        .field { background: #0e0f12; border: 1px solid var(--line-strong); color: #ededef; transition: border-color .15s, box-shadow .15s; }
+        .field:focus { outline: none; border-color: var(--accent-hover); box-shadow: 0 0 0 3px rgba(70,119,255,.18); }
+        .field[readonly] { color: #9398a3; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center px-4 py-10 font-sans">
+    <a href="/" class="mb-6 flex items-center gap-2 text-[15px] font-semibold text-white">
+        <span class="w-7 h-7 rounded-lg bg-[#2f5cf6] flex items-center justify-center" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 32 32"><path d="M8 11h16M8 16h16M8 21h10" stroke="white" stroke-width="3" stroke-linecap="round"/></svg>
+        </span>
+        AnswerWeave
+    </a>
+
+    <main class="card w-full max-w-sm rounded-2xl p-6 sm:p-7">
+        <h1 id="title" class="text-[18px] font-semibold text-white">One moment…</h1>
+        <p id="subtitle" class="mt-1.5 text-[13.5px] text-slate-400"></p>
+
+        <!-- Forgot password -->
+        <form id="forgotForm" class="mt-5 space-y-4 hidden">
+            <div>
+                <label for="forgotEmail" class="block text-[13px] text-slate-300 mb-1.5">Email</label>
+                <input type="email" id="forgotEmail" autocomplete="email" required class="field w-full h-10 rounded-lg px-3 text-[14px]">
+            </div>
+            <button type="submit" class="btn-primary w-full h-10 rounded-lg text-[14px] font-medium">Send reset link</button>
+        </form>
+
+        <!-- Reset password -->
+        <form id="resetForm" class="mt-5 space-y-4 hidden">
+            <div>
+                <label for="resetPassword" class="block text-[13px] text-slate-300 mb-1.5">New password</label>
+                <input type="password" id="resetPassword" autocomplete="new-password" minlength="8" required class="field w-full h-10 rounded-lg px-3 text-[14px]">
+                <p class="mt-1.5 text-[12px] text-slate-500">At least 8 characters.</p>
+            </div>
+            <div>
+                <label for="resetConfirm" class="block text-[13px] text-slate-300 mb-1.5">Confirm new password</label>
+                <input type="password" id="resetConfirm" autocomplete="new-password" minlength="8" required class="field w-full h-10 rounded-lg px-3 text-[14px]">
+            </div>
+            <button type="submit" class="btn-primary w-full h-10 rounded-lg text-[14px] font-medium">Save new password</button>
+        </form>
+
+        <!-- Invite: accept while signed in -->
+        <div id="inviteAccept" class="mt-5 space-y-3 hidden">
+            <button id="acceptBtn" type="button" class="btn-primary w-full h-10 rounded-lg text-[14px] font-medium">Join workspace</button>
+            <button id="switchAccountBtn" type="button" class="btn-secondary w-full h-10 rounded-lg text-[14px] font-medium hidden">Sign in with a different account</button>
+        </div>
+
+        <!-- Invite: sign in or create an account -->
+        <form id="inviteAuthForm" class="mt-5 space-y-4 hidden">
+            <div id="inviteNameRow">
+                <label for="inviteName" class="block text-[13px] text-slate-300 mb-1.5">Full name</label>
+                <input type="text" id="inviteName" autocomplete="name" class="field w-full h-10 rounded-lg px-3 text-[14px]">
+            </div>
+            <div>
+                <label for="inviteEmail" class="block text-[13px] text-slate-300 mb-1.5">Email</label>
+                <input type="email" id="inviteEmail" readonly class="field w-full h-10 rounded-lg px-3 text-[14px]">
+            </div>
+            <div>
+                <label for="invitePassword" id="invitePasswordLabel" class="block text-[13px] text-slate-300 mb-1.5">Password</label>
+                <input type="password" id="invitePassword" minlength="8" required class="field w-full h-10 rounded-lg px-3 text-[14px]">
+            </div>
+            <button type="submit" id="inviteSubmit" class="btn-primary w-full h-10 rounded-lg text-[14px] font-medium">Join workspace</button>
+            <p id="inviteForgot" class="text-center text-[12.5px] hidden"><a href="/account?forgot=1" class="text-slate-400 hover:text-white underline">Forgot your password?</a></p>
+        </form>
+
+        <div id="message" class="hidden mt-4 text-[13px] rounded-lg px-3 py-2.5" role="status" aria-live="polite"></div>
+        <a id="continueLink" href="/dashboard" class="hidden mt-4 btn-primary w-full h-10 rounded-lg text-[14px] font-medium flex items-center justify-center">Go to dashboard</a>
+    </main>
+
+    <p class="mt-6 text-[12.5px] text-slate-500"><a href="/" class="hover:text-slate-300">Back to AnswerWeave</a></p>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const $ = (id) => document.getElementById(id);
+        const show = (id, on = true) => $(id).classList.toggle('hidden', !on);
+        const store = {
+            get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
+            set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+            clear() { try { ['aw_token', 'aw_user', 'aw_workspace'].forEach(k => localStorage.removeItem(k)); } catch (e) {} },
+        };
+
+        function heading(title, subtitle = '') {
+            $('title').textContent = title;
+            $('subtitle').textContent = subtitle;
+            document.title = `${title} · AnswerWeave`;
+        }
+        function message(text, kind = 'info') {
+            const el = $('message');
+            el.textContent = text;
+            el.className = 'mt-4 text-[13px] rounded-lg px-3 py-2.5 ' + ({
+                error: 'bg-rose-500/10 text-rose-300 border border-rose-500/20',
+                success: 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20',
+                info: 'bg-white/5 text-slate-300 border border-white/10',
+            })[kind];
+        }
+        async function api(path, options = {}) {
+            const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+            const token = store.get('aw_token');
+            if (token && options.auth) headers['Authorization'] = `Bearer ${token}`;
+            const res = await fetch(path, { ...options, headers });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Something went wrong. Please try again.');
+            return data;
+        }
+        function signIn(data, workspaceId) {
+            if (data.token) store.set('aw_token', data.token);
+            if (data.user) store.set('aw_user', JSON.stringify(data.user));
+            if (workspaceId) store.set('aw_workspace', workspaceId);
+        }
+        async function busy(btn, label, fn) {
+            const original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = label;
+            try { await fn(); } finally { btn.disabled = false; btn.textContent = original; }
+        }
+
+        // ---- Forgot password
+        function startForgot() {
+            heading('Reset your password', "Enter your account's email and we'll send you a reset link.");
+            show('forgotForm');
+            $('forgotForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                busy(e.submitter, 'Sending…', async () => {
+                    try {
+                        const data = await api('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: $('forgotEmail').value.trim() }) });
+                        show('forgotForm', false);
+                        message(data.message || 'If that email has an account, a reset link is on its way.', 'success');
+                    } catch (err) { message(err.message, 'error'); }
+                });
+            });
+            setTimeout(() => $('forgotEmail').focus(), 30);
+        }
+
+        // ---- Reset password
+        function startReset(token) {
+            heading('Choose a new password');
+            show('resetForm');
+            $('resetForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                if ($('resetPassword').value !== $('resetConfirm').value) {
+                    message("The passwords don't match.", 'error');
+                    return;
+                }
+                busy(e.submitter, 'Saving…', async () => {
+                    try {
+                        const data = await api('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, new_password: $('resetPassword').value }) });
+                        signIn(data);
+                        show('resetForm', false);
+                        message('Your password has been changed and you are signed in.', 'success');
+                        show('continueLink');
+                    } catch (err) { message(err.message, 'error'); }
+                });
+            });
+            setTimeout(() => $('resetPassword').focus(), 30);
+        }
+
+        // ---- Email confirmation
+        async function startVerify(token) {
+            heading('Confirming your email…');
+            try {
+                const data = await api('/api/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) });
+                heading('Email confirmed', data.email || '');
+                message('Thanks! Your email address is confirmed.', 'success');
+            } catch (err) {
+                heading("We couldn't confirm your email");
+                message(err.message, 'error');
+            }
+            show('continueLink');
+        }
+
+        // ---- Team invite
+        async function startInvite(token) {
+            let invite;
+            try {
+                invite = await fetch(`/api/invites/${encodeURIComponent(token)}`).then(async r => {
+                    const d = await r.json().catch(() => ({}));
+                    if (!r.ok) throw new Error(d.detail || 'This invite link has expired or was already used.');
+                    return d;
+                });
+            } catch (err) {
+                heading('Invite unavailable');
+                message(err.message, 'error');
+                return;
+            }
+            const article = /^[aeiou]/.test(invite.role) ? 'an' : 'a';
+            heading(`Join ${invite.workspace_name}`, `You've been invited as ${article} ${invite.role} (${invite.email}).`);
+
+            const accept = () => busy($('acceptBtn'), 'Joining…', async () => {
+                try {
+                    const data = await api(`/api/invites/${encodeURIComponent(token)}/accept`, { method: 'POST', auth: true });
+                    store.set('aw_workspace', data.workspace_id);
+                    window.location.href = '/dashboard';
+                } catch (err) { message(err.message, 'error'); }
+            });
+
+            // Already signed in?
+            let me = null;
+            if (store.get('aw_token')) {
+                try { me = await api('/api/auth/me', { auth: true }); } catch (e) { me = null; }
+            }
+            if (me) {
+                show('inviteAccept');
+                if (me.email !== invite.email) {
+                    $('acceptBtn').classList.add('hidden');
+                    show('switchAccountBtn');
+                    message(`You're signed in as ${me.email}, but this invite is for ${invite.email}.`, 'error');
+                } else {
+                    $('acceptBtn').onclick = accept;
+                }
+                $('switchAccountBtn').onclick = () => { store.clear(); window.location.reload(); };
+                return;
+            }
+
+            // Not signed in: sign in to an existing account, or create one from the invite.
+            $('inviteEmail').value = invite.email;
+            show('inviteAuthForm');
+            show('inviteNameRow', !invite.has_account);
+            show('inviteForgot', invite.has_account);
+            $('inviteName').required = !invite.has_account;
+            $('invitePassword').autocomplete = invite.has_account ? 'current-password' : 'new-password';
+            $('invitePasswordLabel').textContent = invite.has_account ? 'Password' : 'Create a password (at least 8 characters)';
+            $('inviteSubmit').textContent = invite.has_account ? 'Sign in and join' : 'Create account and join';
+            $('inviteAuthForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                busy($('inviteSubmit'), 'Joining…', async () => {
+                    try {
+                        if (invite.has_account) {
+                            const login = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ email: invite.email, password: $('invitePassword').value }) });
+                            signIn(login);
+                            const joined = await api(`/api/invites/${encodeURIComponent(token)}/accept`, { method: 'POST', auth: true });
+                            store.set('aw_workspace', joined.workspace_id);
+                        } else {
+                            const created = await api('/api/auth/signup', { method: 'POST', body: JSON.stringify({
+                                name: $('inviteName').value.trim(), email: invite.email,
+                                password: $('invitePassword').value, invite_token: token,
+                            }) });
+                            signIn(created, created.workspace_id);
+                        }
+                        window.location.href = '/dashboard';
+                    } catch (err) { message(err.message, 'error'); }
+                });
+            });
+            setTimeout(() => $(invite.has_account ? 'invitePassword' : 'inviteName').focus(), 30);
+        }
+
+        if (params.get('reset')) startReset(params.get('reset'));
+        else if (params.get('verify')) startVerify(params.get('verify'));
+        else if (params.get('invite')) startInvite(params.get('invite'));
+        else if (params.get('forgot')) startForgot();
+        else window.location.replace('/');
+    </script>
+</body>
+</html>

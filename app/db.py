@@ -254,8 +254,11 @@ def _default_admin_password() -> str:
     return generated
 
 
-# Columns for embedding versioning, answer analytics and per-assistant personality.
-AI_QUALITY_COLUMNS = [
+# Columns added after the original schema: embedding versioning, answer analytics,
+# per-assistant personality, and workspace tenancy.
+SCHEMA_COLUMNS = [
+    ("assistants", "workspace_id", "TEXT DEFAULT ''"),
+    ("users", "email_verified", "INTEGER DEFAULT 0"),
     ("chunks", "embedding_model", "TEXT DEFAULT ''"),
     ("messages", "feedback", "INTEGER DEFAULT 0"),
     ("messages", "response_ms", "INTEGER DEFAULT 0"),
@@ -422,7 +425,7 @@ def init_db():
             pass
         conn.commit();
         # One statement per transaction, so a failure can't skip the rest.
-        for table, col, col_def in AI_QUALITY_COLUMNS:
+        for table, col, col_def in SCHEMA_COLUMNS:
             try:
                 cursor.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_def};")
                 conn.commit()
@@ -486,6 +489,7 @@ def init_db():
             conn.commit()
 
         conn.close()
+        init_workspaces()
         return
 
     conn = get_db()
@@ -667,7 +671,7 @@ def init_db():
         ("users", "last_seen_epoch", "INTEGER DEFAULT 0"),
         ("conversations", "operator_name", "TEXT DEFAULT ''"),
         ("conversations", "unread_operator_msgs", "INTEGER DEFAULT 0")
-    ] + AI_QUALITY_COLUMNS
+    ] + SCHEMA_COLUMNS
     for tbl, col, col_def in tables_to_migrate:
         try:
             cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_def};")
@@ -702,6 +706,7 @@ def init_db():
 
     conn.commit()
     conn.close()
+    init_workspaces()
 
 # ----------------- User Auth Helpers -----------------
 import hashlib
@@ -836,6 +841,7 @@ def delete_user(user_id: str) -> bool:
         conn.close()
         return False
     cursor.execute("DELETE FROM user_assistants WHERE user_id = ?", (user_id,))
+    cursor.execute("DELETE FROM workspace_members WHERE user_id = ?", (user_id,))
     cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
     conn.commit()
     conn.close()
@@ -882,7 +888,7 @@ def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
 def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, email, name, role, created_at FROM users WHERE id = ?", (user_id,))
+    cursor.execute("SELECT id, email, name, role, created_at, COALESCE(email_verified, 0) AS email_verified FROM users WHERE id = ?", (user_id,))
     row = cursor.fetchone()
     if not row:
         conn.close()
@@ -949,15 +955,15 @@ def list_assistants_for_user(user_id: Optional[str] = None) -> List[Dict[str, An
     return [dict(r) for r in rows]
 
 # ----------------- Assistant CRUD -----------------
-def create_assistant(name: str, domain: str = "*", primary_color: str = "#0f172a", welcome_message: str = "", suggested_questions: str = "", bot_avatar: str = "⚡", widget_subtitle: str = "Online • AI Assistant", teaser_message: str = "👋 Hi! Need quick answers?") -> str:
+def create_assistant(name: str, domain: str = "*", primary_color: str = "#0f172a", welcome_message: str = "", suggested_questions: str = "", bot_avatar: str = "⚡", widget_subtitle: str = "Online • AI Assistant", teaser_message: str = "👋 Hi! Need quick answers?", workspace_id: str = "") -> str:
     asst_id = f"asst_{uuid.uuid4().hex[:8]}"
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO assistants (
             id, name, domain, primary_color, welcome_message, suggested_questions,
-            bot_avatar, widget_subtitle, teaser_message, lead_capture_enabled, voice_enabled, show_branding
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1)
+            bot_avatar, widget_subtitle, teaser_message, lead_capture_enabled, voice_enabled, show_branding, workspace_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?)
     """, (
         asst_id,
         name.strip(),
@@ -967,7 +973,8 @@ def create_assistant(name: str, domain: str = "*", primary_color: str = "#0f172a
         suggested_questions or "What services do you offer?\nHow does pricing work?\nHow do I get started?",
         bot_avatar or "⚡",
         widget_subtitle or "Online • AI Assistant",
-        teaser_message or "👋 Hi! Need quick answers?"
+        teaser_message or "👋 Hi! Need quick answers?",
+        workspace_id or ""
     ))
     conn.commit()
     conn.close()
@@ -1049,9 +1056,13 @@ def delete_assistant(assistant_id: str):
     cursor.execute("DELETE FROM messages WHERE assistant_id = ?", (assistant_id,))
     cursor.execute("DELETE FROM conversations WHERE assistant_id = ?", (assistant_id,))
     cursor.execute("DELETE FROM unanswered_questions WHERE assistant_id = ?", (assistant_id,))
+    cursor.execute("DELETE FROM user_assistants WHERE assistant_id = ?", (assistant_id,))
     cursor.execute("DELETE FROM assistants WHERE id = ?", (assistant_id,))
     conn.commit()
     conn.close()
+    # Without this a deleted assistant keeps answering from the cache for up to 30s.
+    _ASSISTANTS_CACHE.pop(assistant_id, None)
+    invalidate_chunks_cache(assistant_id)
 
 # ----------------- Settings Helpers -----------------
 _SETTINGS_CACHE: Dict[str, str] = {}
@@ -1566,12 +1577,17 @@ def count_operators_online(assistant_id: str, window_seconds: int = 90) -> int:
     cutoff = int(time.time()) - window_seconds
     conn = get_db()
     cursor = conn.cursor()
+    # The assistant's workspace team, minus agents who are limited to other assistants.
     cursor.execute("""
         SELECT COUNT(*) AS n FROM users u
+        JOIN workspace_members m ON m.user_id = u.id
+        JOIN assistants a ON a.workspace_id = m.workspace_id AND a.id = ?
         WHERE COALESCE(u.last_seen_epoch, 0) >= ?
-          AND (u.role = 'admin' OR EXISTS (
-                SELECT 1 FROM user_assistants ua WHERE ua.user_id = u.id AND ua.assistant_id = ?))
-    """, (cutoff, assistant_id))
+          AND (m.role != 'agent'
+               OR NOT EXISTS (SELECT 1 FROM user_assistants ua JOIN assistants a2 ON a2.id = ua.assistant_id
+                              WHERE ua.user_id = u.id AND a2.workspace_id = m.workspace_id)
+               OR EXISTS (SELECT 1 FROM user_assistants ua WHERE ua.user_id = u.id AND ua.assistant_id = a.id))
+    """, (assistant_id, cutoff))
     row = cursor.fetchone()
     conn.close()
     return int(row["n"] or 0) if row else 0
@@ -1729,23 +1745,30 @@ def dismiss_unanswered_question(gap_id: int):
     conn.close()
 
 # ----------------- Subscription Tiers -----------------
-def get_subscription_info() -> Dict[str, Any]:
-    plan_key = get_setting("subscription_plan", "starter")
+def get_subscription_info(workspace_id: Optional[str] = None) -> Dict[str, Any]:
+    """Plan and usage for one workspace (or the whole platform when no workspace is given)."""
+    ws = get_workspace(workspace_id) if workspace_id else None
+    plan_key = (ws or {}).get("plan") or get_setting("subscription_plan", "starter")
     plan = SUBSCRIPTION_PLANS.get(plan_key, SUBSCRIPTION_PLANS["starter"])
 
-    # Aggregate message usage across all assistants
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM messages WHERE role = 'user'")
-    total_messages = cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*), COALESCE(SUM(chunk_count), 0) FROM sources")
-    row = cursor.fetchone()
+    if ws:
+        scope, params = " AND assistant_id IN (SELECT id FROM assistants WHERE workspace_id = ?)", (workspace_id,)
+        cursor.execute("SELECT COUNT(*) FROM messages WHERE role = 'user'" + scope, params)
+        total_messages = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*), COALESCE(SUM(chunk_count), 0) FROM sources WHERE 1 = 1" + scope, params)
+        row = cursor.fetchone()
+        cursor.execute("SELECT COUNT(*) FROM assistants WHERE workspace_id = ?", params)
+    else:
+        cursor.execute("SELECT COUNT(*) FROM messages WHERE role = 'user'")
+        total_messages = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*), COALESCE(SUM(chunk_count), 0) FROM sources")
+        row = cursor.fetchone()
+        cursor.execute("SELECT COUNT(*) FROM assistants")
+    total_assistants = cursor.fetchone()[0]
     total_sources = row[0]
     total_chunks = row[1]
-
-    cursor.execute("SELECT COUNT(*) FROM assistants")
-    total_assistants = cursor.fetchone()[0]
     conn.close()
 
     return {
@@ -1761,8 +1784,12 @@ def get_subscription_info() -> Dict[str, Any]:
         "all_plans": SUBSCRIPTION_PLANS
     }
 
-def update_subscription_plan(plan_key: str):
-    if plan_key in SUBSCRIPTION_PLANS:
+def update_subscription_plan(plan_key: str, workspace_id: Optional[str] = None):
+    if plan_key not in SUBSCRIPTION_PLANS:
+        return
+    if workspace_id:
+        update_workspace(workspace_id, plan=plan_key)
+    else:
         set_setting("subscription_plan", plan_key)
 
 # ----------------- Analytics -----------------
@@ -1797,3 +1824,485 @@ def get_assistant_analytics(assistant_id: str) -> Dict[str, Any]:
         "pending_gaps": pending_gaps,
         "monthly_limit": 2000
     }
+
+
+# ----------------- Workspaces (tenancy) -----------------
+# A workspace owns assistants, team members, AI keys and settings, and a plan.
+# Roles inside a workspace:
+#   owner  - everything, including deleting the workspace and managing owners
+#   admin  - assistants, knowledge, settings, AI keys and inviting people
+#   agent  - inbox, conversations, leads and knowledge gaps (read-only elsewhere);
+#            if an agent has assistant assignments, they only see those assistants
+# users.role = 'admin' remains the platform operator, who can see every workspace.
+
+WORKSPACE_ROLES = ("owner", "admin", "agent")
+MANAGER_ROLES = ("owner", "admin")
+INVITE_TTL_SECONDS = 7 * 24 * 3600
+
+
+def init_workspaces():
+    conn = get_db()
+    cursor = conn.cursor()
+    for ddl in [
+        """CREATE TABLE IF NOT EXISTS workspaces (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            plan TEXT DEFAULT 'starter',
+            use_platform_keys INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS workspace_members (
+            workspace_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'agent',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (workspace_id, user_id)
+        )""",
+        """CREATE TABLE IF NOT EXISTS workspace_settings (
+            workspace_id TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT,
+            PRIMARY KEY (workspace_id, key)
+        )""",
+        """CREATE TABLE IF NOT EXISTS workspace_invites (
+            id TEXT PRIMARY KEY,
+            workspace_id TEXT NOT NULL,
+            email TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'agent',
+            token_hash TEXT NOT NULL,
+            invited_by TEXT,
+            expires_epoch INTEGER NOT NULL,
+            accepted_epoch INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+    ]:
+        cursor.execute(ddl)
+    conn.commit()
+    conn.close()
+    _migrate_to_workspaces()
+
+
+def _migrate_to_workspaces():
+    """One-time move of the single-tenant data into workspaces.
+
+    - A member who is the only person assigned to an assistant gets their own
+      workspace (as owner) containing those assistants: they created them at signup.
+    - Everything else goes to a "Default workspace" owned by the platform admins.
+      Members who shared assistants join it as agents restricted to those assistants.
+    - The old global plan and AI provider choice move to the default workspace.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM assistants WHERE workspace_id IS NULL OR workspace_id = ''")
+    orphan_ids = [r["id"] for r in cursor.fetchall()]
+    cursor.execute("SELECT COUNT(*) AS n FROM workspaces")
+    has_workspaces = int(cursor.fetchone()["n"] or 0) > 0
+    if has_workspaces and not orphan_ids:
+        conn.close()
+        return
+
+    cursor.execute("SELECT id, name, email, role FROM users")
+    users = {r["id"]: dict(r) for r in cursor.fetchall()}
+    cursor.execute("SELECT user_id, assistant_id FROM user_assistants")
+    grants = [(r["user_id"], r["assistant_id"]) for r in cursor.fetchall()]
+    conn.close()
+
+    members_by_asst: Dict[str, List[str]] = {}
+    for uid, aid in grants:
+        if uid in users and users[uid]["role"] != "admin":
+            members_by_asst.setdefault(aid, []).append(uid)
+
+    default_ws = get_setting("default_workspace_id", "")
+    if not default_ws or not get_workspace(default_ws):
+        default_ws = _insert_workspace("Default workspace", plan=get_setting("subscription_plan", "starter") or "starter")
+        set_setting("default_workspace_id", default_ws)
+        provider = get_setting("llm_provider", "")
+        if provider:
+            set_workspace_setting(default_ws, "llm_provider", provider)
+        for u in users.values():
+            if u["role"] == "admin":
+                add_workspace_member(default_ws, u["id"], "owner")
+
+    own_ws: Dict[str, str] = {}
+    for aid in orphan_ids:
+        owners = members_by_asst.get(aid, [])
+        if len(owners) == 1:
+            uid = owners[0]
+            if uid not in own_ws:
+                label = (users[uid].get("name") or users[uid]["email"].split("@")[0]).strip()
+                own_ws[uid] = _insert_workspace(f"{label}'s workspace")
+                add_workspace_member(own_ws[uid], uid, "owner")
+            target = own_ws[uid]
+        else:
+            target = default_ws
+            for uid in owners:
+                if not get_member_role(default_ws, uid):
+                    add_workspace_member(default_ws, uid, "agent")
+        _set_assistant_workspace(aid, target)
+
+    # Signed-up members with no assistants yet still need a workspace of their own.
+    for u in users.values():
+        if u["role"] != "admin" and not list_user_workspaces(u["id"]):
+            label = (u.get("name") or u["email"].split("@")[0]).strip()
+            ws = _insert_workspace(f"{label}'s workspace")
+            add_workspace_member(ws, u["id"], "owner")
+
+
+def _insert_workspace(name: str, plan: str = "starter") -> str:
+    ws_id = f"ws_{uuid.uuid4().hex[:10]}"
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO workspaces (id, name, plan, use_platform_keys) VALUES (?, ?, ?, 1)",
+                   (ws_id, (name or "My workspace").strip()[:80], plan if plan in SUBSCRIPTION_PLANS else "starter"))
+    conn.commit()
+    conn.close()
+    return ws_id
+
+
+def _set_assistant_workspace(assistant_id: str, workspace_id: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE assistants SET workspace_id = ? WHERE id = ?", (workspace_id, assistant_id))
+    conn.commit()
+    conn.close()
+    _ASSISTANTS_CACHE.pop(assistant_id, None)
+
+
+def create_workspace(name: str, owner_user_id: str, plan: str = "starter") -> Dict[str, Any]:
+    ws_id = _insert_workspace(name, plan)
+    add_workspace_member(ws_id, owner_user_id, "owner")
+    return get_workspace(ws_id)
+
+
+def get_workspace(workspace_id: str) -> Optional[Dict[str, Any]]:
+    if not workspace_id:
+        return None
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, plan, use_platform_keys, created_at FROM workspaces WHERE id = ?", (workspace_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    ws = dict(row)
+    ws["use_platform_keys"] = bool(ws.get("use_platform_keys", 1))
+    if hasattr(ws.get("created_at"), "isoformat"):
+        ws["created_at"] = ws["created_at"].isoformat()
+    return ws
+
+
+def update_workspace(workspace_id: str, name: Optional[str] = None, use_platform_keys: Optional[bool] = None,
+                     plan: Optional[str] = None):
+    updates, values = [], []
+    if name is not None and name.strip():
+        updates.append("name = ?"); values.append(name.strip()[:80])
+    if use_platform_keys is not None:
+        updates.append("use_platform_keys = ?"); values.append(1 if use_platform_keys else 0)
+    if plan is not None and plan in SUBSCRIPTION_PLANS:
+        updates.append("plan = ?"); values.append(plan)
+    if not updates:
+        return
+    values.append(workspace_id)
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(f"UPDATE workspaces SET {', '.join(updates)} WHERE id = ?", values)
+    conn.commit()
+    conn.close()
+    _WS_SETTINGS_CACHE.pop(workspace_id, None)
+
+
+def delete_workspace(workspace_id: str):
+    """Deletes a workspace and everything it owns."""
+    for a in list_workspace_assistant_ids(workspace_id):
+        delete_assistant(a)
+    conn = get_db()
+    cursor = conn.cursor()
+    for table in ("workspace_members", "workspace_settings", "workspace_invites"):
+        cursor.execute(f"DELETE FROM {table} WHERE workspace_id = ?", (workspace_id,))
+    cursor.execute("DELETE FROM workspaces WHERE id = ?", (workspace_id,))
+    conn.commit()
+    conn.close()
+    _WS_SETTINGS_CACHE.pop(workspace_id, None)
+
+
+def list_user_workspaces(user_id: str) -> List[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT w.id, w.name, w.plan, m.role
+        FROM workspaces w JOIN workspace_members m ON m.workspace_id = w.id
+        WHERE m.user_id = ?
+        ORDER BY w.created_at ASC, w.id ASC
+    """, (user_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def list_all_workspaces() -> List[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, plan FROM workspaces ORDER BY created_at ASC, id ASC")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def get_member_role(workspace_id: str, user_id: str) -> Optional[str]:
+    if not workspace_id or not user_id:
+        return None
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?", (workspace_id, user_id))
+    row = cursor.fetchone()
+    conn.close()
+    return row["role"] if row else None
+
+
+def add_workspace_member(workspace_id: str, user_id: str, role: str = "agent"):
+    role = role if role in WORKSPACE_ROLES else "agent"
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT role FROM workspace_members WHERE workspace_id = ? AND user_id = ?", (workspace_id, user_id))
+    if cursor.fetchone():
+        cursor.execute("UPDATE workspace_members SET role = ? WHERE workspace_id = ? AND user_id = ?", (role, workspace_id, user_id))
+    else:
+        cursor.execute("INSERT INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, ?)", (workspace_id, user_id, role))
+    conn.commit()
+    conn.close()
+
+
+def remove_workspace_member(workspace_id: str, user_id: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?", (workspace_id, user_id))
+    # Drop assistant assignments inside this workspace too.
+    cursor.execute("""
+        DELETE FROM user_assistants WHERE user_id = ? AND assistant_id IN
+            (SELECT id FROM assistants WHERE workspace_id = ?)
+    """, (user_id, workspace_id))
+    conn.commit()
+    conn.close()
+
+
+def count_workspace_owners(workspace_id: str) -> int:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) AS n FROM workspace_members WHERE workspace_id = ? AND role = 'owner'", (workspace_id,))
+    n = int(cursor.fetchone()["n"] or 0)
+    conn.close()
+    return n
+
+
+def list_workspace_members(workspace_id: str) -> List[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT u.id, u.email, u.name, m.role, m.created_at, COALESCE(u.last_seen_epoch, 0) AS last_seen_epoch
+        FROM workspace_members m JOIN users u ON u.id = m.user_id
+        WHERE m.workspace_id = ?
+        ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, u.email
+    """, (workspace_id,))
+    members = []
+    for r in cursor.fetchall():
+        m = dict(r)
+        if hasattr(m.get("created_at"), "isoformat"):
+            m["created_at"] = m["created_at"].isoformat()
+        cursor.execute("""
+            SELECT ua.assistant_id FROM user_assistants ua JOIN assistants a ON a.id = ua.assistant_id
+            WHERE ua.user_id = ? AND a.workspace_id = ?
+        """, (m["id"], workspace_id))
+        m["assistant_ids"] = [x["assistant_id"] for x in cursor.fetchall()]
+        members.append(m)
+    conn.close()
+    return members
+
+
+def set_member_assistants(workspace_id: str, user_id: str, assistant_ids: List[str]):
+    """Restrict an agent to some assistants of this workspace (empty list = all of them)."""
+    allowed = set(list_workspace_assistant_ids(workspace_id))
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        DELETE FROM user_assistants WHERE user_id = ? AND assistant_id IN
+            (SELECT id FROM assistants WHERE workspace_id = ?)
+    """, (user_id, workspace_id))
+    for aid in assistant_ids or []:
+        if aid in allowed:
+            cursor.execute("INSERT INTO user_assistants (user_id, assistant_id) VALUES (?, ?) ON CONFLICT DO NOTHING;", (user_id, aid))
+    conn.commit()
+    conn.close()
+
+
+def list_workspace_assistant_ids(workspace_id: str) -> List[str]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM assistants WHERE workspace_id = ? ORDER BY created_at ASC", (workspace_id,))
+    ids = [r["id"] for r in cursor.fetchall()]
+    conn.close()
+    return ids
+
+
+def visible_assistant_ids(workspace_id: str, user_id: str, role: Optional[str]) -> List[str]:
+    """Assistants in the workspace this member may see (agents can be limited to assigned ones)."""
+    ids = list_workspace_assistant_ids(workspace_id)
+    if role == "agent":
+        assigned = set(get_user_assigned_assistants(user_id))
+        mine = [a for a in ids if a in assigned]
+        if mine:
+            return mine
+    return ids
+
+
+def list_assistants_in_workspace(workspace_id: str, only_ids: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT a.*,
+            (SELECT COUNT(*) FROM sources s WHERE s.assistant_id = a.id) as total_sources,
+            (SELECT COUNT(*) FROM chunks c WHERE c.assistant_id = a.id) as total_chunks,
+            (SELECT COUNT(*) FROM leads l WHERE l.assistant_id = a.id) as total_leads,
+            (SELECT COUNT(*) FROM messages m WHERE m.assistant_id = a.id AND m.role = 'user') as total_messages
+        FROM assistants a
+        WHERE a.workspace_id = ?
+        ORDER BY a.created_at ASC
+    """, (workspace_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    if only_ids is not None:
+        keep = set(only_ids)
+        rows = [r for r in rows if r["id"] in keep]
+    return rows
+
+
+def assistant_workspace_id(assistant_id: str) -> str:
+    asst = get_assistant(assistant_id) if assistant_id else None
+    return (asst or {}).get("workspace_id") or ""
+
+
+# ---- Workspace settings (AI provider, API keys, ...) ----
+_WS_SETTINGS_CACHE: Dict[str, Dict[str, Any]] = {}
+_WS_SETTINGS_TTL = 30.0
+
+
+def get_workspace_settings(workspace_id: str) -> Dict[str, str]:
+    if not workspace_id:
+        return {}
+    cached = _WS_SETTINGS_CACHE.get(workspace_id)
+    if cached and time.time() - cached["ts"] < _WS_SETTINGS_TTL:
+        return cached["values"]
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT key, value FROM workspace_settings WHERE workspace_id = ?", (workspace_id,))
+    values = {r["key"]: r["value"] for r in cursor.fetchall()}
+    conn.close()
+    _WS_SETTINGS_CACHE[workspace_id] = {"ts": time.time(), "values": values}
+    return values
+
+
+def get_workspace_setting(workspace_id: str, key: str, default: str = "") -> str:
+    return get_workspace_settings(workspace_id).get(key, default) or default
+
+
+def set_workspace_setting(workspace_id: str, key: str, value: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM workspace_settings WHERE workspace_id = ? AND key = ?", (workspace_id, key))
+    if value is not None and value != "":
+        cursor.execute("INSERT INTO workspace_settings (workspace_id, key, value) VALUES (?, ?, ?)", (workspace_id, key, value))
+    conn.commit()
+    conn.close()
+    _WS_SETTINGS_CACHE.pop(workspace_id, None)
+
+
+# ---- Invites ----
+def _token_hash(token: str) -> str:
+    return hashlib.sha256((token or "").encode("utf-8")).hexdigest()
+
+
+def create_invite(workspace_id: str, email: str, role: str, invited_by: str) -> Dict[str, Any]:
+    """Creates (or refreshes) an invite and returns it with the one-time token."""
+    email = email.strip().lower()
+    role = role if role in WORKSPACE_ROLES else "agent"
+    token = secrets.token_urlsafe(32)
+    invite_id = f"inv_{uuid.uuid4().hex[:10]}"
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM workspace_invites WHERE workspace_id = ? AND email = ? AND COALESCE(accepted_epoch, 0) = 0",
+                   (workspace_id, email))
+    cursor.execute("""
+        INSERT INTO workspace_invites (id, workspace_id, email, role, token_hash, invited_by, expires_epoch)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (invite_id, workspace_id, email, role, _token_hash(token), invited_by, int(time.time()) + INVITE_TTL_SECONDS))
+    conn.commit()
+    conn.close()
+    return {"id": invite_id, "workspace_id": workspace_id, "email": email, "role": role, "token": token}
+
+
+def list_pending_invites(workspace_id: str) -> List[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, email, role, expires_epoch, created_at FROM workspace_invites
+        WHERE workspace_id = ? AND COALESCE(accepted_epoch, 0) = 0 AND expires_epoch > ?
+        ORDER BY created_at DESC
+    """, (workspace_id, int(time.time())))
+    rows = []
+    for r in cursor.fetchall():
+        d = dict(r)
+        if hasattr(d.get("created_at"), "isoformat"):
+            d["created_at"] = d["created_at"].isoformat()
+        rows.append(d)
+    conn.close()
+    return rows
+
+
+def revoke_invite(workspace_id: str, invite_id: str) -> bool:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM workspace_invites WHERE id = ? AND workspace_id = ? AND COALESCE(accepted_epoch, 0) = 0",
+                   (invite_id, workspace_id))
+    changed = cursor.rowcount if hasattr(cursor, "rowcount") else 1
+    conn.commit()
+    conn.close()
+    return bool(changed)
+
+
+def get_invite_by_token(token: str) -> Optional[Dict[str, Any]]:
+    """A pending, unexpired invite for this token, with the workspace name."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT i.id, i.workspace_id, i.email, i.role, i.expires_epoch, w.name AS workspace_name
+        FROM workspace_invites i JOIN workspaces w ON w.id = i.workspace_id
+        WHERE i.token_hash = ? AND COALESCE(i.accepted_epoch, 0) = 0 AND i.expires_epoch > ?
+    """, (_token_hash(token), int(time.time())))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def accept_invite(token: str, user_id: str, user_email: str) -> Optional[Dict[str, Any]]:
+    """Adds the user to the invite's workspace. The signed-in email must match the invited one."""
+    invite = get_invite_by_token(token)
+    if not invite or invite["email"] != (user_email or "").strip().lower():
+        return None
+    existing = get_member_role(invite["workspace_id"], user_id)
+    # Accepting never downgrades someone who is already a member.
+    rank = {"owner": 0, "admin": 1, "agent": 2}
+    if not existing or rank[invite["role"]] < rank.get(existing, 3):
+        add_workspace_member(invite["workspace_id"], user_id, invite["role"])
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE workspace_invites SET accepted_epoch = ? WHERE id = ?", (int(time.time()), invite["id"]))
+    conn.commit()
+    conn.close()
+    return invite
+
+
+def set_email_verified(user_id: str, verified: bool = True):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET email_verified = ? WHERE id = ?", (1 if verified else 0, user_id))
+    conn.commit()
+    conn.close()

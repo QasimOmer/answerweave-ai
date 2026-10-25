@@ -535,6 +535,7 @@
                 </div>
                 <button type="submit" id="loginSubmitBtn" class="btn-primary w-full h-10 rounded-lg text-[14px] font-medium">Sign in</button>
                 <div id="loginError" class="hidden text-[13px] text-rose-300 text-center" role="alert"></div>
+                <p class="text-center text-[12.5px]"><a href="/account?forgot=1" class="text-slate-400 hover:text-white underline underline-offset-2">Forgot your password?</a></p>
             </form>
 
             <form id="signupForm" class="mt-5 space-y-4 hidden">
@@ -739,6 +740,9 @@
                 if (res.ok && data.status === 'success') {
                     localStorage.setItem('aw_user', JSON.stringify(data.user));
                     localStorage.setItem('aw_token', data.token);
+                    // A new account starts in its own workspace; on sign-in the server picks the first one.
+                    if (data.workspace_id) localStorage.setItem('aw_workspace', data.workspace_id);
+                    else localStorage.removeItem('aw_workspace');
                     window.location.href = '/dashboard';
                     return;
                 }

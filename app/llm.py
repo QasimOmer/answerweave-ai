@@ -59,19 +59,19 @@ class LLMUnavailable(LLMError):
 
 # ---------------------------------------------------------------- providers
 
-def available_providers() -> List[str]:
-    """Providers to try, in order: the admin's choice first, then any other configured key as backup."""
-    choice = get_provider()
+def available_providers(workspace_id: Optional[str] = None) -> List[str]:
+    """Providers to try, in order: the workspace's choice first, then any other usable key as backup."""
+    choice = get_provider(workspace_id)
     if choice == "local":
         return []
-    keyed = [p for p in AUTO_PROVIDER_ORDER if get_api_key(p)]
+    keyed = [p for p in AUTO_PROVIDER_ORDER if get_api_key(p, workspace_id)]
     if choice in keyed:
         return [choice] + [p for p in keyed if p != choice]
     return keyed
 
 
-def is_configured() -> bool:
-    return bool(available_providers())
+def is_configured(workspace_id: Optional[str] = None) -> bool:
+    return bool(available_providers(workspace_id))
 
 
 # ---------------------------------------------------------------- Groq model discovery
@@ -294,8 +294,9 @@ def _gemini_stream(api_key: str, messages: List[Message], temperature: float, ma
 # ---------------------------------------------------------------- public API
 
 def _provider_stream(provider: str, messages: List[Message], temperature: float, max_tokens: int,
-                     model: Optional[str] = None, api_key: Optional[str] = None) -> Iterator[str]:
-    key = api_key or get_api_key(provider)
+                     model: Optional[str] = None, api_key: Optional[str] = None,
+                     workspace_id: Optional[str] = None) -> Iterator[str]:
+    key = api_key or get_api_key(provider, workspace_id)
     if not key:
         raise LLMError(f"no API key for {provider}")
     if provider == "gemini":
@@ -306,14 +307,16 @@ def _provider_stream(provider: str, messages: List[Message], temperature: float,
 
 
 def stream_chat(messages: List[Message], temperature: float = 0.5, max_tokens: int = 900,
-                providers: Optional[List[str]] = None, meta: Optional[Dict[str, Any]] = None) -> Iterator[str]:
+                providers: Optional[List[str]] = None, meta: Optional[Dict[str, Any]] = None,
+                workspace_id: Optional[str] = None) -> Iterator[str]:
     """Yield reply text as it is generated, failing over between providers.
 
     Failover only happens before the first token; once text has reached the
     visitor, an error mid-stream is raised rather than restarting elsewhere.
     If `meta` is given, meta["provider"] is set to the provider that answered.
+    Keys come from `workspace_id` (its own keys, then platform keys if it may use them).
     """
-    order = providers if providers is not None else available_providers()
+    order = providers if providers is not None else available_providers(workspace_id)
     if not order:
         raise LLMUnavailable("no LLM provider configured")
     errors = []
@@ -321,7 +324,7 @@ def stream_chat(messages: List[Message], temperature: float = 0.5, max_tokens: i
         think = _ThinkFilter()
         produced = False
         try:
-            for piece in _provider_stream(provider, messages, temperature, max_tokens):
+            for piece in _provider_stream(provider, messages, temperature, max_tokens, workspace_id=workspace_id):
                 visible = think.feed(piece)
                 if visible:
                     if not produced and meta is not None:
@@ -346,9 +349,10 @@ def stream_chat(messages: List[Message], temperature: float = 0.5, max_tokens: i
 
 
 def chat(messages: List[Message], temperature: float = 0.5, max_tokens: int = 900,
-         providers: Optional[List[str]] = None, meta: Optional[Dict[str, Any]] = None) -> str:
+         providers: Optional[List[str]] = None, meta: Optional[Dict[str, Any]] = None,
+         workspace_id: Optional[str] = None) -> str:
     """Return the full reply, with the same provider failover as stream_chat."""
-    return clean_model_text("".join(stream_chat(messages, temperature, max_tokens, providers, meta)))
+    return clean_model_text("".join(stream_chat(messages, temperature, max_tokens, providers, meta, workspace_id)))
 
 
 def complete_with_provider(provider: str, api_key: str, prompt: str, system_prompt: str,

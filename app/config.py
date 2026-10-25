@@ -4,7 +4,9 @@ Supports: Gemini (free tier), Groq (free Llama 3), OpenAI, and 100% Free Local O
 """
 
 import os
-from app.db import get_setting, set_setting
+from typing import Optional
+
+from app.db import get_setting, set_setting, get_workspace, get_workspace_setting, set_workspace_setting
 
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 FALLBACK_GEMINI_MODEL = "gemini-2.5-flash-lite"
@@ -16,13 +18,43 @@ DEFAULT_SILICONFLOW_MODEL = "deepseek-ai/DeepSeek-V3"
 DEFAULT_QWEN_MODEL = "qwen-plus"
 DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-r1:free"
 
-def get_provider() -> str:
+PROVIDERS = ("gemini", "groq", "openai", "deepseek", "siliconflow", "qwen", "openrouter")
+
+
+def get_provider(workspace_id: Optional[str] = None) -> str:
+    """The workspace's provider choice, else the platform default."""
+    if workspace_id:
+        choice = get_workspace_setting(workspace_id, "llm_provider", "")
+        if choice:
+            return choice
     return get_setting("llm_provider", "auto")
 
-def set_provider(provider: str):
-    set_setting("llm_provider", provider)
+def set_provider(provider: str, workspace_id: Optional[str] = None):
+    if workspace_id:
+        set_workspace_setting(workspace_id, "llm_provider", provider)
+    else:
+        set_setting("llm_provider", provider)
 
-def get_api_key(provider: str = "gemini") -> str:
+def workspace_uses_platform_keys(workspace_id: Optional[str]) -> bool:
+    ws = get_workspace(workspace_id) if workspace_id else None
+    return True if ws is None else bool(ws.get("use_platform_keys", True))
+
+def get_workspace_api_key(provider: str, workspace_id: str) -> str:
+    """Only the key the workspace saved itself (never the platform's)."""
+    return (get_workspace_setting(workspace_id, f"{provider}_api_key", "") or "").strip()
+
+def get_api_key(provider: str = "gemini", workspace_id: Optional[str] = None) -> str:
+    """Key used for a request: the workspace's own key first, then the platform key
+    if the workspace is allowed to use it."""
+    if workspace_id:
+        own = get_workspace_api_key(provider, workspace_id)
+        if own:
+            return own
+        if not workspace_uses_platform_keys(workspace_id):
+            return ""
+    return get_platform_api_key(provider)
+
+def get_platform_api_key(provider: str) -> str:
     # 1. Check database setting
     db_key = get_setting(f"{provider}_api_key", "").strip()
     if db_key:
@@ -39,78 +71,56 @@ def get_api_key(provider: str = "gemini") -> str:
     }
     return os.environ.get(env_var_map.get(provider, ""), "").strip()
 
-def set_api_key(key: str, provider: str = "gemini"):
-    set_setting(f"{provider}_api_key", key.strip())
+def set_api_key(key: str, provider: str = "gemini", workspace_id: Optional[str] = None):
+    if workspace_id:
+        set_workspace_setting(workspace_id, f"{provider}_api_key", key.strip())
+    else:
+        set_setting(f"{provider}_api_key", key.strip())
 
-def get_bot_settings() -> dict:
-    gemini_key = get_api_key("gemini")
-    groq_key = get_api_key("groq")
-    openai_key = get_api_key("openai")
-    deepseek_key = get_api_key("deepseek")
-    siliconflow_key = get_api_key("siliconflow")
-    qwen_key = get_api_key("qwen")
-    openrouter_key = get_api_key("openrouter")
-    
-    current_provider = get_provider()
+AUTO_ORDER = ["openrouter", "siliconflow", "deepseek", "gemini", "groq", "qwen", "openai"]
+
+
+def get_bot_settings(workspace_id: Optional[str] = None) -> dict:
+    """AI engine settings as the dashboard shows them. With a workspace, `has_<provider>_key`
+    means the workspace saved its own key; `platform_keys` says which the platform provides."""
+    effective = {p: get_api_key(p, workspace_id) for p in PROVIDERS}
+    own = {p: (get_workspace_api_key(p, workspace_id) if workspace_id else effective[p]) for p in PROVIDERS}
+
+    current_provider = get_provider(workspace_id)
     if current_provider == "auto":
-        if openrouter_key:
-            current_provider = "openrouter"
-        elif siliconflow_key:
-            current_provider = "siliconflow"
-        elif deepseek_key:
-            current_provider = "deepseek"
-        elif gemini_key:
-            current_provider = "gemini"
-        elif groq_key:
-            current_provider = "groq"
-        elif qwen_key:
-            current_provider = "qwen"
-        elif openai_key:
-            current_provider = "openai"
-        else:
-            current_provider = "local" # Zero-key local engine!
+        current_provider = next((p for p in AUTO_ORDER if effective[p]), "local")  # local = zero-key engine
 
-    return {
+    settings = {
         "bot_name": get_setting("bot_name", "WeaveFlow Bot"),
         "primary_color": get_setting("primary_color", "#081726"),
         "welcome_message": get_setting("welcome_message", "Hi there! 👋 How can I help you today?"),
         "suggested_questions": get_setting("suggested_questions", "What services do you provide?\nHow does pricing work?\nHow do I contact support?"),
         "lead_capture_enabled": get_setting("lead_capture_enabled", "true") == "true",
         "llm_provider": current_provider,
-        "has_api_key": bool(gemini_key or groq_key or openai_key or deepseek_key or siliconflow_key or qwen_key or openrouter_key),
-        "has_gemini_key": bool(gemini_key),
-        "has_groq_key": bool(groq_key),
-        "has_openai_key": bool(openai_key),
-        "has_deepseek_key": bool(deepseek_key),
-        "has_siliconflow_key": bool(siliconflow_key),
-        "has_qwen_key": bool(qwen_key),
-        "has_openrouter_key": bool(openrouter_key)
+        "llm_provider_choice": get_provider(workspace_id),
+        "has_api_key": any(effective.values()),
+        **{f"has_{p}_key": bool(own[p]) for p in PROVIDERS},
     }
+    if workspace_id:
+        settings["workspace_id"] = workspace_id
+        settings["uses_platform_keys"] = workspace_uses_platform_keys(workspace_id)
+        settings["platform_keys"] = {p: bool(get_platform_api_key(p)) for p in PROVIDERS}
+    return settings
 
-def update_bot_settings(data: dict):
-    if "bot_name" in data:
-        set_setting("bot_name", data["bot_name"])
-    if "primary_color" in data:
-        set_setting("primary_color", data["primary_color"])
-    if "welcome_message" in data:
-        set_setting("welcome_message", data["welcome_message"])
-    if "suggested_questions" in data:
-        set_setting("suggested_questions", data["suggested_questions"])
-    if "lead_capture_enabled" in data:
-        set_setting("lead_capture_enabled", "true" if data["lead_capture_enabled"] else "false")
-    if "llm_provider" in data:
-        set_provider(data["llm_provider"])
-    if "gemini_api_key" in data and data["gemini_api_key"].strip():
-        set_api_key(data["gemini_api_key"].strip(), "gemini")
-    if "groq_api_key" in data and data["groq_api_key"].strip():
-        set_api_key(data["groq_api_key"].strip(), "groq")
-    if "openai_api_key" in data and data["openai_api_key"].strip():
-        set_api_key(data["openai_api_key"].strip(), "openai")
-    if "deepseek_api_key" in data and data["deepseek_api_key"].strip():
-        set_api_key(data["deepseek_api_key"].strip(), "deepseek")
-    if "siliconflow_api_key" in data and data["siliconflow_api_key"].strip():
-        set_api_key(data["siliconflow_api_key"].strip(), "siliconflow")
-    if "qwen_api_key" in data and data["qwen_api_key"].strip():
-        set_api_key(data["qwen_api_key"].strip(), "qwen")
-    if "openrouter_api_key" in data and data["openrouter_api_key"].strip():
-        set_api_key(data["openrouter_api_key"].strip(), "openrouter")
+def update_bot_settings(data: dict, workspace_id: Optional[str] = None):
+    """Saves AI engine settings for a workspace (or the platform defaults when none is given)."""
+    if workspace_id is None:
+        for key in ("bot_name", "primary_color", "welcome_message", "suggested_questions"):
+            if key in data:
+                set_setting(key, data[key])
+        if "lead_capture_enabled" in data:
+            set_setting("lead_capture_enabled", "true" if data["lead_capture_enabled"] else "false")
+    if data.get("llm_provider"):
+        set_provider(data["llm_provider"], workspace_id)
+    for p in PROVIDERS:
+        value = data.get(f"{p}_api_key")
+        if isinstance(value, str) and value.strip():
+            set_api_key(value.strip(), p, workspace_id)
+    for p in data.get("clear_keys") or []:
+        if p in PROVIDERS:
+            set_api_key("", p, workspace_id)

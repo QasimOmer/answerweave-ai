@@ -22,7 +22,7 @@ from google import genai
 from google.genai import types
 
 from app.config import get_api_key, EMBEDDING_MODEL, EMBEDDING_DIM
-from app.db import get_chunks_for_assistant
+from app.db import get_chunks_for_assistant, assistant_workspace_id
 
 PSEUDO_DIM = 256
 PSEUDO_TAG = f"pseudo-{PSEUDO_DIM}"
@@ -46,8 +46,9 @@ def embedding_tag(vec: List[float]) -> str:
     return f"unknown@{len(vec)}"
 
 
-def get_genai_client() -> Optional[genai.Client]:
-    api_key = get_api_key("gemini")
+def get_genai_client(workspace_id: Optional[str] = None) -> Optional[genai.Client]:
+    """Gemini client for the workspace's key (its own, else the platform's if allowed)."""
+    api_key = get_api_key("gemini", workspace_id)
     if not api_key:
         return None
     client = _CLIENTS.get(api_key)
@@ -56,7 +57,8 @@ def get_genai_client() -> Optional[genai.Client]:
             client = genai.Client(api_key=api_key)
         except Exception:
             return None
-        _CLIENTS.clear()  # key changed; drop clients for old keys
+        if len(_CLIENTS) > 50:
+            _CLIENTS.clear()
         _CLIENTS[api_key] = client
     return client
 
@@ -73,12 +75,12 @@ def _embed(client: genai.Client, texts: List[str], task_type: str) -> List[List[
     return vectors
 
 
-def generate_embedding(text: str, task: str = "query") -> List[float]:
+def generate_embedding(text: str, task: str = "query", workspace_id: Optional[str] = None) -> List[float]:
     """Embed one text. `task` is "query" for visitor questions, "document" for knowledge chunks.
 
     Falls back to a keyword-hash vector when Gemini isn't configured or fails.
     """
-    client = get_genai_client()
+    client = get_genai_client(workspace_id)
     if client:
         try:
             task_type = "RETRIEVAL_QUERY" if task == "query" else "RETRIEVAL_DOCUMENT"
@@ -88,10 +90,11 @@ def generate_embedding(text: str, task: str = "query") -> List[float]:
     return _pseudo_embedding(text)
 
 
-def generate_embeddings_batch(texts: List[str], titles: Optional[List[str]] = None) -> List[List[float]]:
+def generate_embeddings_batch(texts: List[str], titles: Optional[List[str]] = None,
+                              workspace_id: Optional[str] = None) -> List[List[float]]:
     """Embed knowledge chunks in batches. Titles, when given, are prepended for context."""
     docs = [f"{t}\n{x}" if t else x for t, x in zip(titles, texts)] if titles else list(texts)
-    client = get_genai_client()
+    client = get_genai_client(workspace_id)
     if not client:
         return [_pseudo_embedding(t) for t in texts]
     out: List[List[float]] = []
@@ -273,14 +276,14 @@ class _Index:
             scores.append(s)
         return scores
 
-    def dense(self, query: str) -> List[Optional[float]]:
+    def dense(self, query: str, workspace_id: Optional[str] = None) -> List[Optional[float]]:
         """Cosine similarity per chunk, or None where the chunk's vector can't be compared."""
         sims: List[Optional[float]] = [None] * len(self.chunks)
         for tag, (rows, matrix) in self.groups.items():
             if tag == PSEUDO_TAG:
                 qv = _pseudo_embedding(query)
             else:
-                qv = generate_embedding(query, task="query")
+                qv = generate_embedding(query, task="query", workspace_id=workspace_id)
                 if len(qv) != EMBEDDING_DIM:
                     continue  # Gemini unavailable right now; lexical signals still work
             if np is not None:
@@ -369,7 +372,7 @@ def search_relevant_chunks(
 
     bm25 = index.bm25(query_words) if query_words else [0.0] * len(index.chunks)
     max_bm25 = max(bm25) if bm25 else 0.0
-    dense = index.dense(norm_query)
+    dense = index.dense(norm_query, assistant_workspace_id(assistant_id))
     current_tag = current_embedding_tag()
 
     scored = []
@@ -442,13 +445,15 @@ def reindex_assistant(assistant_id: str, max_chunks: int = 200, after_id: Option
     """
     from app.db import list_chunks_to_reindex, update_chunk_embeddings, get_embedding_status
     tag = current_embedding_tag()
-    if not get_genai_client():
+    workspace_id = assistant_workspace_id(assistant_id)
+    if not get_genai_client(workspace_id):
         return {"processed": 0, "upgraded": 0, "next_after_id": None, "done": True,
                 "error": "Add a Gemini API key in Settings to use semantic embeddings.",
                 **get_embedding_status(assistant_id, tag)}
 
     rows = list_chunks_to_reindex(assistant_id, tag, max_chunks, after_id=after_id)
-    vectors = generate_embeddings_batch([r["content"] for r in rows], titles=[r.get("title") or "" for r in rows])
+    vectors = generate_embeddings_batch([r["content"] for r in rows], titles=[r.get("title") or "" for r in rows],
+                                        workspace_id=workspace_id)
     update_chunk_embeddings(assistant_id, [(r["id"], v, embedding_tag(v)) for r, v in zip(rows, vectors)])
     upgraded = sum(1 for v in vectors if embedding_tag(v) == tag)
     status = get_embedding_status(assistant_id, tag)

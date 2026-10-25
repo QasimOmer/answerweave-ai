@@ -604,7 +604,8 @@ Keep the visitor's language and key terms. Output only the query on one line, wi
 If the message is already self-contained, output it unchanged."""
 
 
-def contextualize_query(query: str, history_turns: List[Dict[str, str]], org: str) -> str:
+def contextualize_query(query: str, history_turns: List[Dict[str, str]], org: str,
+                        workspace_id: Optional[str] = None) -> str:
     """Make follow-up questions searchable ("how much is it?" -> "price of the Shopify management plan")."""
     if not any(t["role"] == "user" for t in history_turns):
         return query
@@ -620,6 +621,7 @@ def contextualize_query(query: str, history_turns: List[Dict[str, str]], org: st
             ],
             temperature=0,
             max_tokens=200,
+            workspace_id=workspace_id,
         )
         rewritten = rewritten.strip().strip('"').splitlines()[0].strip() if rewritten.strip() else ""
         if 2 <= len(rewritten) <= 300:
@@ -772,12 +774,13 @@ def _prepare_turn(query: str, assistant_id: str, conversation_history: Optional[
     asst = get_assistant(assistant_id) if assistant_id else None
     asst_name = (asst or {}).get("name") or "Our Team"
     org = team_name(asst_name)
+    workspace_id = (asst or {}).get("workspace_id") or None
 
     injection_reply = detect_prompt_injection(norm_query, asst_name=org)
     if injection_reply:
         return {"final": {"answer": injection_reply, "sources": [], "lead_prompted": False, "knowledge_gap": False, "provider": "guardrail"}}
 
-    if not llm.is_configured():
+    if not llm.is_configured(workspace_id):
         chunks = search_relevant_chunks(norm_query, assistant_id=assistant_id, top_k=top_k)
         result = generate_local_extractive_answer(norm_query, chunks, assistant_id=assistant_id)
         result.setdefault("knowledge_gap", _UNKNOWN_MARKER in (result.get("answer") or "").lower())
@@ -790,7 +793,7 @@ def _prepare_turn(query: str, assistant_id: str, conversation_history: Optional[
     if is_trivial_or_conversational(norm_query) or detect_conversational_intent(norm_query, asst_name=org):
         search_query, chunks = norm_query, []
     else:
-        search_query = normalize_query_terms(contextualize_query(norm_query, history_turns, org))
+        search_query = normalize_query_terms(contextualize_query(norm_query, history_turns, org, workspace_id))
         chunks = search_relevant_chunks(search_query, assistant_id=assistant_id, top_k=top_k)
 
     user_content = "\n\n".join(p for p in [
@@ -811,6 +814,7 @@ def _prepare_turn(query: str, assistant_id: str, conversation_history: Optional[
         "query": query,
         "norm_query": norm_query,
         "search_query": search_query,
+        "workspace_id": workspace_id,
     }
 
 
@@ -864,7 +868,8 @@ def generate_grounded_response(
         return plan["final"]
     meta: Dict[str, Any] = {}
     try:
-        raw = llm.chat(plan["messages"], temperature=ANSWER_TEMPERATURE, max_tokens=ANSWER_MAX_TOKENS, meta=meta)
+        raw = llm.chat(plan["messages"], temperature=ANSWER_TEMPERATURE, max_tokens=ANSWER_MAX_TOKENS, meta=meta,
+                       workspace_id=plan["workspace_id"])
     except Exception as e:
         print(f"All LLM providers failed: {e}. Falling back to local extractor.")
         return _local_fallback(plan)
@@ -899,7 +904,8 @@ def stream_grounded_response(
     raw, shown = "", ""
     meta: Dict[str, Any] = {}
     try:
-        for piece in llm.stream_chat(plan["messages"], temperature=ANSWER_TEMPERATURE, max_tokens=ANSWER_MAX_TOKENS, meta=meta):
+        for piece in llm.stream_chat(plan["messages"], temperature=ANSWER_TEMPERATURE, max_tokens=ANSWER_MAX_TOKENS,
+                                     meta=meta, workspace_id=plan["workspace_id"]):
             raw += piece
             visible = _visible_text(raw)
             if visible.startswith(shown) and len(visible) > len(shown):
@@ -926,7 +932,7 @@ Use exactly these bullets:
 Be specific to this conversation and concise. Don't invent facts that aren't in the chat."""
 
 
-def generate_call_prep_brief(conversation_history: List[Dict[str, Any]]) -> str:
+def generate_call_prep_brief(conversation_history: List[Dict[str, Any]], assistant_id: Optional[str] = None) -> str:
     """
     Signature AnswerWeave feature: Generates an AI Call-Prep Brief for the sales team.
     Includes Intent, Pain Points, and Recommended Talking Points for follow-up.
@@ -941,13 +947,15 @@ def generate_call_prep_brief(conversation_history: List[Dict[str, Any]]) -> str:
         for m in conversation_history[-12:] if m.get("role") != "system"
     )
 
-    if llm.is_configured():
+    workspace_id = ((get_assistant(assistant_id) or {}).get("workspace_id") or None) if assistant_id else None
+    if llm.is_configured(workspace_id):
         try:
             return llm.chat(
                 [{"role": "system", "content": CALL_PREP_SYSTEM_PROMPT},
                  {"role": "user", "content": f"Transcript:\n{transcript}"}],
                 temperature=0.3,
                 max_tokens=600,
+                workspace_id=workspace_id,
             )
         except Exception as e:
             print(f"Error generating LLM call-prep brief: {e}")

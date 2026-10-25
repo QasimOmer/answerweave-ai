@@ -188,11 +188,23 @@
             </button>
         </div>
 
+        <!-- Workspace switcher -->
+        <div class="px-3 pt-3">
+            <div class="flex items-center justify-between px-1 mb-2">
+                <label for="workspaceSelector" class="text-[11px] font-medium text-slate-500">Workspace</label>
+                <span id="workspaceRoleBadge" class="text-[11px] px-1.5 py-0.5 rounded-md bg-white/5 text-slate-400 capitalize"></span>
+            </div>
+            <div class="relative">
+                <select id="workspaceSelector" onchange="onWorkspaceChange(this.value)" class="glass-input w-full text-[13px] font-medium rounded-lg pl-3 pr-8 py-2 cursor-pointer appearance-none truncate"></select>
+                <i data-lucide="chevrons-up-down" class="w-3.5 h-3.5 text-slate-500 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2"></i>
+            </div>
+        </div>
+
         <!-- Assistant switcher -->
         <div class="p-3 border-b border-white/7">
             <div class="flex items-center justify-between px-1 mb-2">
                 <label for="assistantSelector" class="text-[11px] font-medium text-slate-500">Assistant</label>
-                <button onclick="openNewAssistantModal()" class="text-[12px] font-medium text-slate-400 hover:text-white flex items-center gap-1 px-1.5 py-0.5 rounded-md hover:bg-white/5 transition">
+                <button onclick="openNewAssistantModal()" data-requires="manage" class="text-[12px] font-medium text-slate-400 hover:text-white flex items-center gap-1 px-1.5 py-0.5 rounded-md hover:bg-white/5 transition">
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i> New
                 </button>
             </div>
@@ -225,7 +237,7 @@
             </button>
 
             <div class="nav-section">Train</div>
-            <button onclick="switchTab('knowledge')" id="nav-knowledge" class="nav-btn w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] font-medium transition text-left">
+            <button onclick="switchTab('knowledge')" id="nav-knowledge" data-requires="manage" class="nav-btn w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] font-medium transition text-left">
                 <i data-lucide="library" class="w-4 h-4"></i>
                 <span>Knowledge base</span>
             </button>
@@ -236,13 +248,17 @@
             </button>
 
             <div class="nav-section">Deploy</div>
-            <button onclick="switchTab('widget')" id="nav-widget" class="nav-btn w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] font-medium transition text-left">
+            <button onclick="switchTab('widget')" id="nav-widget" data-requires="manage" class="nav-btn w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] font-medium transition text-left">
                 <i data-lucide="app-window" class="w-4 h-4"></i>
                 <span>Widget studio</span>
             </button>
 
             <div class="nav-section">Workspace</div>
-            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] font-medium transition text-left">
+            <button onclick="switchTab('team')" id="nav-team" class="nav-btn w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] font-medium transition text-left">
+                <i data-lucide="users-round" class="w-4 h-4"></i>
+                <span>Team</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" data-requires="manage" class="nav-btn w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-lg text-[13px] font-medium transition text-left">
                 <i data-lucide="cpu" class="w-4 h-4"></i>
                 <span>AI engine &amp; keys</span>
             </button>
@@ -373,7 +389,7 @@
 
                     <!-- Quick actions -->
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                        <button onclick="switchTab('knowledge')" class="glass-panel rounded-xl p-3.5 flex items-center gap-3 text-left group">
+                        <button data-requires="manage" onclick="switchTab('knowledge')" class="glass-panel rounded-xl p-3.5 flex items-center gap-3 text-left group">
                             <span class="w-8 h-8 rounded-lg bg-white/[0.05] text-slate-300 group-hover:text-white flex items-center justify-center shrink-0"><i data-lucide="upload" class="w-4 h-4"></i></span>
                             <span class="min-w-0">
                                 <span class="block text-[13px] font-medium text-white truncate">Add knowledge</span>
@@ -394,7 +410,7 @@
                                 <span class="block text-[12px] text-slate-500 truncate">Take over a conversation</span>
                             </span>
                         </button>
-                        <button onclick="switchTab('widget')" class="glass-panel rounded-xl p-3.5 flex items-center gap-3 text-left group">
+                        <button data-requires="manage" onclick="switchTab('widget')" class="glass-panel rounded-xl p-3.5 flex items-center gap-3 text-left group">
                             <span class="w-8 h-8 rounded-lg bg-white/[0.05] text-slate-300 group-hover:text-white flex items-center justify-center shrink-0"><i data-lucide="code-xml" class="w-4 h-4"></i></span>
                             <span class="min-w-0">
                                 <span class="block text-[13px] font-medium text-white truncate">Install widget</span>
@@ -1575,6 +1591,77 @@
                 </section>
 
                 <!-- ================= TAB 7: PLAN & BILLING ================= -->
+                <section id="tab-team" class="tab-pane hidden space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                        <div>
+                            <h1 class="text-xl font-semibold tracking-tight text-white">Team</h1>
+                            <p class="text-[13px] text-slate-400 mt-1">Who can use <span id="teamWorkspaceName" class="text-slate-200">this workspace</span>, and what they can do.</p>
+                        </div>
+                        <button type="button" onclick="createWorkspace()" class="self-start sm:self-auto h-8 px-3 rounded-lg text-[12.5px] text-slate-200 font-medium border border-white/10 hover:bg-white/5 transition flex items-center gap-1.5">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> New workspace
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                        <div class="xl:col-span-2 glass-panel rounded-xl overflow-hidden">
+                            <div class="px-5 py-4 border-b border-white/7">
+                                <h2 class="text-[14px] font-semibold text-white">Members</h2>
+                                <p class="text-[12.5px] text-slate-500 mt-0.5">Owners manage everything. Admins manage assistants, knowledge, keys and invites. Agents handle the inbox, leads and knowledge gaps.</p>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-[13px]">
+                                    <thead class="text-[11.5px] text-slate-500 uppercase tracking-wider">
+                                        <tr><th class="px-5 py-2.5 font-medium">Person</th><th class="px-5 py-2.5 font-medium">Role</th><th class="px-5 py-2.5 font-medium text-right">Actions</th></tr>
+                                    </thead>
+                                    <tbody id="teamMembersBody" class="divide-y divide-white/5">
+                                        <tr><td colspan="3" class="px-5 py-6 text-slate-500">Loading…</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="glass-panel rounded-xl p-5" data-requires="manage">
+                                <h2 class="text-[14px] font-semibold text-white">Invite someone</h2>
+                                <form id="inviteForm" class="mt-3 space-y-3">
+                                    <div>
+                                        <label for="inviteEmail" class="block text-xs font-semibold text-slate-300 mb-1">Email</label>
+                                        <input type="email" id="inviteEmail" required placeholder="teammate@company.com" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label for="inviteRole" class="block text-xs font-semibold text-slate-300 mb-1">Role</label>
+                                        <select id="inviteRole" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                            <option value="agent">Agent</option>
+                                            <option value="admin">Admin</option>
+                                            <option value="owner" data-requires="owner">Owner</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="w-full h-9 rounded-lg text-[12.5px] font-medium text-white bg-brand-500/90 hover:bg-brand-500 transition">Send invite</button>
+                                </form>
+                                <div id="inviteResult" class="hidden mt-3 text-[12px] text-slate-400 space-y-2"></div>
+                            </div>
+
+                            <div class="glass-panel rounded-xl p-5" data-requires="manage">
+                                <h2 class="text-[14px] font-semibold text-white">Pending invites</h2>
+                                <div id="pendingInvites" class="mt-3 space-y-2 text-[12.5px] text-slate-400">None.</div>
+                            </div>
+
+                            <div class="glass-panel rounded-xl p-5 space-y-3">
+                                <h2 class="text-[14px] font-semibold text-white">Workspace</h2>
+                                <form id="workspaceNameForm" class="flex gap-2" data-requires="manage">
+                                    <label for="workspaceNameInput" class="sr-only">Workspace name</label>
+                                    <input id="workspaceNameInput" maxlength="80" class="glass-input flex-1 min-w-0 text-xs rounded-xl px-3 py-2 outline-none" />
+                                    <button type="submit" class="h-8 px-3 rounded-lg text-[12.5px] text-slate-200 font-medium border border-white/10 hover:bg-white/5 transition">Rename</button>
+                                </form>
+                                <div class="flex flex-wrap gap-2 pt-1">
+                                    <button type="button" onclick="leaveWorkspace()" class="h-8 px-3 rounded-lg text-[12.5px] text-slate-300 font-medium border border-white/10 hover:bg-white/5 transition">Leave workspace</button>
+                                    <button type="button" onclick="deleteWorkspace()" data-requires="owner" class="h-8 px-3 rounded-lg text-[12.5px] text-rose-300 font-medium border border-rose-500/30 hover:bg-rose-500/10 transition">Delete workspace</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <section id="tab-billing" class="tab-pane hidden space-y-6">
                     <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
                         <div>
@@ -1734,6 +1821,20 @@
                                     </div>
                                 </div>
 
+                                <div id="cfgScopeRow" class="hidden">
+                                    <label for="cfgScope" class="block text-xs font-semibold text-slate-300 mb-1">Editing</label>
+                                    <select id="cfgScope" onchange="loadGlobalSettings()" class="glass-input w-full text-xs font-semibold rounded-xl px-3.5 py-2.5 outline-none cursor-pointer">
+                                        <option value="workspace">This workspace</option>
+                                        <option value="platform">Platform keys (fallback for every workspace)</option>
+                                    </select>
+                                </div>
+                                <label id="cfgPlatformKeysRow" class="flex items-start gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/8 cursor-pointer">
+                                    <input type="checkbox" id="cfgUsePlatformKeys" class="mt-0.5 accent-[#4677ff]" />
+                                    <span>
+                                        <span class="block text-xs font-semibold text-white">Use platform keys when this workspace has none</span>
+                                        <span id="cfgPlatformKeysNote" class="block text-[11.5px] text-slate-400 mt-0.5">Keys you save below always take priority.</span>
+                                    </span>
+                                </label>
                                 <form id="globalAiForm" class="space-y-4">
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-300 mb-1">Active Model / Engine</label>
@@ -2284,10 +2385,19 @@
         function getAuthToken() {
             try { return localStorage.getItem(AUTH_TOKEN_KEY) || ''; } catch (e) { return ''; }
         }
+        // The workspace the dashboard acts in; sent as X-Workspace-Id on every API call.
+        const WORKSPACE_KEY = 'aw_workspace';
+        function getWorkspaceId() {
+            try { return localStorage.getItem(WORKSPACE_KEY) || ''; } catch (e) { return ''; }
+        }
+        function setWorkspaceId(id) {
+            try { id ? localStorage.setItem(WORKSPACE_KEY, id) : localStorage.removeItem(WORKSPACE_KEY); } catch (e) {}
+        }
         function redirectToLogin() {
             try {
                 localStorage.removeItem(AUTH_TOKEN_KEY);
                 localStorage.removeItem('aw_user');
+                localStorage.removeItem(WORKSPACE_KEY);
             } catch (e) {}
             window.location.replace('/?login=1');
         }
@@ -2301,6 +2411,8 @@
                 const headers = new Headers(init.headers || {});
                 const token = getAuthToken();
                 if (token) headers.set('Authorization', `Bearer ${token}`);
+                const workspaceId = getWorkspaceId();
+                if (workspaceId && !headers.has('X-Workspace-Id')) headers.set('X-Workspace-Id', workspaceId);
                 init = { ...init, headers };
             }
             const res = await nativeFetch(input, init);
@@ -2408,6 +2520,7 @@
             widget: 'Widget studio',
             settings: 'AI engine & keys',
             billing: 'Plan & billing',
+            team: 'Team',
         };
 
         function toggleSidebar(open) {
@@ -2468,18 +2581,21 @@
             if (tab === 'leads') loadLeads();
             if (tab === 'widget') renderEmbedCode();
             if (tab === 'billing') loadSubscription();
+            if (tab === 'team') loadTeam();
             
             setTimeout(refreshIcons, 50);
         }
 
         async function initDashboard() {
+            await initWorkspace();
             await loadAssistants();
             await loadGlobalSettings();
             await loadSubscription();
 
             const hashTab = (window.location.hash || '').replace('#', '');
-            const validTabs = ['analytics', 'knowledge', 'inbox', 'gaps', 'leads', 'widget', 'billing', 'settings'];
-            if (validTabs.includes(hashTab)) {
+            const validTabs = ['analytics', 'knowledge', 'inbox', 'gaps', 'leads', 'widget', 'billing', 'settings', 'team'];
+            const navBtn = document.getElementById(`nav-${hashTab}`);
+            if (validTabs.includes(hashTab) && !(navBtn && navBtn.classList.contains('hidden'))) {
                 switchTab(hashTab);
             } else {
                 switchTab('analytics');
@@ -2502,6 +2618,13 @@
                 } else if (!assistantsList.some(a => a.id === currentAssistantId) && assistantsList.length > 0) {
                     const withData = assistantsList.find(a => (a.total_leads > 0 || a.total_sources > 0 || a.total_messages > 0));
                     currentAssistantId = withData ? withData.id : assistantsList[0].id;
+                }
+
+                if (!assistantsList.length) {
+                    currentAssistantId = '';
+                    selector.innerHTML = '<option value="">No assistants yet</option>';
+                    if (window.workspaceRole !== 'agent') setTimeout(openNewAssistantModal, 400);
+                    return;
                 }
 
                 selector.innerHTML = assistantsList.map(a => `
@@ -4784,6 +4907,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ plan_key: planKey })
                 });
+                if (res.status === 403) {
+                    showToast('Plan changes are handled by the AnswerWeave team for now. Contact support to switch.', 'alert-circle');
+                    return;
+                }
                 if (!res.ok) throw new Error('Status ' + res.status);
                 const data = await res.json();
                 const name = (data.subscription && data.subscription.plan_name) || planKey;
@@ -4796,10 +4923,35 @@
             }
         }
 
+        const KEY_INPUTS = {
+            openrouter: ['cfgOpenRouterKey', 'OpenRouter Key'], siliconflow: ['cfgSiliconFlowKey', 'SiliconFlow Key'],
+            deepseek: ['cfgDeepSeekKey', 'DeepSeek Key'], qwen: ['cfgQwenKey', 'Qwen DashScope Key'],
+            groq: ['cfgGroqKey', 'Groq Key'], gemini: ['cfgGeminiKey', 'Gemini Key'], openai: ['cfgOpenAIKey', 'OpenAI Key'],
+        };
+        function settingsScope() {
+            const el = document.getElementById('cfgScope');
+            return el && el.value === 'platform' ? 'platform' : 'workspace';
+        }
+
         async function loadGlobalSettings() {
+            if (window.workspaceRole === 'agent') return;
             try {
-                const res = await fetch('/api/settings');
+                const res = await fetch(settingsScope() === 'platform' ? '/api/settings?scope=platform' : '/api/settings');
+                if (!res.ok) return;
                 const cfg = await res.json();
+                document.getElementById('cfgScopeRow').classList.toggle('hidden', !(cfg.can_edit_platform || cfg.scope === 'platform'));
+                const platformRow = document.getElementById('cfgPlatformKeysRow');
+                platformRow.classList.toggle('hidden', cfg.scope === 'platform');
+                if (cfg.scope !== 'platform') {
+                    document.getElementById('cfgUsePlatformKeys').checked = cfg.uses_platform_keys !== false;
+                    const offered = Object.entries(cfg.platform_keys || {}).filter(([, on]) => on).map(([p]) => KEY_INPUTS[p] ? KEY_INPUTS[p][1].replace(' Key', '') : p);
+                    document.getElementById('cfgPlatformKeysNote').innerText = offered.length
+                        ? `Platform provides: ${offered.join(', ')}. Keys you save below always take priority.`
+                        : 'The platform has no keys set, so this workspace needs its own. Keys you save below always take priority.';
+                }
+                // Reset placeholders so switching scope or workspace never shows another one's saved state.
+                Object.values(KEY_INPUTS).forEach(([id]) => { const el = document.getElementById(id); if (el) { el.value = ''; el.placeholder = 'Paste API key…'; } });
+                if (cfg.llm_provider_choice) document.getElementById('cfgProvider').value = cfg.llm_provider_choice;
                 if (cfg.llm_provider || cfg.active_provider) {
                     document.getElementById('cfgProvider').value = cfg.llm_provider || cfg.active_provider;
                 }
@@ -4884,6 +5036,8 @@
             const openaiKey = document.getElementById('cfgOpenAIKey').value.trim();
 
             const payload = { llm_provider: provider };
+            if (settingsScope() === 'platform') payload.scope = 'platform';
+            else payload.use_platform_keys = document.getElementById('cfgUsePlatformKeys').checked;
             if (openrouterKey) payload.openrouter_api_key = openrouterKey;
             if (siliconflowKey) payload.siliconflow_api_key = siliconflowKey;
             if (deepseekKey) payload.deepseek_api_key = deepseekKey;
@@ -4899,7 +5053,7 @@
                     body: JSON.stringify(payload)
                 });
                 if (!res.ok) throw new Error("Failed to save settings");
-                showToast("AI inference settings saved");
+                showToast(settingsScope() === 'platform' ? "Platform keys saved" : "Workspace AI settings saved");
                 loadGlobalSettings();
             } catch (err) {
                 alert("Error saving settings: " + err.message);
@@ -5006,6 +5160,188 @@
                 btn.innerText = "Delete Project";
             }
         }
+
+        // ---- Workspaces and team
+        window.workspaceRole = 'owner';
+        const ROLE_RANK = { owner: 0, admin: 1, agent: 2 };
+
+        async function initWorkspace() {
+            try {
+                const res = await fetch('/api/auth/me');
+                if (!res.ok) return;
+                const me = await res.json();
+                window.currentUser = { ...(window.currentUser || {}), ...me };
+                window.workspaces = me.workspaces || [];
+                window.workspaceRole = me.workspace_role || 'agent';
+                if (me.current_workspace_id && me.current_workspace_id !== getWorkspaceId()) {
+                    // Stored workspace was removed or we lost access; reset per-workspace selections.
+                    setWorkspaceId(me.current_workspace_id);
+                    localStorage.removeItem('wf_selected_asst_id');
+                }
+                const selector = document.getElementById('workspaceSelector');
+                selector.innerHTML = window.workspaces.map(w =>
+                    `<option value="${escapeHtml(w.id)}" style="background-color:#0b0f17;color:#f1f5f9">${escapeHtml(w.name)}</option>`).join('');
+                selector.value = me.current_workspace_id || '';
+                document.getElementById('workspaceRoleBadge').innerText = me.is_platform_admin && !window.workspaces.some(w => w.id === me.current_workspace_id && w.role !== 'owner') ? 'platform admin' : window.workspaceRole;
+                applyRoleUI();
+            } catch (err) {
+                console.error('Workspace load error:', err);
+            }
+        }
+
+        function applyRoleUI() {
+            const role = window.workspaceRole;
+            document.querySelectorAll('[data-requires]').forEach(el => {
+                const need = el.dataset.requires;
+                const allowed = need === 'owner' ? role === 'owner' : (need === 'manage' ? role === 'owner' || role === 'admin' : true);
+                el.classList.toggle('hidden', !allowed);
+                if (el.tagName === 'OPTION') el.disabled = !allowed;
+            });
+        }
+
+        function onWorkspaceChange(id) {
+            if (!id || id === getWorkspaceId()) return;
+            setWorkspaceId(id);
+            localStorage.removeItem('wf_selected_asst_id');
+            window.location.hash = '#analytics';
+            window.location.reload();
+        }
+
+        async function createWorkspace() {
+            const name = (prompt('Name for the new workspace (e.g. a client or brand):') || '').trim();
+            if (!name) return;
+            const res = await fetch('/api/workspaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { showToast(data.detail || 'Could not create the workspace', 'alert-circle'); return; }
+            onWorkspaceChange(data.workspace.id);
+        }
+
+        async function loadTeam() {
+            const role = window.workspaceRole;
+            const canManage = role === 'owner' || role === 'admin';
+            try {
+                const [wsRes, membersRes, invitesRes] = await Promise.all([
+                    fetch('/api/workspace'), fetch('/api/workspace/members'),
+                    canManage ? fetch('/api/workspace/invites') : Promise.resolve(null),
+                ]);
+                const ws = await wsRes.json();
+                document.getElementById('teamWorkspaceName').innerText = ws.name || 'this workspace';
+                document.getElementById('workspaceNameInput').value = ws.name || '';
+                const { members = [] } = await membersRes.json();
+                renderMembers(members, canManage);
+                if (invitesRes && invitesRes.ok) renderInvites((await invitesRes.json()).invites || []);
+            } catch (err) {
+                console.error('Team load error:', err);
+            }
+            refreshIcons();
+        }
+
+        function renderMembers(members, canManage) {
+            const me = window.currentUser || {};
+            const myRole = window.workspaceRole;
+            const body = document.getElementById('teamMembersBody');
+            body.innerHTML = members.map(m => {
+                const isMe = m.id === me.id;
+                // Only owners can touch owners or hand out ownership.
+                const editable = canManage && !isMe && (myRole === 'owner' || m.role !== 'owner');
+                const roleCell = editable
+                    ? `<select onchange="changeMemberRole('${escapeHtml(m.id)}', this.value)" aria-label="Role for ${escapeHtml(m.email)}" class="glass-input text-xs rounded-lg px-2 py-1 cursor-pointer">
+                        ${['owner', 'admin', 'agent'].filter(r => myRole === 'owner' || r !== 'owner').map(r => `<option value="${r}" ${r === m.role ? 'selected' : ''}>${r[0].toUpperCase() + r.slice(1)}</option>`).join('')}
+                       </select>`
+                    : `<span class="capitalize text-slate-300">${escapeHtml(m.role)}</span>`;
+                const limited = m.role === 'agent' && m.assistant_ids && m.assistant_ids.length
+                    ? `<div class="text-[11.5px] text-slate-500 mt-0.5">Limited to ${m.assistant_ids.length} assistant${m.assistant_ids.length === 1 ? '' : 's'}</div>` : '';
+                const online = (Date.now() / 1000 - (m.last_seen_epoch || 0)) < 120;
+                return `<tr>
+                    <td class="px-5 py-3">
+                        <div class="flex items-center gap-2 text-slate-100">${escapeHtml(m.name || m.email)}${isMe ? ' <span class="text-[11px] text-slate-500">(you)</span>' : ''}${online ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Online"></span>' : ''}</div>
+                        <div class="text-[12px] text-slate-500">${escapeHtml(m.email)}</div>${limited}
+                    </td>
+                    <td class="px-5 py-3">${roleCell}</td>
+                    <td class="px-5 py-3 text-right">${editable ? `<button onclick="removeMember('${escapeHtml(m.id)}', '${escapeHtml(m.email)}')" class="text-[12.5px] text-rose-300 hover:text-rose-200">Remove</button>` : ''}</td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="3" class="px-5 py-6 text-slate-500">No members.</td></tr>';
+        }
+
+        function renderInvites(invites) {
+            const box = document.getElementById('pendingInvites');
+            box.innerHTML = invites.length ? invites.map(i => `
+                <div class="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] border border-white/7 px-3 py-2">
+                    <div class="min-w-0"><div class="text-slate-200 truncate">${escapeHtml(i.email)}</div><div class="text-[11.5px] text-slate-500 capitalize">${escapeHtml(i.role)}</div></div>
+                    <button onclick="revokeInvite('${escapeHtml(i.id)}')" class="text-[12px] text-slate-400 hover:text-rose-300 shrink-0">Revoke</button>
+                </div>`).join('') : 'None.';
+        }
+
+        async function teamRequest(url, options, okMessage) {
+            const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { showToast(data.detail || 'Something went wrong', 'alert-circle'); loadTeam(); return null; }
+            if (okMessage) showToast(okMessage);
+            return data;
+        }
+
+        async function changeMemberRole(userId, role) {
+            if (await teamRequest(`/api/workspace/members/${encodeURIComponent(userId)}`, { method: 'PATCH', body: JSON.stringify({ role }) }, 'Role updated')) loadTeam();
+        }
+
+        async function removeMember(userId, email) {
+            if (!confirm(`Remove ${email} from this workspace?`)) return;
+            if (await teamRequest(`/api/workspace/members/${encodeURIComponent(userId)}`, { method: 'DELETE' }, 'Removed from workspace')) loadTeam();
+        }
+
+        async function revokeInvite(inviteId) {
+            if (await teamRequest(`/api/workspace/invites/${encodeURIComponent(inviteId)}`, { method: 'DELETE' }, 'Invite revoked')) loadTeam();
+        }
+
+        async function leaveWorkspace() {
+            const me = window.currentUser || {};
+            if (!confirm('Leave this workspace? You will lose access to its assistants.')) return;
+            if (await teamRequest(`/api/workspace/members/${encodeURIComponent(me.id)}`, { method: 'DELETE' }, 'You left the workspace')) {
+                setWorkspaceId('');
+                localStorage.removeItem('wf_selected_asst_id');
+                window.location.reload();
+            }
+        }
+
+        async function deleteWorkspace() {
+            const name = document.getElementById('workspaceNameInput').value;
+            const typed = prompt(`This permanently deletes "${name}", its assistants, knowledge, conversations and leads.\n\nType the workspace name to confirm:`);
+            if (typed === null) return;
+            if (typed.trim() !== name.trim()) { showToast('The name did not match, nothing was deleted', 'alert-circle'); return; }
+            if (await teamRequest('/api/workspace', { method: 'DELETE' }, 'Workspace deleted')) {
+                setWorkspaceId('');
+                localStorage.removeItem('wf_selected_asst_id');
+                window.location.reload();
+            }
+        }
+
+        document.getElementById('inviteForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('inviteEmail').value.trim();
+            const role = document.getElementById('inviteRole').value;
+            const data = await teamRequest('/api/workspace/invites', { method: 'POST', body: JSON.stringify({ email, role }) });
+            if (!data) return;
+            document.getElementById('inviteEmail').value = '';
+            const result = document.getElementById('inviteResult');
+            result.classList.remove('hidden');
+            result.innerHTML = `
+                <p>${data.email_sent ? `Invite emailed to ${escapeHtml(email)}.` : `Email isn't set up, so share this link with ${escapeHtml(email)} yourself:`} The link works for 7 days.</p>
+                <div class="flex gap-2">
+                    <input readonly value="${escapeHtml(data.invite_link)}" aria-label="Invite link" class="glass-input flex-1 min-w-0 font-mono text-[11px] rounded-lg px-2 py-1.5" />
+                    <button type="button" class="h-7 px-2.5 rounded-lg text-[12px] text-slate-200 border border-white/10 hover:bg-white/5" onclick="navigator.clipboard.writeText(this.previousElementSibling.value).then(() => showToast('Invite link copied'))">Copy</button>
+                </div>`;
+            loadTeam();
+        });
+
+        document.getElementById('workspaceNameForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('workspaceNameInput').value.trim();
+            if (!name) return;
+            if (await teamRequest('/api/workspace', { method: 'PATCH', body: JSON.stringify({ name }) }, 'Workspace renamed')) {
+                await initWorkspace();
+                loadTeam();
+            }
+        });
 
         function initAdminAuth() {
             const rawUser = localStorage.getItem('aw_user');

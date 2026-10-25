@@ -6,8 +6,9 @@ Authentication and authorization for the AnswerWeave admin API.
   every existing session.
 - A single middleware (`auth_middleware`) guards every /api route according to
   ROUTE_RULES, so new endpoints are private unless explicitly listed as public.
-- Tenancy: users with role "admin" can access everything; other users only the
-  assistants assigned to them in `user_assistants`.
+- Tenancy: data belongs to workspaces. Members act as owner, admin or agent in
+  the workspace the dashboard selects (X-Workspace-Id). users.role = "admin" is
+  the platform operator and can open every workspace.
 """
 import base64
 import hashlib
@@ -26,7 +27,12 @@ from app.db import (
     get_db,
     get_setting,
     set_setting,
-    get_user_assigned_assistants,
+    get_workspace,
+    get_member_role,
+    list_user_workspaces,
+    assistant_workspace_id,
+    visible_assistant_ids,
+    MANAGER_ROLES,
 )
 
 TOKEN_TTL_SECONDS = 7 * 24 * 3600
@@ -119,21 +125,109 @@ def user_from_token(token: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+# ----------------------------------------------------------------------------
+# One-purpose links (password reset, email verification)
+# ----------------------------------------------------------------------------
+RESET_TTL_SECONDS = 3600
+VERIFY_TTL_SECONDS = 7 * 24 * 3600
+
+
+def create_purpose_token(user_id: str, purpose: str, ttl_seconds: int) -> str:
+    """Signed link token bound to one purpose. Reset tokens also embed the password
+    fingerprint, so a link stops working as soon as it has been used."""
+    row = _load_user_row(user_id)
+    if not row:
+        raise ValueError("Unknown user")
+    payload = {"uid": user_id, "use": purpose, "exp": int(time.time()) + ttl_seconds, "em": row["email"]}
+    if purpose == "reset":
+        payload["pv"] = _password_fingerprint(row["password_hash"])
+    body = _b64e(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+    sig = _b64e(hmac.new(_auth_secret(), f"{purpose}.{body}".encode("ascii"), hashlib.sha256).digest())
+    return f"{body}.{sig}"
+
+
+def read_purpose_token(token: str, purpose: str) -> Optional[Dict[str, Any]]:
+    """The user row for a valid, unexpired token of this purpose, else None."""
+    try:
+        body, sig = (token or "").split(".", 1)
+        expected = _b64e(hmac.new(_auth_secret(), f"{purpose}.{body}".encode("ascii"), hashlib.sha256).digest())
+        if not hmac.compare_digest(sig, expected):
+            return None
+        payload = json.loads(_b64d(body))
+        if payload.get("use") != purpose or int(payload.get("exp", 0)) < time.time():
+            return None
+        row = _load_user_row(payload.get("uid", ""))
+        if not row or row["email"] != payload.get("em"):
+            return None
+        if purpose == "reset" and payload.get("pv") != _password_fingerprint(row["password_hash"]):
+            return None
+        row.pop("password_hash", None)
+        return row
+    except Exception:
+        return None
+
+
 def is_admin(user: Optional[Dict[str, Any]]) -> bool:
+    """Platform operator (users.role = 'admin'): can open every workspace."""
     return bool(user) and (user.get("role") or "").lower() == "admin"
 
 
-def can_access_assistant(user: Optional[Dict[str, Any]], assistant_id: Optional[str]) -> bool:
+def resolve_workspace(user: Optional[Dict[str, Any]], requested: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+    """The workspace a request acts in, and the user's role there.
+
+    The dashboard sends X-Workspace-Id; without it (or if the user isn't a member)
+    the user's first workspace is used. Platform admins act as owner anywhere.
+    """
+    if not user:
+        return None, None
+    requested = (requested or "").strip()
+    if requested:
+        if is_admin(user) and get_workspace(requested):
+            return requested, "owner"
+        role = get_member_role(requested, user["id"])
+        if role:
+            return requested, role
+    memberships = list_user_workspaces(user["id"])
+    if memberships:
+        return memberships[0]["id"], memberships[0]["role"]
+    if is_admin(user):
+        default_ws = get_setting("default_workspace_id", "")
+        if default_ws and get_workspace(default_ws):
+            return default_ws, "owner"
+    return None, None
+
+
+def workspace_role_for(user: Optional[Dict[str, Any]], workspace_id: Optional[str]) -> Optional[str]:
+    if not user or not workspace_id:
+        return None
+    if is_admin(user):
+        return "owner"
+    return get_member_role(workspace_id, user["id"])
+
+
+def can_access_assistant(user: Optional[Dict[str, Any]], assistant_id: Optional[str], need: str = "view") -> bool:
+    """need='view' for reading and inbox work, 'manage' for changing the assistant or its knowledge."""
     if not user or not assistant_id:
         return False
     if is_admin(user):
         return True
-    return assistant_id in set(get_user_assigned_assistants(user["id"]))
+    workspace_id = assistant_workspace_id(assistant_id)
+    role = workspace_role_for(user, workspace_id)
+    if not role:
+        return False
+    if need == "manage" and role not in MANAGER_ROLES:
+        return False
+    if role == "agent":
+        return assistant_id in visible_assistant_ids(workspace_id, user["id"], role)
+    return True
 
 
-def accessible_assistant_ids(user: Dict[str, Any]) -> Optional[List[str]]:
-    """None means 'all' (admin)."""
-    return None if is_admin(user) else get_user_assigned_assistants(user["id"])
+def accessible_assistant_ids(user: Dict[str, Any], workspace_id: Optional[str] = None) -> Optional[List[str]]:
+    """Assistants the user can see in a workspace; None means 'all' (platform admin, no workspace)."""
+    if workspace_id:
+        role = workspace_role_for(user, workspace_id)
+        return visible_assistant_ids(workspace_id, user["id"], role) if role else []
+    return None if is_admin(user) else []
 
 
 # ----------------------------------------------------------------------------
@@ -154,14 +248,20 @@ def _owner(table: str, key_col: str, key_val: Any) -> Optional[str]:
 PUBLIC = "public"            # no login needed
 OPTIONAL = "optional"        # works without login; endpoint may return more when logged in
 USER = "user"                # any signed-in user
-ADMIN = "admin"              # admin role only
+ADMIN = "admin"              # platform admin only
+WS_MEMBER = "ws_member"      # any role in the current workspace
+WS_MANAGE = "ws_manage"      # owner or admin of the current workspace
+WS_OWNER = "ws_owner"        # owner of the current workspace
+
+_WS_LEVEL_ROLES = {WS_MEMBER: ("owner", "admin", "agent"), WS_MANAGE: MANAGER_ROLES, WS_OWNER: ("owner",)}
 
 # (methods, path regex, level, ownership resolver)
 # Ownership resolvers return the assistant_id the request touches (checked for
-# tenant access), or None when there is nothing to check.
+# tenant access), or None when there is nothing to check. Rules are checked in order.
 ROUTE_RULES: List[Tuple[Tuple[str, ...], "re.Pattern", str, Optional[str]]] = [
     # --- Public: auth and the embeddable widget ---
-    (("POST",), re.compile(r"^/api/auth/(login|signup)$"), PUBLIC, None),
+    (("POST",), re.compile(r"^/api/auth/(login|signup|forgot-password|reset-password|verify-email)$"), PUBLIC, None),
+    (("GET",), re.compile(r"^/api/invites/[^/]+$"), PUBLIC, None),
     (("POST",), re.compile(r"^/api/chat(/stream)?$"), PUBLIC, None),
     (("POST",), re.compile(r"^/api/leads?$"), PUBLIC, None),
     # Visitor's own conversation: the unguessable conversation id is the capability.
@@ -173,16 +273,33 @@ ROUTE_RULES: List[Tuple[Tuple[str, ...], "re.Pattern", str, Optional[str]]] = [
     # Plan catalogue for the pricing page (usage only when signed in).
     (("GET",), re.compile(r"^/api/subscription$"), OPTIONAL, None),
 
-    # --- Admin only ---
+    # --- Platform admin only ---
     (("GET", "POST", "PUT", "PATCH", "DELETE"), re.compile(r"^/api/users(/[^/]+)?$"), ADMIN, None),
-    (("GET", "POST"), re.compile(r"^/api/(config|settings)$"), ADMIN, None),
-    (("POST",), re.compile(r"^/api/settings/test-llm$"), ADMIN, None),
+    # Plan changes stay with the platform until self-serve billing exists.
     (("POST",), re.compile(r"^/api/subscription/upgrade$"), ADMIN, None),
 
-    # --- Signed-in users, scoped to their assistants ---
+    # --- Account ---
     (("GET",), re.compile(r"^/api/auth/me$"), USER, None),
-    (("POST",), re.compile(r"^/api/auth/change-password$"), USER, None),
-    (("GET", "POST"), re.compile(r"^/api/assistants$"), USER, None),
+    (("POST",), re.compile(r"^/api/auth/(change-password|resend-verification)$"), USER, None),
+    (("POST",), re.compile(r"^/api/invites/[^/]+/accept$"), USER, None),
+    (("GET", "POST"), re.compile(r"^/api/workspaces$"), USER, None),
+
+    # --- Current workspace (X-Workspace-Id) ---
+    (("GET",), re.compile(r"^/api/workspace$"), WS_MEMBER, None),
+    (("PATCH",), re.compile(r"^/api/workspace$"), WS_MANAGE, None),
+    (("DELETE",), re.compile(r"^/api/workspace$"), WS_OWNER, None),
+    (("GET",), re.compile(r"^/api/workspace/members$"), WS_MEMBER, None),
+    # Members may remove themselves; changing anyone else is checked in the endpoint.
+    (("PATCH", "DELETE"), re.compile(r"^/api/workspace/members/[^/]+$"), WS_MEMBER, None),
+    (("GET", "POST", "DELETE"), re.compile(r"^/api/workspace/invites(/[^/]+)?$"), WS_MANAGE, None),
+    (("GET", "POST"), re.compile(r"^/api/(config|settings)$"), WS_MANAGE, None),
+    (("POST",), re.compile(r"^/api/settings/test-llm$"), WS_MANAGE, None),
+    (("GET",), re.compile(r"^/api/assistants$"), WS_MEMBER, None),
+    (("POST",), re.compile(r"^/api/assistants$"), WS_MANAGE, None),
+    (("GET",), re.compile(r"^/api/inbox/waiting$"), WS_MEMBER, None),
+    (("POST",), re.compile(r"^/api/presence$"), USER, None),
+
+    # --- Per-assistant resources (role checked against the assistant's workspace) ---
     (("POST",), re.compile(r"^/api/assistants/[^/]+/gaps/(?P<gap>\d+)/(resolve|dismiss)$"), USER, "gap"),
     (("DELETE",), re.compile(r"^/api/assistants/[^/]+/gaps/(?P<gap>\d+)$"), USER, "gap"),
     (("GET", "POST", "PUT", "PATCH", "DELETE"), re.compile(r"^/api/assistants/(?P<asst>[^/]+)(/.*)?$"), USER, "asst"),
@@ -190,6 +307,9 @@ ROUTE_RULES: List[Tuple[Tuple[str, ...], "re.Pattern", str, Optional[str]]] = [
     (("PATCH", "POST"), re.compile(r"^/api/leads/(?P<lead>\d+)/status$"), USER, "lead"),
     (("DELETE",), re.compile(r"^/api/sources/(?P<source>\d+)$"), USER, "source"),
 ]
+
+# Writes agents may make on an assistant (knowledge-gap work); every other write needs owner/admin.
+_AGENT_WRITE_PATHS = re.compile(r"^/api/assistants/[^/]+/gaps(/.*)?$")
 
 
 def _match_rule(method: str, path: str):
@@ -215,6 +335,9 @@ async def auth_middleware(request: Request, call_next):
     if auth_header.lower().startswith("bearer "):
         user = user_from_token(auth_header[7:].strip())
     request.state.user = user
+    ws_id, ws_role = resolve_workspace(user, request.headers.get("x-workspace-id"))
+    request.state.workspace_id = ws_id
+    request.state.workspace_role = ws_role
 
     level, resolver, match = _match_rule(request.method, path)
     if level in (PUBLIC, OPTIONAL):
@@ -223,10 +346,18 @@ async def auth_middleware(request: Request, call_next):
         return _deny(401, "Please sign in.")
     if level == ADMIN and not is_admin(user):
         return _deny(403, "Admin access required.")
+    if level in _WS_LEVEL_ROLES:
+        if not ws_id:
+            return _deny(403, "You're not a member of any workspace yet.")
+        if ws_role not in _WS_LEVEL_ROLES[level]:
+            return _deny(403, "Your role in this workspace doesn't allow that.")
 
     if resolver and match:
+        need = "view"
         if resolver == "asst":
             asst_id = match.group("asst")
+            if request.method != "GET" and not _AGENT_WRITE_PATHS.match(path):
+                need = "manage"
         elif resolver == "gap":
             # A gap must belong to the assistant named in the URL.
             gap_owner = _owner("unanswered_questions", "id", int(match.group("gap")))
@@ -240,12 +371,15 @@ async def auth_middleware(request: Request, call_next):
             asst_id = _owner("leads", "id", int(match.group("lead")))
         elif resolver == "source":
             asst_id = _owner("sources", "id", int(match.group("source")))
+            need = "manage"
         else:
             asst_id = None
         if asst_id is None and resolver != "asst":
             return _deny(404, "Not found.")
-        if not can_access_assistant(user, asst_id):
-            return _deny(404 if not is_admin(user) else 403, "Not found.")
+        if not can_access_assistant(user, asst_id, need):
+            if need == "manage" and can_access_assistant(user, asst_id, "view"):
+                return _deny(403, "Your role in this workspace doesn't allow that.")
+            return _deny(404, "Not found.")
 
     return await call_next(request)
 
