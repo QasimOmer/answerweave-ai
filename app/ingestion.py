@@ -299,97 +299,89 @@ def crawl_sitemap(sitemap_url: str, max_urls: int = 100) -> List[str]:
         print(f"Error parsing sitemap {sitemap_url}: {e}")
         return []
 
-def crawl_website(start_url: str, max_pages: int = 50) -> List[Dict[str, str]]:
-    """Crawls an entire website, checking sitemaps and recursive internal links."""
-    parsed_start = urllib.parse.urlparse(start_url)
-    domain = parsed_start.netloc
-    scheme = parsed_start.scheme or "https"
-    base_domain_url = f"{scheme}://{domain}"
+# Excluded URL patterns (admin, feeds, logins, carts, media files)
+EXCLUDE_URL_PATTERN = re.compile(
+    r"(wp-admin|wp-includes|wp-json|xmlrpc|feed|comments|\?add-to-cart|cart|checkout|my-account|login|logout|register|\.(pdf|png|jpg|jpeg|gif|zip|exe|mp4|svg|webp|css|js|woff|woff2|ttf))(\?|$)",
+    re.I
+)
+# Catalog pagination: /page/2, ?page=2, ?p=2, ?paged=2, ?pg=2, offset=10
+PAGINATION_PATTERN = re.compile(r"(/page/\d+|[?&](page|p|paged|pg|offset)=\d+)", re.I)
 
-    visited: Set[str] = set()
-    to_visit: List[str] = [start_url]
-    results: List[Dict[str, str]] = []
 
-    headers = {
-        "User-Agent": DEFAULT_USER_AGENT
-    }
+def normalize_crawl_url(url: str) -> str:
+    return (url or "").split("#")[0].rstrip("/")
 
-    # 1. Probe robots.txt and standard sitemap locations to seed URLs across the whole site
-    sitemap_candidates = [
-        f"{base_domain_url}/sitemap.xml",
-        f"{base_domain_url}/wp-sitemap.xml",
-        f"{base_domain_url}/sitemap_index.xml"
-    ]
+
+def discover_sitemap_urls(start_url: str, max_urls: int = 50) -> List[str]:
+    """Page URLs from the site's sitemap (robots.txt Sitemap: lines first, then the usual locations)."""
+    parsed = urllib.parse.urlparse(start_url)
+    base = f"{parsed.scheme or 'https'}://{parsed.netloc}"
+    candidates = [f"{base}/sitemap.xml", f"{base}/wp-sitemap.xml", f"{base}/sitemap_index.xml"]
     try:
-        robots_resp = requests.get(f"{base_domain_url}/robots.txt", headers=headers, timeout=6)
-        if robots_resp.status_code == 200:
-            for line in robots_resp.text.splitlines():
-                line_str = line.strip()
-                if line_str.lower().startswith("sitemap:"):
-                    sm_url = line_str.split(":", 1)[1].strip()
-                    if sm_url.startswith("http") and sm_url not in sitemap_candidates:
-                        sitemap_candidates.insert(0, sm_url)
+        robots = requests.get(f"{base}/robots.txt", headers={"User-Agent": DEFAULT_USER_AGENT}, timeout=6)
+        if robots.status_code == 200:
+            for line in robots.text.splitlines():
+                if line.strip().lower().startswith("sitemap:"):
+                    sm = line.split(":", 1)[1].strip()
+                    if sm.startswith("http") and sm not in candidates:
+                        candidates.insert(0, sm)
     except Exception:
         pass
+    for candidate in candidates:
+        urls = crawl_sitemap(candidate, max_urls=max_urls)
+        if urls:
+            return [normalize_crawl_url(u) for u in urls]
+    return []
 
-    for sm_candidate in sitemap_candidates:
-        sitemap_urls = crawl_sitemap(sm_candidate, max_urls=max_pages)
-        if sitemap_urls:
-            for u in sitemap_urls:
-                clean_u = u.split("#")[0].rstrip("/")
-                if clean_u not in to_visit and clean_u not in visited:
-                    to_visit.append(clean_u)
-            break
 
-    # Excluded URL patterns (admin, feeds, logins, media)
-    exclude_pattern = re.compile(
-        r"(wp-admin|wp-includes|wp-json|xmlrpc|feed|comments|\?add-to-cart|cart|checkout|my-account|login|logout|register|\.(pdf|png|jpg|jpeg|gif|zip|exe|mp4|svg|webp|css|js|woff|woff2|ttf))(\?|$)",
-        re.I
-    )
-    # Detect pagination patterns: /page/2, ?page=2, ?p=2, ?paged=2, ?pg=2, offset=10
-    pagination_pattern = re.compile(r"(/page/\d+|[?&](page|p|paged|pg|offset)=\d+)", re.I)
+def fetch_page_with_links(url: str, timeout: int = 10) -> Dict[str, Any]:
+    """Fetches one page. Returns {"status": http status or 0, "page": {...} or None, "links": [same-site URLs]}."""
+    try:
+        resp = requests.get(url, headers={"User-Agent": DEFAULT_USER_AGENT}, timeout=timeout, allow_redirects=True)
+    except Exception as e:
+        return {"status": 0, "page": None, "links": [], "error": str(e)[:200]}
+    if resp.status_code != 200 or "text/html" not in resp.headers.get("Content-Type", ""):
+        return {"status": resp.status_code, "page": None, "links": []}
+    parsed = clean_html(resp.text, base_url=url)
+    page = {"url": url, "title": parsed["title"], "content": parsed["content"]} if len(parsed["content"]) > 60 else None
+    domain = urllib.parse.urlparse(url).netloc
+    links: List[str] = []
+    seen: Set[str] = set()
+    for a_tag in BeautifulSoup(resp.text, "html.parser").find_all("a", href=True):
+        resolved = normalize_crawl_url(urllib.parse.urljoin(url, a_tag["href"]))
+        if (resolved and resolved not in seen and urllib.parse.urlparse(resolved).netloc == domain
+                and resolved.startswith("http") and not EXCLUDE_URL_PATTERN.search(resolved)):
+            seen.add(resolved)
+            links.append(resolved)
+    # Catalog pagination first, so every page of products/listings gets indexed.
+    links.sort(key=lambda u: 0 if PAGINATION_PATTERN.search(u) else 1)
+    return {"status": 200, "page": page, "links": links}
 
+
+def crawl_website(start_url: str, max_pages: int = 50) -> List[Dict[str, str]]:
+    """Crawls a whole website in one go (sitemap first, then internal links).
+
+    Request handlers should prefer a background crawl job (app.jobs), which does the
+    same work in resumable steps so large sites don't hit request time limits.
+    """
+    start = normalize_crawl_url(start_url)
+    to_visit: List[str] = [start] + [u for u in discover_sitemap_urls(start_url, max_pages) if u != start]
+    visited: Set[str] = set()
+    results: List[Dict[str, str]] = []
     while to_visit and len(visited) < max_pages:
-        current_url = to_visit.pop(0)
-        current_url = current_url.split("#")[0].rstrip("/")
-        if not current_url or current_url in visited:
+        current = normalize_crawl_url(to_visit.pop(0))
+        if not current or current in visited or EXCLUDE_URL_PATTERN.search(current):
             continue
-
-        if exclude_pattern.search(current_url):
-            continue
-
-        visited.add(current_url)
-
-        try:
-            resp = requests.get(current_url, headers=headers, timeout=10, allow_redirects=True)
-            if resp.status_code != 200 or "text/html" not in resp.headers.get("Content-Type", ""):
-                continue
-
-            parsed_data = clean_html(resp.text, base_url=current_url)
-            if len(parsed_data["content"]) > 60:
-                results.append({
-                    "url": current_url,
-                    "title": parsed_data["title"],
-                    "content": parsed_data["content"]
-                })
-
-            # Discover more internal links
-            if len(visited) < max_pages:
-                soup = BeautifulSoup(resp.text, "html.parser")
-                for a_tag in soup.find_all("a", href=True):
-                    href = a_tag["href"]
-                    resolved = urllib.parse.urljoin(current_url, href).split("#")[0].rstrip("/")
-                    parsed_link = urllib.parse.urlparse(resolved)
-                    if parsed_link.netloc == domain and resolved not in visited and resolved not in to_visit:
-                        if not exclude_pattern.search(resolved):
-                            # Prioritize catalog pagination links so multiple pages of products/listings are indexed
-                            if pagination_pattern.search(resolved):
-                                to_visit.insert(0, resolved)
-                            else:
-                                to_visit.append(resolved)
-        except Exception:
-            continue
-
+        visited.add(current)
+        fetched = fetch_page_with_links(current)
+        if fetched["page"]:
+            results.append(fetched["page"])
+        for link in fetched["links"]:
+            if link not in visited and link not in to_visit:
+                if PAGINATION_PATTERN.search(link):
+                    to_visit.insert(0, link)
+                else:
+                    to_visit.append(link)
     return results
 
 def parse_csv_catalog(file_bytes: bytes, filename: str) -> Dict[str, str]:

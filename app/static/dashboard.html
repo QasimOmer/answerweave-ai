@@ -568,6 +568,53 @@
                         </div>
                     </div>
 
+                    <!-- Website crawling: live progress, history and re-crawl schedule -->
+                    <div class="glass-panel rounded-xl overflow-hidden" data-requires="manage">
+                        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-5 py-4 border-b border-white/7">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="refresh-cw" class="w-4 h-4 text-brand-400"></i>
+                                    <h2 class="text-[14px] font-semibold text-white">Website sync</h2>
+                                    <span id="crawlStatusBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-white/5 text-slate-400">Idle</span>
+                                </div>
+                                <p id="crawlScheduleNote" class="text-[12.5px] text-slate-500 mt-1">Crawls run in the background, so you can leave this page. Re-crawls only re-index pages that changed.</p>
+                            </div>
+                            <form id="recrawlForm" class="flex flex-wrap items-end gap-2">
+                                <div>
+                                    <label for="recrawlFrequency" class="block text-[11px] font-medium text-slate-400 mb-1">Auto re-crawl</label>
+                                    <select id="recrawlFrequency" class="glass-input text-xs rounded-lg px-2.5 py-1.5 cursor-pointer">
+                                        <option value="off">Off</option>
+                                        <option value="daily">Daily</option>
+                                        <option value="weekly">Weekly</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="recrawlMaxPages" class="block text-[11px] font-medium text-slate-400 mb-1">Max pages</label>
+                                    <input id="recrawlMaxPages" type="number" min="1" max="500" class="glass-input w-20 text-xs rounded-lg px-2.5 py-1.5" />
+                                </div>
+                                <button type="submit" class="h-[30px] px-3 rounded-lg text-[12px] text-slate-200 font-medium border border-white/10 hover:bg-white/5 transition">Save</button>
+                                <button type="button" onclick="syncAssistantKnowledge()" class="h-[30px] px-3 rounded-lg text-[12px] font-medium text-white bg-brand-500/90 hover:bg-brand-500 transition">Re-crawl now</button>
+                            </form>
+                        </div>
+                        <div id="crawlActive" class="hidden px-5 py-4 border-b border-white/7">
+                            <div class="flex items-center justify-between gap-3 text-[12.5px]">
+                                <span id="crawlActiveTitle" class="text-slate-200 font-medium truncate">Crawling…</span>
+                                <span class="flex items-center gap-3 shrink-0">
+                                    <span id="crawlActiveCount" class="font-mono text-slate-400"></span>
+                                    <button type="button" onclick="cancelActiveCrawl()" class="text-[12px] text-slate-400 hover:text-rose-300">Cancel</button>
+                                </span>
+                            </div>
+                            <div class="mt-2.5 h-1.5 rounded-full bg-white/[0.06] overflow-hidden" role="progressbar" aria-label="Crawl progress" aria-valuemin="0" aria-valuemax="100" id="crawlProgressTrack">
+                                <div id="crawlProgressBar" class="h-full rounded-full bg-brand-500 transition-all duration-500" style="width: 2%"></div>
+                            </div>
+                            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-slate-500">
+                                <span id="crawlStats"></span>
+                                <span id="crawlCurrentUrl" class="font-mono truncate max-w-full"></span>
+                            </div>
+                        </div>
+                        <div id="crawlHistory" class="px-5 py-3 text-[12.5px] text-slate-500">No crawls yet.</div>
+                    </div>
+
                     <!-- Listings & products the assistant can recommend -->
                     <div id="catalogPanel" class="glass-panel rounded-xl overflow-hidden hidden">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-5 py-4 border-b border-white/7">
@@ -3468,19 +3515,28 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if (!res.ok) {
-                    const errData = await res.json().catch(() => ({}));
-                    throw new Error(errData.detail || "Failed to crawl URL");
+                const data = await res.json().catch(() => ({}));
+                if (res.status === 409 && data.detail && data.detail.job) {
+                    status.className = "mt-3 text-xs text-amber-300 block font-semibold";
+                    status.innerText = 'A crawl is already running for this assistant. Its progress is shown above.';
+                    watchCrawlJob(data.detail.job.id);
+                    return;
                 }
-                const data = await res.json();
-                const pagesCount = data.pages_indexed || (data.sources ? data.sources.length : 1);
-                const chunksCount = data.total_chunks || 0;
-                status.className = "mt-3 text-xs text-emerald-400 block font-semibold";
-                status.innerText = `Crawled ${pagesCount} page(s). Total chunks generated: ${chunksCount}.`;
-                showToast("Web source crawled successfully");
+                if (!res.ok) throw new Error((typeof data.detail === 'string' && data.detail) || "Failed to crawl URL");
                 document.getElementById('urlInput').value = '';
-                loadSources();
-                loadAnalytics();
+                if (data.job) {
+                    status.className = "mt-3 text-xs text-brand-400 block font-semibold";
+                    status.innerText = 'Crawl started in the background. You can keep working; progress is shown above.';
+                    watchCrawlJob(data.job.id);
+                } else {
+                    status.className = "mt-3 text-xs text-emerald-400 block font-semibold";
+                    status.innerText = data.outcome === 'unchanged'
+                        ? 'That page is already indexed and has not changed.'
+                        : `Indexed 1 page (${data.total_chunks || 0} chunks).`;
+                    showToast("Web page indexed");
+                    loadSources();
+                    loadAnalytics();
+                }
             } catch (err) {
                 status.className = "mt-3 text-xs text-rose-400 block font-semibold";
                 status.innerText = `Error: ${err.message || 'Error crawling URL.'}`;
@@ -3534,18 +3590,18 @@
                 btn.innerHTML = `<span class="inline-block animate-spin">⚡</span> <span>Syncing...</span>`;
             }
             try {
-                showToast("Re-crawling active web sources and refreshing vector embeddings...");
                 const res = await fetch(`/api/assistants/${encodeURIComponent(currentAssistantId)}/sync`, {
                     method: 'POST'
                 });
-                const data = await res.json();
-                if (res.ok && data.status === 'success') {
-                    showToast(data.message || `Successfully synced ${data.synced_sources} sources!`);
-                    await loadSources();
-                    if (typeof loadAnalytics === 'function') loadAnalytics();
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.job) {
+                    showToast('Re-crawl started. Unchanged pages are skipped automatically.');
+                    watchCrawlJob(data.job.id);
+                } else if (res.status === 409 && data.detail && data.detail.job) {
+                    showToast('A crawl is already running');
+                    watchCrawlJob(data.detail.job.id);
                 } else {
-                    showToast(data.message || data.detail || "Knowledge sync complete.");
-                    await loadSources();
+                    showToast((typeof data.detail === 'string' && data.detail) || 'Could not start the re-crawl', 'alert-circle');
                 }
             } catch (err) {
                 showToast("Error syncing knowledge: " + err.message);
@@ -3566,10 +3622,178 @@
                 renderKnowledgeStats(sourcesData);
                 loadEmbeddingStatus();
                 loadCatalog();
+                loadCrawlJobs();
             } catch (err) {
                 console.error("Error loading sources:", err);
             }
         }
+
+        // ---- Background website crawls
+        let crawlWatch = null;  // { jobId, assistantId }
+
+        function describeJob(job) {
+            const kinds = { crawl: 'Site crawl', sitemap: 'Sitemap import', resync: job.trigger_type === 'schedule' ? 'Scheduled re-crawl' : 'Re-crawl', page: 'Page import' };
+            return kinds[job.kind] || 'Crawl';
+        }
+
+        function jobStats(job) {
+            const parts = [];
+            if (job.pages_added) parts.push(`${job.pages_added} new`);
+            if (job.pages_updated) parts.push(`${job.pages_updated} updated`);
+            if (job.pages_unchanged) parts.push(`${job.pages_unchanged} unchanged`);
+            if (job.pages_removed) parts.push(`${job.pages_removed} removed`);
+            if (job.pages_failed) parts.push(`${job.pages_failed} failed`);
+            return parts.join(' · ') || 'Starting…';
+        }
+
+        function timeAgo(epoch) {
+            if (!epoch) return '';
+            const s = Math.max(0, Math.round(Date.now() / 1000 - epoch));
+            if (s < 60) return 'just now';
+            if (s < 3600) return `${Math.round(s / 60)}m ago`;
+            if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+            return `${Math.round(s / 86400)}d ago`;
+        }
+
+        function renderActiveJob(job) {
+            const box = document.getElementById('crawlActive');
+            const badge = document.getElementById('crawlStatusBadge');
+            if (!box || !badge) return;
+            const active = job && (job.status === 'queued' || job.status === 'running');
+            box.classList.toggle('hidden', !active);
+            badge.className = `text-[11px] px-2 py-0.5 rounded-full ${active ? 'bg-brand-500/15 text-brand-300' : 'bg-white/5 text-slate-400'}`;
+            badge.innerText = active ? (job.status === 'queued' ? 'Queued' : 'Crawling') : 'Idle';
+            if (!active) return;
+            const total = Math.max(job.max_pages || 1, 1);
+            // The queue can be shorter than the page limit; estimate against whichever ends first.
+            const estimate = Math.min(total, job.pages_done + (job.queue_size || 0)) || total;
+            const pct = Math.max(3, Math.min(99, Math.round(job.pages_done / estimate * 100)));
+            document.getElementById('crawlActiveTitle').innerText = `${describeJob(job)} · ${job.start_url || ''}`;
+            document.getElementById('crawlActiveCount').innerText = `${job.pages_done} / ${estimate} pages`;
+            document.getElementById('crawlProgressBar').style.width = `${pct}%`;
+            document.getElementById('crawlProgressTrack').setAttribute('aria-valuenow', String(pct));
+            document.getElementById('crawlStats').innerText = jobStats(job);
+            document.getElementById('crawlCurrentUrl').innerText = job.current_url || '';
+        }
+
+        function renderJobHistory(jobs) {
+            const box = document.getElementById('crawlHistory');
+            if (!box) return;
+            const done = (jobs || []).filter(j => !['queued', 'running'].includes(j.status)).slice(0, 5);
+            if (!done.length) { box.innerHTML = 'No crawls yet.'; return; }
+            const tone = { done: 'text-emerald-300', failed: 'text-rose-300', cancelled: 'text-slate-400' };
+            box.innerHTML = '<div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1.5">Recent</div>' + done.map(j => `
+                <div class="flex items-center justify-between gap-3 py-1.5 border-t border-white/5 first:border-t-0">
+                    <div class="min-w-0">
+                        <span class="text-slate-200">${escapeHtml(describeJob(j))}</span>
+                        <span class="${tone[j.status] || 'text-slate-400'} ml-1.5 capitalize">${escapeHtml(j.status)}</span>
+                        <div class="text-[11.5px] text-slate-500 truncate">${escapeHtml(j.status === 'failed' && j.error ? j.error : jobStats(j))}</div>
+                    </div>
+                    <span class="text-[11.5px] text-slate-500 shrink-0">${timeAgo(j.finished_epoch || j.updated_epoch)}</span>
+                </div>`).join('');
+        }
+
+        async function loadCrawlJobs() {
+            if (!currentAssistantId || window.workspaceRole === 'agent') return;
+            try {
+                const [jobsRes, asstRes] = await Promise.all([
+                    fetch(`/api/assistants/${currentAssistantId}/jobs`),
+                    fetch(`/api/assistants/${currentAssistantId}`),
+                ]);
+                if (asstRes.ok) {
+                    const asst = await asstRes.json();
+                    document.getElementById('recrawlFrequency').value = asst.recrawl_frequency || 'off';
+                    document.getElementById('recrawlMaxPages').value = asst.crawl_max_pages || 50;
+                    const last = asst.last_recrawl_epoch ? `Last full crawl ${timeAgo(asst.last_recrawl_epoch)}.` : '';
+                    const root = asst.crawl_root_url ? ` Re-crawls start from ${asst.crawl_root_url}.` : '';
+                    document.getElementById('crawlScheduleNote').innerText =
+                        `Crawls run in the background, so you can leave this page. Re-crawls only re-index pages that changed. ${last}${root}`.trim();
+                }
+                if (!jobsRes.ok) return;
+                const data = await jobsRes.json();
+                renderActiveJob(data.active);
+                renderJobHistory(data.recent);
+                if (data.active) watchCrawlJob(data.active.id);
+            } catch (err) {
+                console.error('Crawl jobs load error:', err);
+            }
+        }
+
+        // Advances the job while the dashboard is open (cron and server workers also advance it).
+        async function watchCrawlJob(jobId) {
+            if (crawlWatch && crawlWatch.jobId === jobId) return;
+            const assistantId = currentAssistantId;
+            crawlWatch = { jobId, assistantId };
+            let lastAdded = -1;
+            while (crawlWatch && crawlWatch.jobId === jobId) {
+                if (currentAssistantId !== assistantId) break;
+                let job;
+                try {
+                    const res = await fetch(`/api/assistants/${assistantId}/jobs/${jobId}/step`, { method: 'POST' });
+                    if (!res.ok) break;
+                    job = await res.json();
+                } catch (err) {
+                    await new Promise(r => setTimeout(r, 3000));
+                    continue;
+                }
+                renderActiveJob(job);
+                const indexed = (job.pages_added || 0) + (job.pages_updated || 0);
+                if (indexed !== lastAdded) { lastAdded = indexed; loadSourcesQuiet(); }
+                if (!['queued', 'running'].includes(job.status)) {
+                    const msg = job.status === 'done' ? `${describeJob(job)} finished: ${jobStats(job)}`
+                        : job.status === 'failed' ? `${describeJob(job)} failed: ${job.error || 'unknown error'}` : 'Crawl cancelled';
+                    showToast(msg, job.status === 'failed' ? 'alert-circle' : 'check');
+                    break;
+                }
+                await new Promise(r => setTimeout(r, 400));
+            }
+            if (crawlWatch && crawlWatch.jobId === jobId) crawlWatch = null;
+            if (currentAssistantId === assistantId) { loadSourcesQuiet(); loadCrawlJobsQuiet(); loadAnalytics(); }
+        }
+
+        // Refresh lists without restarting a watch loop.
+        async function loadSourcesQuiet() {
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/sources`);
+                if (!res.ok) return;
+                sourcesData = await res.json();
+                renderSourcesTable(sourcesData);
+                renderKnowledgeStats(sourcesData);
+                loadCatalog();
+            } catch (err) {}
+        }
+        async function loadCrawlJobsQuiet() {
+            try {
+                const res = await fetch(`/api/assistants/${currentAssistantId}/jobs`);
+                if (!res.ok) return;
+                const data = await res.json();
+                renderActiveJob(data.active);
+                renderJobHistory(data.recent);
+            } catch (err) {}
+        }
+
+        async function cancelActiveCrawl() {
+            if (!crawlWatch) return;
+            const { jobId, assistantId } = crawlWatch;
+            crawlWatch = null;
+            await fetch(`/api/assistants/${assistantId}/jobs/${jobId}/cancel`, { method: 'POST' });
+            loadCrawlJobsQuiet();
+            showToast('Crawl cancelled. Pages already indexed are kept.');
+        }
+
+        document.getElementById('recrawlForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                recrawl_frequency: document.getElementById('recrawlFrequency').value,
+                crawl_max_pages: parseInt(document.getElementById('recrawlMaxPages').value, 10) || 50,
+            };
+            const res = await fetch(`/api/assistants/${currentAssistantId}`, {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+            });
+            showToast(res.ok ? (payload.recrawl_frequency === 'off' ? 'Auto re-crawl turned off' : `Site will be re-crawled ${payload.recrawl_frequency}`) : 'Could not save the schedule',
+                res.ok ? 'check' : 'alert-circle');
+            loadCrawlJobs();
+        });
 
         async function loadCatalog() {
             const panel = document.getElementById('catalogPanel');
@@ -5159,7 +5383,7 @@
             const btn = document.getElementById('createAsstSubmitBtn');
 
             btn.disabled = true;
-            btn.innerText = (autoCrawl && url) ? "Deep crawling whole site..." : "Provisioning Project...";
+            btn.innerText = "Creating project...";
 
             try {
                 const res = await fetch('/api/assistants', {
@@ -5182,9 +5406,10 @@
                 const data = await res.json();
                 currentAssistantId = data.assistant_id || (data.assistant && data.assistant.id) || currentAssistantId;
                 closeNewAssistantModal();
-                showToast(`Project "${name}" created! ${data.pages_indexed ? `Indexed ${data.pages_indexed} pages` : ''}`);
+                showToast(`Project "${name}" created!${data.crawl_job ? ' Crawling your site in the background.' : ''}`);
                 await loadAssistants();
                 switchTab('knowledge');
+                if (data.crawl_job) watchCrawlJob(data.crawl_job.id);
             } catch (err) {
                 alert("Error creating project: " + (err.message || err));
             } finally {

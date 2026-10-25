@@ -259,6 +259,11 @@ def _default_admin_password() -> str:
 SCHEMA_COLUMNS = [
     ("assistants", "workspace_id", "TEXT DEFAULT ''"),
     ("assistants", "industry", "TEXT DEFAULT 'auto'"),
+    ("assistants", "recrawl_frequency", "TEXT DEFAULT 'off'"),
+    ("assistants", "crawl_root_url", "TEXT DEFAULT ''"),
+    ("assistants", "crawl_max_pages", "INTEGER DEFAULT 50"),
+    ("assistants", "last_recrawl_epoch", "INTEGER DEFAULT 0"),
+    ("sources", "content_hash", "TEXT DEFAULT ''"),
     ("messages", "cards_json", "TEXT"),
     ("users", "email_verified", "INTEGER DEFAULT 0"),
     ("chunks", "embedding_model", "TEXT DEFAULT ''"),
@@ -1030,7 +1035,8 @@ def update_assistant(assistant_id: str, data: Dict[str, Any]) -> bool:
         "teaser_message", "lead_title", "lead_fields", "sound_enabled", "show_branding", "whatsapp_number",
         "input_placeholder", "launcher_pulse", "border_radius",
         "font_family", "widget_width", "offset_x", "offset_y", "launcher_icon", "teaser_delay", "exit_intent", "hide_on_mobile", "custom_css",
-        "tone", "reply_length", "custom_instructions", "avoid_topics", "industry"
+        "tone", "reply_length", "custom_instructions", "avoid_topics", "industry",
+        "recrawl_frequency", "crawl_root_url", "crawl_max_pages"
     ]
     updates = []
     values = []
@@ -1879,6 +1885,7 @@ def init_workspaces():
             accepted_epoch INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
+        CRAWL_JOBS_DDL,
     ]:
         cursor.execute(ddl)
     conn.commit()
@@ -2310,3 +2317,226 @@ def set_email_verified(user_id: str, verified: bool = True):
     cursor.execute("UPDATE users SET email_verified = ? WHERE id = ?", (1 if verified else 0, user_id))
     conn.commit()
     conn.close()
+
+
+# ----------------- Background crawl jobs -----------------
+# Crawls run as resumable jobs: each step processes a few pages within a time budget
+# and saves its frontier, so large sites work on serverless hosts (see app/jobs.py).
+
+JOB_ACTIVE_STATUSES = ("queued", "running")
+
+CRAWL_JOBS_DDL = """CREATE TABLE IF NOT EXISTS crawl_jobs (
+    id TEXT PRIMARY KEY,
+    assistant_id TEXT NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'crawl',
+    trigger_type TEXT DEFAULT 'manual',
+    start_url TEXT,
+    max_pages INTEGER DEFAULT 50,
+    status TEXT NOT NULL DEFAULT 'queued',
+    pages_done INTEGER DEFAULT 0,
+    pages_added INTEGER DEFAULT 0,
+    pages_updated INTEGER DEFAULT 0,
+    pages_unchanged INTEGER DEFAULT 0,
+    pages_removed INTEGER DEFAULT 0,
+    pages_failed INTEGER DEFAULT 0,
+    chunks_added INTEGER DEFAULT 0,
+    queue_size INTEGER DEFAULT 0,
+    current_url TEXT DEFAULT '',
+    error TEXT DEFAULT '',
+    state_json TEXT,
+    lock_token TEXT DEFAULT '',
+    locked_until INTEGER DEFAULT 0,
+    created_by TEXT DEFAULT '',
+    created_epoch INTEGER DEFAULT 0,
+    updated_epoch INTEGER DEFAULT 0,
+    finished_epoch INTEGER DEFAULT 0
+)"""
+
+_JOB_PUBLIC_FIELDS = (
+    "id", "assistant_id", "kind", "trigger_type", "start_url", "max_pages", "status", "pages_done", "pages_added",
+    "pages_updated", "pages_unchanged", "pages_removed", "pages_failed", "chunks_added", "queue_size",
+    "current_url", "error", "created_epoch", "updated_epoch", "finished_epoch",
+)
+
+
+def create_crawl_job(assistant_id: str, kind: str, start_url: str, max_pages: int, state: Dict[str, Any],
+                     trigger: str = "manual", created_by: str = "") -> Dict[str, Any]:
+    job_id = f"job_{uuid.uuid4().hex[:12]}"
+    now = int(time.time())
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO crawl_jobs (id, assistant_id, kind, trigger_type, start_url, max_pages, status, queue_size,
+                                state_json, created_by, created_epoch, updated_epoch)
+        VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?, ?)
+    """, (job_id, assistant_id, kind, trigger, start_url, int(max_pages), len(state.get("frontier", [])),
+          json.dumps(state), created_by, now, now))
+    conn.commit()
+    conn.close()
+    return get_crawl_job(job_id)
+
+
+def get_crawl_job(job_id: str, with_state: bool = False) -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM crawl_jobs WHERE id = ?", (job_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    job = {k: row[k] for k in _JOB_PUBLIC_FIELDS}
+    if with_state:
+        job["state"] = json.loads(row["state_json"]) if row["state_json"] else {}
+        job["lock_token"] = row["lock_token"]
+    return job
+
+
+def list_crawl_jobs(assistant_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT {', '.join(_JOB_PUBLIC_FIELDS)} FROM crawl_jobs WHERE assistant_id = ? ORDER BY created_epoch DESC LIMIT ?",
+                   (assistant_id, limit))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def active_crawl_job(assistant_id: str) -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM crawl_jobs WHERE assistant_id = ? AND status IN ('queued', 'running') ORDER BY created_epoch ASC LIMIT 1",
+                   (assistant_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return get_crawl_job(row["id"]) if row else None
+
+
+def runnable_crawl_job_ids(limit: int = 5) -> List[str]:
+    """Active jobs nobody is working on right now, oldest first."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id FROM crawl_jobs
+        WHERE status IN ('queued', 'running') AND COALESCE(locked_until, 0) < ?
+        ORDER BY updated_epoch ASC LIMIT ?
+    """, (int(time.time()), limit))
+    ids = [r["id"] for r in cursor.fetchall()]
+    conn.close()
+    return ids
+
+
+def claim_crawl_job(job_id: str, lease_seconds: int) -> Optional[str]:
+    """Takes the job's lease so only one worker runs it at a time; returns the lock token or None."""
+    token = secrets.token_hex(8)
+    now = int(time.time())
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE crawl_jobs SET lock_token = ?, locked_until = ?
+        WHERE id = ? AND status IN ('queued', 'running') AND COALESCE(locked_until, 0) < ?
+    """, (token, now + lease_seconds, job_id, now))
+    conn.commit()
+    cursor.execute("SELECT lock_token FROM crawl_jobs WHERE id = ?", (job_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return token if row and row["lock_token"] == token else None
+
+
+def save_crawl_job(job_id: str, token: str, fields: Dict[str, Any], state: Optional[Dict[str, Any]] = None,
+                   release: bool = False) -> bool:
+    """Writes progress if this worker still holds the lease (a cancel clears it)."""
+    allowed = set(_JOB_PUBLIC_FIELDS) - {"id", "assistant_id", "created_epoch"}
+    sets, values = [], []
+    for k, v in fields.items():
+        if k in allowed:
+            sets.append(f"{k} = ?"); values.append(v)
+    if state is not None:
+        sets.append("state_json = ?"); values.append(json.dumps(state))
+    sets.append("updated_epoch = ?"); values.append(int(time.time()))
+    if release:
+        sets.append("locked_until = 0")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT lock_token, status FROM crawl_jobs WHERE id = ?", (job_id,))
+    row = cursor.fetchone()
+    if not row or row["lock_token"] != token or row["status"] not in JOB_ACTIVE_STATUSES:
+        conn.close()
+        return False
+    cursor.execute(f"UPDATE crawl_jobs SET {', '.join(sets)} WHERE id = ?", values + [job_id])
+    conn.commit()
+    conn.close()
+    return True
+
+
+def cancel_crawl_job(job_id: str) -> bool:
+    now = int(time.time())
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT status FROM crawl_jobs WHERE id = ?", (job_id,))
+    row = cursor.fetchone()
+    if not row or row["status"] not in JOB_ACTIVE_STATUSES:
+        conn.close()
+        return False
+    cursor.execute("""
+        UPDATE crawl_jobs SET status = 'cancelled', lock_token = '', locked_until = 0,
+               finished_epoch = ?, updated_epoch = ? WHERE id = ?
+    """, (now, now, job_id))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def get_url_source(assistant_id: str, url: str) -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, url, title, content_hash FROM sources
+        WHERE assistant_id = ? AND source_type = 'url' AND url = ?
+        ORDER BY id DESC LIMIT 1
+    """, (assistant_id, url))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def list_url_source_urls(assistant_id: str) -> List[str]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT url FROM sources WHERE assistant_id = ? AND source_type = 'url' AND url LIKE 'http%'",
+                   (assistant_id,))
+    urls = [r["url"] for r in cursor.fetchall()]
+    conn.close()
+    return urls
+
+
+def set_source_content_hash(source_id: int, content_hash: str):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE sources SET content_hash = ? WHERE id = ?", (content_hash, source_id))
+    conn.commit()
+    conn.close()
+
+
+def assistants_due_for_recrawl(now: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Assistants whose re-crawl schedule says they're due and that have no crawl running."""
+    now = now or int(time.time())
+    intervals = {"daily": 86400, "weekly": 7 * 86400}
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, recrawl_frequency, COALESCE(last_recrawl_epoch, 0) AS last_recrawl_epoch FROM assistants
+        WHERE recrawl_frequency IN ('daily', 'weekly')
+          AND NOT EXISTS (SELECT 1 FROM crawl_jobs j WHERE j.assistant_id = assistants.id AND j.status IN ('queued', 'running'))
+    """)
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return [r for r in rows if now - int(r["last_recrawl_epoch"] or 0) >= intervals[r["recrawl_frequency"]]]
+
+
+def mark_assistant_recrawled(assistant_id: str, when: Optional[int] = None):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE assistants SET last_recrawl_epoch = ? WHERE id = ?", (when or int(time.time()), assistant_id))
+    conn.commit()
+    conn.close()
+    _ASSISTANTS_CACHE.pop(assistant_id, None)

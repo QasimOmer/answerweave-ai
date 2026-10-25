@@ -263,6 +263,8 @@ ROUTE_RULES: List[Tuple[Tuple[str, ...], "re.Pattern", str, Optional[str]]] = [
     (("POST",), re.compile(r"^/api/auth/(login|signup|forgot-password|reset-password|verify-email)$"), PUBLIC, None),
     (("GET",), re.compile(r"^/api/invites/[^/]+$"), PUBLIC, None),
     (("POST",), re.compile(r"^/api/chat(/stream)?$"), PUBLIC, None),
+    # Scheduler hook; the endpoint checks CRON_SECRET itself.
+    (("GET", "POST"), re.compile(r"^/api/cron/tick$"), PUBLIC, None),
     (("POST",), re.compile(r"^/api/leads?$"), PUBLIC, None),
     # Visitor's own conversation: the unguessable conversation id is the capability.
     (("GET",), re.compile(r"^/api/conversations/[^/]+/(transcript|status)$"), PUBLIC, None),

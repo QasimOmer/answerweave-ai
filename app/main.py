@@ -11,6 +11,7 @@ import csv
 import json
 import time
 import uuid
+import secrets
 import re
 import urllib.parse
 import requests
@@ -108,6 +109,10 @@ from app.db import (
     accept_invite,
     set_email_verified,
     WORKSPACE_ROLES,
+    get_crawl_job,
+    list_crawl_jobs,
+    active_crawl_job,
+    cancel_crawl_job,
 )
 from app.notify import notify_human_requested, send_email, email_provider
 from app.config import (
@@ -136,6 +141,8 @@ from google import genai
 from google.genai import types
 
 init_db()
+from app import jobs as crawl_jobs  # noqa: E402  (after init_db so the jobs table exists)
+crawl_jobs.start_background_worker()
 
 app = FastAPI(
     title="WeaveFlow AI SaaS Engine",
@@ -271,10 +278,17 @@ class UpdateAssistantRequest(BaseModel):
     custom_instructions: Optional[str] = None
     avoid_topics: Optional[str] = None
     industry: Optional[str] = None  # auto | general | real_estate | ecommerce
+    recrawl_frequency: Optional[str] = None  # off | daily | weekly
+    crawl_max_pages: Optional[int] = None
 
 class ReindexRequest(BaseModel):
     full: bool = False              # re-embed everything, not just chunks from older models
     after_id: Optional[int] = None  # continue a batch run from this chunk id
+
+class CrawlJobRequest(BaseModel):
+    kind: str = "crawl"          # crawl | sitemap | resync | page
+    url: Optional[str] = None
+    max_pages: int = 50
 
 class FeedbackRequest(BaseModel):
     rating: int  # 1 = helpful, -1 = not helpful, 0 = clear
@@ -723,34 +737,22 @@ def api_create_assistant(req: CreateAssistantRequest, request: Request):
         workspace_id=request.state.workspace_id
     )
 
-    pages_indexed = 0
-    total_chunks = 0
-    # Auto-crawl whole website if provided
+    # The site crawl runs as a background job; the dashboard shows its progress.
+    job = None
     if req.website_url and req.crawl_whole_site:
-        url = req.website_url.strip()
-        if not url.startswith("http://") and not url.startswith("https://"):
-            url = "https://" + url
         try:
-            pages = crawl_website(url, max_pages=50)
-            for p in pages:
-                src_id = add_source(asst_id, "url", p["title"], p["url"], p["content"])
-                chunks = chunk_text(p["content"])
-                if chunks:
-                    embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[p["title"]] * len(chunks))
-                    for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
-                        add_chunk(asst_id, src_id, idx, c_text, p["title"], p["url"], emb)
-                    update_source_chunk_count(src_id, len(chunks))
-                    total_chunks += len(chunks)
-                pages_indexed += 1
+            job = crawl_jobs.start_crawl_job(asst_id, "crawl", req.website_url, max_pages=50,
+                                             created_by=request.state.user["id"])
         except Exception as e:
-            print(f"Auto-crawl warning during assistant creation: {e}")
+            print(f"Could not queue the site crawl for {asst_id}: {e}")
 
     return {
         "status": "success",
         "assistant_id": asst_id,
         "assistant": get_assistant(asst_id),
-        "pages_indexed": pages_indexed,
-        "total_chunks": total_chunks
+        "crawl_job": job,
+        "pages_indexed": 0,
+        "total_chunks": 0
     }
 
 def is_domain_allowed(allowed_domain_pattern: Optional[str], host: Optional[str]) -> bool:
@@ -899,6 +901,10 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
         data["tone"] = "friendly"
     if "reply_length" in data and data["reply_length"] not in ("short", "balanced", "detailed"):
         data["reply_length"] = "balanced"
+    if "recrawl_frequency" in data and data["recrawl_frequency"] not in ("off", "daily", "weekly"):
+        data["recrawl_frequency"] = "off"
+    if "crawl_max_pages" in data and data["crawl_max_pages"] is not None:
+        data["crawl_max_pages"] = max(1, min(crawl_jobs.MAX_PAGES_LIMIT, int(data["crawl_max_pages"])))
     if "industry" in data and data["industry"] not in ("auto", "general", "real_estate", "ecommerce"):
         data["industry"] = "auto"
     for key, limit in (("custom_instructions", 2000), ("avoid_topics", 1000)):
@@ -985,37 +991,9 @@ async def api_upload_file(asst_id: str, file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/assistants/{asst_id}/sources/sitemap")
-def api_ingest_sitemap(asst_id: str, req: IngestSitemapRequest):
-    """Parses a sitemap.xml and ingests discovered URLs."""
-    urls = crawl_sitemap(req.sitemap_url, max_urls=req.max_pages)
-    if not urls:
-        raise HTTPException(status_code=400, detail="No URLs extracted from sitemap.")
-
-    indexed = []
-    total_chunks = 0
-    for u in urls:
-        try:
-            page = fetch_url(u)
-            src_id = add_source(asst_id, "url", page["title"], u, page["content"])
-            chunks = chunk_text(page["content"])
-            if chunks:
-                embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[page["title"]] * len(chunks))
-                for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
-                    add_chunk(asst_id, src_id, idx, c_text, page["title"], u, emb)
-                update_source_chunk_count(src_id, len(chunks))
-                total_chunks += len(chunks)
-            indexed.append({"id": src_id, "title": page["title"], "url": u, "chunks": len(chunks)})
-        except Exception:
-            continue
-
-    return {
-        "status": "success",
-        "assistant_id": asst_id,
-        "sitemap_url": req.sitemap_url,
-        "pages_indexed": len(indexed),
-        "total_chunks": total_chunks,
-        "sources": indexed
-    }
+def api_ingest_sitemap(asst_id: str, req: IngestSitemapRequest, request: Request):
+    """Queues a background job that indexes every page listed in a sitemap.xml."""
+    return queue_crawl(asst_id, "sitemap", req.sitemap_url, req.max_pages, request)
 
 @app.post("/api/assistants/{asst_id}/sources")
 async def api_ingest_source_generic(asst_id: str, request: Request):
@@ -1031,52 +1009,92 @@ async def api_ingest_source_generic(asst_id: str, request: Request):
     elif "sitemap_url" in data or (str(data.get("url", "")).endswith(".xml")):
         s_url = data.get("sitemap_url") or data.get("url")
         req = IngestSitemapRequest(sitemap_url=s_url, max_pages=data.get("crawl_depth", 10))
-        return api_ingest_sitemap(asst_id, req)
+        return api_ingest_sitemap(asst_id, req, request)
     elif "url" in data:
         req = IngestUrlRequest(url=data["url"], crawl_depth=data.get("crawl_depth", 50))
-        return api_ingest_url(asst_id, req)
+        return api_ingest_url(asst_id, req, request)
     raise HTTPException(status_code=400, detail="Payload must include 'url' or 'title' & 'content'")
 
 @app.post("/api/assistants/{asst_id}/sources/url")
-def api_ingest_url(asst_id: str, req: IngestUrlRequest):
+def api_ingest_url(asst_id: str, req: IngestUrlRequest, request: Request):
+    """One page is indexed right away; a multi-page crawl is queued as a background job."""
     url = req.url.strip()
     if not url.startswith("http://") and not url.startswith("https://"):
         url = "https://" + url
-
-    pages_to_index = []
     if req.crawl_depth > 1:
-        pages_to_index = crawl_website(url, max_pages=req.crawl_depth)
-    else:
-        single = fetch_url(url)
-        pages_to_index = [{
-            "url": url,
-            "title": single["title"],
-            "content": single["content"]
-        }]
+        return queue_crawl(asst_id, "crawl", url, req.crawl_depth, request)
 
-    if not pages_to_index:
+    single = fetch_url(url)
+    page = {"url": url.split("#")[0].rstrip("/"), "title": single["title"], "content": single["content"]}
+    if len(page["content"]) < 60:
         raise HTTPException(status_code=400, detail="No readable content found at URL.")
-
-    indexed = []
-    total_chunks = 0
-    for p in pages_to_index:
-        src_id = add_source(asst_id, "url", p["title"], p["url"], p["content"])
-        chunks = chunk_text(p["content"])
-        if chunks:
-            embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[p["title"]] * len(chunks))
-            for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
-                add_chunk(asst_id, src_id, idx, c_text, p["title"], p["url"], emb)
-            update_source_chunk_count(src_id, len(chunks))
-            total_chunks += len(chunks)
-        indexed.append({"id": src_id, "title": p["title"], "url": p["url"], "chunks": len(chunks)})
-
+    result = crawl_jobs.upsert_page(asst_id, page)
     return {
         "status": "success",
         "assistant_id": asst_id,
-        "pages_indexed": len(indexed),
-        "total_chunks": total_chunks,
-        "sources": indexed
+        "pages_indexed": 1,
+        "outcome": result["outcome"],
+        "total_chunks": result["chunks"],
+        "sources": [{"title": page["title"], "url": page["url"], "chunks": result["chunks"]}]
     }
+
+
+def queue_crawl(asst_id: str, kind: str, url: Optional[str], max_pages: int, request: Request) -> Dict[str, Any]:
+    try:
+        job = crawl_jobs.start_crawl_job(asst_id, kind, url, max_pages=max_pages, created_by=request.state.user["id"])
+    except crawl_jobs.JobConflict as e:
+        raise HTTPException(status_code=409, detail={"message": "A crawl is already running for this assistant.",
+                                                     "job": get_crawl_job(str(e))})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"status": "queued", "assistant_id": asst_id, "job": job,
+            "message": "Crawl started. Progress updates live in the dashboard."}
+
+
+# ----------------- Background crawl jobs -----------------
+def _job_for(asst_id: str, job_id: str) -> Dict[str, Any]:
+    job = get_crawl_job(job_id)
+    if not job or job["assistant_id"] != asst_id:
+        raise HTTPException(status_code=404, detail="Crawl job not found.")
+    return job
+
+@app.post("/api/assistants/{asst_id}/jobs")
+def api_start_crawl_job(asst_id: str, req: CrawlJobRequest, request: Request):
+    return queue_crawl(asst_id, req.kind, req.url, req.max_pages, request)
+
+@app.get("/api/assistants/{asst_id}/jobs")
+def api_list_crawl_jobs(asst_id: str):
+    return {"active": active_crawl_job(asst_id), "recent": list_crawl_jobs(asst_id, limit=10)}
+
+@app.get("/api/assistants/{asst_id}/jobs/{job_id}")
+def api_get_crawl_job(asst_id: str, job_id: str):
+    return _job_for(asst_id, job_id)
+
+@app.post("/api/assistants/{asst_id}/jobs/{job_id}/step")
+def api_step_crawl_job(asst_id: str, job_id: str):
+    """Runs a few seconds of the crawl. The dashboard calls this while showing progress, so crawls
+    move forward even on hosts without a background worker."""
+    job = _job_for(asst_id, job_id)
+    if job["status"] in ("queued", "running"):
+        job = crawl_jobs.run_job_step(job_id, budget_seconds=8) or job
+    return job
+
+@app.post("/api/assistants/{asst_id}/jobs/{job_id}/cancel")
+def api_cancel_crawl_job(asst_id: str, job_id: str):
+    _job_for(asst_id, job_id)
+    cancel_crawl_job(job_id)
+    return get_crawl_job(job_id)
+
+@app.api_route("/api/cron/tick", methods=["GET", "POST"])
+def api_cron_tick(request: Request):
+    """Scheduler hook: starts due re-crawls and advances queued crawl jobs.
+    Call with `Authorization: Bearer $CRON_SECRET` (Vercel Cron sends this automatically)."""
+    secret = os.environ.get("CRON_SECRET", "").strip()
+    supplied = (request.headers.get("authorization") or "").removeprefix("Bearer ").strip()
+    is_local = request.client and request.client.host in ("127.0.0.1", "localhost", "testclient")
+    if not ((secret and secrets.compare_digest(supplied, secret)) or (not secret and is_local)):
+        raise HTTPException(status_code=401, detail="Invalid cron secret.")
+    return {"status": "ok", **crawl_jobs.tick()}
 
 @app.post("/api/assistants/{asst_id}/sources/text")
 def api_ingest_text(asst_id: str, req: IngestTextRequest):
@@ -1108,72 +1126,13 @@ def api_delete_source(source_id: int):
     return {"status": "success", "deleted_id": source_id}
 
 @app.post("/api/assistants/{asst_id}/sync")
-def api_sync_assistant_knowledge(asst_id: str):
-    """
-    1-Click 'Re-crawl & Sync Knowledge':
-    Re-crawls active web sources for the given assistant, updates chunks & embeddings,
-    clears stale knowledge, and invalidates the cache.
-    """
-    asst = get_assistant(asst_id)
-    if not asst:
+def api_sync_assistant_knowledge(asst_id: str, request: Request):
+    """'Re-crawl & sync': refreshes every indexed page in the background, re-embedding only pages that
+    changed, adding new pages from the site and removing pages that no longer exist."""
+    if not get_assistant(asst_id):
         raise HTTPException(status_code=404, detail="Assistant not found")
-
-    sources = list_sources(assistant_id=asst_id)
-    url_sources = [s for s in sources if s.get("source_type") == "url" and str(s.get("url", "")).startswith("http")]
-
-    if not url_sources:
-        domain = asst.get("domain", "")
-        if domain and domain != "*":
-            domain_url = f"https://{domain}" if not domain.startswith("http") else domain
-            url_sources = [{"id": None, "url": domain_url, "title": asst.get("name", "Website")}]
-        else:
-            return {
-                "status": "warning",
-                "message": "No active web URL sources found to re-crawl for this assistant.",
-                "synced_sources": 0,
-                "refreshed_chunks": 0
-            }
-
-    synced_count = 0
-    refreshed_chunks = 0
-
-    for s in url_sources:
-        u = s.get("url")
-        src_id = s.get("id")
-        try:
-            parsed = fetch_url(u, timeout=15)
-            content = parsed.get("content", "")
-            title = parsed.get("title", s.get("title", "Updated Document"))
-            if not content or len(content) < 50:
-                continue
-
-            chunks = chunk_text(content)
-            if not chunks:
-                continue
-
-            if src_id:
-                delete_source(src_id)
-
-            new_src_id = add_source(asst_id, "url", title, u, content)
-            embs = generate_embeddings_batch(chunks, workspace_id=assistant_workspace_id(asst_id), titles=[title] * len(chunks))
-            for idx, (c_text, emb) in enumerate(zip(chunks, embs)):
-                add_chunk(asst_id, new_src_id, idx, c_text, title, u, emb)
-            update_source_chunk_count(new_src_id, len(chunks))
-
-            refreshed_chunks += len(chunks)
-            synced_count += 1
-        except Exception as e:
-            print(f"[Sync] Error refreshing {u}: {e}")
-            continue
-
-    invalidate_chunks_cache(asst_id)
-    return {
-        "status": "success",
-        "assistant_id": asst_id,
-        "synced_sources": synced_count,
-        "refreshed_chunks": refreshed_chunks,
-        "message": f"Successfully re-crawled and synchronized {synced_count} sources ({refreshed_chunks} chunks updated)."
-    }
+    result = queue_crawl(asst_id, "resync", None, 0, request)
+    return {**result, "status": "success", "message": "Re-crawl started. Unchanged pages are skipped automatically."}
 
 # ----------------- Visitor Conversations Inbox -----------------
 @app.get("/api/assistants/{asst_id}/conversations")
