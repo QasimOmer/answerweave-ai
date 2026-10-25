@@ -16,6 +16,8 @@ import urllib.parse
 from typing import List, Dict, Any, Set, Optional
 import requests
 from bs4 import BeautifulSoup
+
+from app.netsafe import check_public_url, is_public_url
 from pypdf import PdfReader
 
 def extract_structured_metadata(soup: BeautifulSoup, base_url: str = "") -> str:
@@ -249,6 +251,9 @@ def clean_html(html_content: str, base_url: str = "") -> Dict[str, str]:
 DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 
 def fetch_url(url: str, timeout: int = 15) -> Dict[str, str]:
+    ok, reason = check_public_url(url)
+    if not ok:
+        raise ValueError(reason)
     headers = {
         "User-Agent": DEFAULT_USER_AGENT,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
@@ -263,6 +268,8 @@ def crawl_sitemap(sitemap_url: str, max_urls: int = 100) -> List[str]:
         "User-Agent": DEFAULT_USER_AGENT
     }
     found_urls = []
+    if not is_public_url(sitemap_url):
+        return []
     try:
         resp = requests.get(sitemap_url, headers=headers, timeout=10, allow_redirects=True)
         if resp.status_code != 200:
@@ -276,6 +283,8 @@ def crawl_sitemap(sitemap_url: str, max_urls: int = 100) -> List[str]:
         if sub_sitemaps:
             for sm_url in sub_sitemaps[:5]:
                 try:
+                    if not is_public_url(sm_url):
+                        continue
                     sub_resp = requests.get(sm_url, headers=headers, timeout=10, allow_redirects=True)
                     sub_locs = re.findall(r"<loc>\s*(https?://[^\s<]+)\s*</loc>", sub_resp.text, re.I)
                     for u in sub_locs:
@@ -317,6 +326,8 @@ def discover_sitemap_urls(start_url: str, max_urls: int = 50) -> List[str]:
     parsed = urllib.parse.urlparse(start_url)
     base = f"{parsed.scheme or 'https'}://{parsed.netloc}"
     candidates = [f"{base}/sitemap.xml", f"{base}/wp-sitemap.xml", f"{base}/sitemap_index.xml"]
+    if not is_public_url(base):
+        return []
     try:
         robots = requests.get(f"{base}/robots.txt", headers={"User-Agent": DEFAULT_USER_AGENT}, timeout=6)
         if robots.status_code == 200:
@@ -336,6 +347,9 @@ def discover_sitemap_urls(start_url: str, max_urls: int = 50) -> List[str]:
 
 def fetch_page_with_links(url: str, timeout: int = 10) -> Dict[str, Any]:
     """Fetches one page. Returns {"status": http status or 0, "page": {...} or None, "links": [same-site URLs]}."""
+    ok, reason = check_public_url(url)
+    if not ok:
+        return {"status": 0, "page": None, "links": [], "error": reason}
     try:
         resp = requests.get(url, headers={"User-Agent": DEFAULT_USER_AGENT}, timeout=timeout, allow_redirects=True)
     except Exception as e:

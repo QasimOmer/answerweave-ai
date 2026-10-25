@@ -16,6 +16,8 @@ from typing import Any, Dict, List, Tuple
 
 import requests
 
+from app.netsafe import is_public_url
+
 
 def email_provider() -> str:
     if os.environ.get("RESEND_API_KEY"):
@@ -93,7 +95,7 @@ def notify_human_requested(asst: Dict[str, Any], conversation_id: str, visitor_m
     email_ok, email_detail = send_email(_recipients(asst.get("notification_email") or ""), subject, text, html_body)
 
     webhook_ok = None
-    if asst.get("webhook_url"):
+    if asst.get("webhook_url") and is_public_url(asst["webhook_url"]):
         try:
             r = requests.post(asst["webhook_url"], json={
                 "event": "human_requested",

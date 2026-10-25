@@ -380,6 +380,8 @@
             } catch (e) { return ''; }
         }
         const greetingFor = (name) => `Hi! 👋 I'm the ${name.replace(/\s+assistant$/i, '')} assistant. How can I help?`;
+        // The widget's "Popular questions" start out matched to the business type.
+        const questionsFor = (industry) => (TEST_QUESTIONS[industry] || TEST_QUESTIONS.general).join('\n');
         let nameTouched = false;
         $('asstName').addEventListener('input', () => { nameTouched = true; });
         $('siteUrl').addEventListener('input', () => {
@@ -407,7 +409,7 @@
             try {
                 if (state.assistantId && state.url !== url) {
                     // Same assistant, new address: point it at the new site and crawl that instead.
-                    await api(`/api/assistants/${state.assistantId}`, { method: 'PATCH', body: JSON.stringify({ name, industry, domain: new URL(url).hostname, welcome_message: greetingFor(name) }) });
+                    await api(`/api/assistants/${state.assistantId}`, { method: 'PATCH', body: JSON.stringify({ name, industry, domain: new URL(url).hostname, welcome_message: greetingFor(name), suggested_questions: questionsFor(industry) }) });
                     const r = await api(`/api/assistants/${state.assistantId}/jobs`, { method: 'POST', body: JSON.stringify({ kind: 'crawl', url, max_pages: 50 }) });
                     state.jobId = r.job.id;
                 } else if (!state.assistantId) {
@@ -416,7 +418,7 @@
                     }) });
                     state.assistantId = created.assistant_id;
                     state.jobId = created.crawl_job ? created.crawl_job.id : '';
-                    await api(`/api/assistants/${state.assistantId}`, { method: 'PATCH', body: JSON.stringify({ industry }) });
+                    await api(`/api/assistants/${state.assistantId}`, { method: 'PATCH', body: JSON.stringify({ industry, suggested_questions: questionsFor(industry) }) });
                 }
                 state.url = url; state.industry = industry;
                 store.set('wf_selected_asst_id', state.assistantId);

@@ -1431,11 +1431,82 @@
             animation: wf-pulse 0.8s ease 2 !important;
         }
 
+        /* ================= Header menu, contact card, message formatting ================= */
+        .wf-header-left { min-width: 0 !important; flex: 1 !important; }
+        .wf-header-info { min-width: 0 !important; }
+        .wf-title-row { min-width: 0 !important; }
+        .wf-header-title { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; min-width: 0 !important; }
+        .wf-header-actions { flex-shrink: 0 !important; }
+        .wf-menu-wrap { position: relative !important; display: inline-flex !important; }
+        .wf-menu {
+            position: absolute !important;
+            top: 36px !important;
+            right: 0 !important;
+            min-width: 220px !important;
+            background: var(--wf-card-bg, #ffffff) !important;
+            border: 1px solid var(--wf-card-border, #e2e8f0) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 18px 40px -12px rgba(15, 23, 42, 0.35) !important;
+            padding: 6px !important;
+            display: none !important;
+            z-index: 20 !important;
+            transform-origin: top right !important;
+        }
+        .wf-menu.wf-menu-open { display: block !important; animation: wfMenuIn 0.16s ease-out both !important; }
+        @keyframes wfMenuIn { from { opacity: 0; transform: scale(0.96) translateY(-4px); } to { opacity: 1; transform: none; } }
+        button.wf-menu-item {
+            all: unset !important;
+            box-sizing: border-box !important;
+            width: 100% !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            padding: 9px 10px !important;
+            border-radius: 9px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            color: var(--wf-text, #0f172a) !important;
+            cursor: pointer !important;
+        }
+        button.wf-menu-item:hover, button.wf-menu-item:focus-visible { background: var(--wf-surface-hover, #f1f5f9) !important; }
+        button.wf-menu-item svg { width: 16px !important; height: 16px !important; stroke: var(--wf-text-muted, #64748b) !important; flex-shrink: 0 !important; }
+        button.wf-icon-btn:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.7) !important; outline-offset: 1px !important; }
+
+        .wf-lead-card { animation: wfBotIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both !important; }
+        .wf-lead-card.wf-lead-leaving { opacity: 0 !important; transform: translateY(6px) !important; transition: all 0.2s ease !important; }
+        .wf-lead-head { display: flex !important; align-items: flex-start !important; justify-content: space-between !important; gap: 8px !important; }
+        button.wf-lead-dismiss {
+            all: unset !important;
+            font-size: 11.5px !important;
+            font-weight: 600 !important;
+            color: var(--wf-text-muted, #64748b) !important;
+            cursor: pointer !important;
+            padding: 2px 6px !important;
+            border-radius: 6px !important;
+            white-space: nowrap !important;
+        }
+        button.wf-lead-dismiss:hover { background: var(--wf-surface-hover, #f1f5f9) !important; color: var(--wf-text, #0f172a) !important; }
+        .wf-lead-error { display: none; color: #dc2626 !important; font-size: 11.5px !important; margin: -2px 0 8px 0 !important; }
+        button.wf-lead-btn:disabled { opacity: 0.6 !important; cursor: default !important; }
+        .wf-lead-success { display: flex !important; align-items: center !important; gap: 10px !important; font-size: 13px !important; color: var(--wf-text, #0f172a) !important; font-weight: 500 !important; }
+        .wf-lead-check {
+            width: 28px !important; height: 28px !important; border-radius: 999px !important; flex-shrink: 0 !important;
+            background: rgba(16, 185, 129, 0.14) !important; color: #059669 !important;
+            display: inline-flex !important; align-items: center !important; justify-content: center !important;
+            animation: wfPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4) both !important;
+        }
+        .wf-lead-check svg { width: 15px !important; height: 15px !important; }
+        @keyframes wfPop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .wf-msg-heading { font-weight: 700 !important; margin-top: 4px !important; }
+        ol.wf-msg-list { list-style: decimal !important; }
+
         /* ================= PREMIUM LAYER: depth, motion and listing cards ================= */
         .wf-header {
             background: linear-gradient(135deg, var(--wf-primary, #0f172a) 0%, color-mix(in srgb, var(--wf-primary, #0f172a) 70%, #6366f1) 100%) !important;
             position: relative !important;
-            overflow: hidden !important;
+            /* Visible so the "more" menu can drop below the header; the window itself clips the sheen. */
+            overflow: visible !important;
+            z-index: 5 !important;
         }
         .wf-header::after {
             content: '' !important;
@@ -1673,23 +1744,27 @@
                             <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
                         </svg>
                     </button>
-                    <button type="button" class="wf-icon-btn" id="wf-sound-toggle-btn" title="Toggle audio chime">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-                        </svg>
-                    </button>
-                    <button type="button" class="wf-icon-btn" id="wf-email-btn" title="Leave Contact Info">
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                        </svg>
-                    </button>
-                    <button type="button" class="wf-icon-btn" id="wf-reset-btn" title="Start New Conversation">
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                        </svg>
-                    </button>
+                    <div class="wf-menu-wrap">
+                        <button type="button" class="wf-icon-btn" id="wf-more-btn" title="More options" aria-label="More options" aria-haspopup="menu" aria-expanded="false">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>
+                            </svg>
+                        </button>
+                        <div class="wf-menu" id="wf-menu" role="menu">
+                            <button type="button" class="wf-menu-item" id="wf-reset-btn" role="menuitem">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                <span>Start a new chat</span>
+                            </button>
+                            <button type="button" class="wf-menu-item" id="wf-email-btn" role="menuitem">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                <span>Leave my contact details</span>
+                            </button>
+                            <button type="button" class="wf-menu-item" id="wf-sound-toggle-btn" role="menuitem">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                                <span>Mute sounds</span>
+                            </button>
+                        </div>
+                    </div>
                     <div class="wf-header-divider"></div>
                     <button type="button" class="wf-icon-btn" id="wf-close-btn" title="Close">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2222,19 +2297,18 @@
         if (soundBtn) {
             const updateSoundBtnState = () => {
                 const on = botConfig.sound_enabled !== 0 && botConfig.sound_enabled !== false;
-                soundBtn.title = on ? "Mute audio chime" : "Unmute audio chime";
-                soundBtn.innerHTML = on ? `
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                soundBtn.title = on ? "Mute sounds" : "Turn sounds on";
+                soundBtn.innerHTML = (on ? `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
                         <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
                     </svg>
                 ` : `
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                        <line x1="23" x2="1" y1="1" y2="23"/>
+                        <line x1="23" x2="15" y1="9" y2="15"/><line x1="15" x2="23" y1="9" y2="15"/>
                     </svg>
-                `;
+                `) + `<span>${on ? 'Mute sounds' : 'Turn sounds on'}</span>`;
             };
             updateSoundBtnState();
             soundBtn.onclick = () => {
@@ -2587,8 +2661,23 @@
         });
     }
 
+    // Header "more" menu
+    const moreBtn = $('wf-more-btn');
+    const menuEl = $('wf-menu');
+    const setMenu = (open) => {
+        menuEl.classList.toggle('wf-menu-open', open);
+        moreBtn.setAttribute('aria-expanded', String(open));
+    };
+    moreBtn.addEventListener('click', (e) => { e.stopPropagation(); setMenu(!menuEl.classList.contains('wf-menu-open')); });
+    menuEl.addEventListener('click', (e) => { if (e.target.closest('.wf-menu-item')) setMenu(false); });
+    shadow.addEventListener('click', (e) => { if (!e.target.closest || !e.target.closest('.wf-menu-wrap')) setMenu(false); });
+    // Clicks on the host page (outside the widget) close it too.
+    document.addEventListener('click', (e) => { if (!hostContainer.contains(e.target)) setMenu(false); });
+    shadow.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
+
     // Reset Chat action
     resetBtn.addEventListener('click', () => {
+        leadCardShown = false;
         conversationId = newConversationId();
         sessionStorage.setItem(`wf_conv_${ASSISTANT_ID}`, conversationId);
         lastMessageId = 0;
@@ -2643,9 +2732,8 @@
                 submitBtn.innerText = "Send Information →";
             }, 2000);
         } catch (err) {
-            alert("Error submitting details. Please try again.");
             submitBtn.disabled = false;
-            submitBtn.innerText = "Send Information →";
+            submitBtn.innerText = "Couldn't send. Try again →";
         }
     };
 
@@ -2805,8 +2893,9 @@
                 if (finalData.sources && finalData.sources.length > 0) {
                     let citeHtml = `<div class="wf-citations">`;
                     finalData.sources.forEach(s => {
+                        const safeHref = /^https?:\/\//i.test(s.url || '') ? escapeHtml(s.url) : '#';
                         citeHtml += `
-                            <a href="${s.url}" target="_blank" class="wf-citation-pill" title="${escapeHtml(s.snippet || '')}">
+                            <a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="wf-citation-pill" title="${escapeHtml(s.snippet || '')}">
                                 <span>📚</span>
                                 <span>[${s.index}] ${escapeHtml(s.title || 'Source')} ↗</span>
                             </a>
@@ -2882,29 +2971,27 @@
         // Inline Citations: [1], [2]
         escaped = escaped.replace(/\[(\d+)\]/g, '<span class="wf-citation-inline">[$1]</span>');
         
-        // Lists with bullet points
+        // Lists (•, -, * and 1.) and headings
         const lines = escaped.split(/\n+/);
-        let inList = false;
+        let listTag = '';
         let formatted = '';
+        const closeList = () => { if (listTag) { formatted += `</${listTag}>`; listTag = ''; } };
         for (let line of lines) {
             line = line.trim();
-            if (line.startsWith('• ') || line.startsWith('- ')) {
-                if (!inList) {
-                    formatted += '<ul class="wf-msg-list">';
-                    inList = true;
-                }
-                formatted += `<li>${line.substring(2)}</li>`;
+            const bullet = line.match(/^(?:•|-|\*)\s+(.*)$/);
+            const numbered = line.match(/^\d{1,2}[.)]\s+(.*)$/);
+            const heading = line.match(/^#{1,4}\s+(.*)$/);
+            if (bullet || numbered) {
+                const tag = bullet ? 'ul' : 'ol';
+                if (listTag !== tag) { closeList(); formatted += `<${tag} class="wf-msg-list">`; listTag = tag; }
+                formatted += `<li>${(bullet || numbered)[1]}</li>`;
             } else {
-                if (inList) {
-                    formatted += '</ul>';
-                    inList = false;
-                }
-                if (line) {
-                    formatted += `<p class="wf-msg-p">${line}</p>`;
-                }
+                closeList();
+                if (heading) formatted += `<p class="wf-msg-p wf-msg-heading">${heading[1]}</p>`;
+                else if (line) formatted += `<p class="wf-msg-p">${line}</p>`;
             }
         }
-        if (inList) formatted += '</ul>';
+        closeList();
         return formatted || escaped;
     }
 
@@ -2919,8 +3006,9 @@
         if (sources && sources.length > 0) {
             html += `<div class="wf-citations">`;
             sources.forEach(s => {
+                const safeHref = /^https?:\/\//i.test(s.url || '') ? escapeHtml(s.url) : '#';
                 html += `
-                    <a href="${s.url}" target="_blank" class="wf-citation-pill" title="${escapeHtml(s.snippet || '')}">
+                    <a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="wf-citation-pill" title="${escapeHtml(s.snippet || '')}">
                         <span>📚</span>
                         <span>[${s.index}] ${escapeHtml(s.title || 'Source')} ↗</span>
                     </a>
@@ -2940,64 +3028,73 @@
         bodyEl.scrollTop = bodyEl.scrollHeight;
     }
 
+    // One contact card per conversation; it never stacks and disappears once sent or dismissed.
+    let leadCardShown = false;
+    const LEAD_DONE_KEY = `wf_lead_done_${ASSISTANT_ID}`;
+
     function renderInChatLeadCard() {
-        const card = document.createElement('div');
+        if (leadCardShown || bodyEl.querySelector('.wf-lead-card')) return;
+        try { if (sessionStorage.getItem(LEAD_DONE_KEY) === conversationId) return; } catch (e) {}
+        leadCardShown = true;
+        const fields = String(botConfig.lead_fields || 'name_email');
+        const phoneRequired = fields.includes('phone');
+        const card = document.createElement('form');
         card.className = 'wf-lead-card';
+        card.noValidate = true;
         card.innerHTML = `
-            <h4>Connect with ${escapeHtml(botConfig.name || 'Our Team')}</h4>
-            <p>Leave your phone number and email below so our specialist can call or text you directly!</p>
-            <input type="text" placeholder="Your full name..." class="wf-lead-input" id="wf-inline-name" />
-            <input type="email" placeholder="Work email address..." class="wf-lead-input" id="wf-inline-email" required />
-            <input type="tel" placeholder="Phone number (required)..." class="wf-lead-input" id="wf-inline-phone" required />
-            <button type="button" class="wf-lead-btn" id="wf-inline-submit">Request Call / Follow-up &rarr;</button>
+            <div class="wf-lead-head">
+                <h4>${escapeHtml(botConfig.lead_title || 'Get in touch with our team')}</h4>
+                <button type="button" class="wf-lead-dismiss" aria-label="Not now">Not now</button>
+            </div>
+            <p>Leave your details and someone from ${escapeHtml(String(botConfig.name || 'our team').replace(/\s+(ai\s+)?(assistant|chatbot|bot)$/i, '')) || 'the team'} will get back to you.</p>
+            <input type="text" placeholder="Your name" class="wf-lead-input" name="name" autocomplete="name" maxlength="120" />
+            <input type="email" placeholder="Email address" class="wf-lead-input" name="email" autocomplete="email" maxlength="254" required />
+            <input type="tel" placeholder="${phoneRequired ? 'Phone number' : 'Phone number (optional)'}" class="wf-lead-input" name="phone" autocomplete="tel" maxlength="40" ${phoneRequired ? 'required' : ''} />
+            <p class="wf-lead-error" role="alert"></p>
+            <button type="submit" class="wf-lead-btn">Send my details</button>
         `;
-
-        card.querySelector('#wf-inline-submit').onclick = async (e) => {
+        const errorEl = card.querySelector('.wf-lead-error');
+        const showError = (msg, input) => {
+            errorEl.textContent = msg;
+            errorEl.style.display = msg ? 'block' : 'none';
+            if (input) input.focus();
+        };
+        card.querySelector('.wf-lead-dismiss').onclick = () => {
+            card.classList.add('wf-lead-leaving');
+            setTimeout(() => card.remove(), 220);
+        };
+        card.onsubmit = async (e) => {
             e.preventDefault();
-            const emailInput = card.querySelector('#wf-inline-email');
-            const phoneInput = card.querySelector('#wf-inline-phone');
-            const nameInput = card.querySelector('#wf-inline-name');
-            const email = emailInput ? emailInput.value.trim() : '';
-            const phone = phoneInput ? phoneInput.value.trim() : '';
-            const name = nameInput ? nameInput.value.trim() : '';
-
-            if (!email) {
-                alert("Please enter a valid email address.");
-                return;
-            }
-            if (!phone) {
-                alert("Please enter your phone number so our team can follow up with you.");
-                return;
-            }
-
-            const btn = card.querySelector('#wf-inline-submit');
+            const name = card.elements.name.value.trim();
+            const email = card.elements.email.value.trim();
+            const phone = card.elements.phone.value.trim();
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return showError('Please enter a valid email address.', card.elements.email);
+            if (phoneRequired && phone.replace(/\D/g, '').length < 6) return showError('Please enter a phone number we can reach you on.', card.elements.phone);
+            showError('');
+            const btn = card.querySelector('.wf-lead-btn');
             btn.disabled = true;
-            btn.innerText = "Submitting...";
-
+            btn.textContent = 'Sending…';
             try {
                 const res = await fetch(`${API_BASE}/api/leads`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Host-Domain': currentHost
-                    },
-                    body: JSON.stringify({
-                        assistant_id: ASSISTANT_ID,
-                        conversation_id: conversationId,
-                        email: email,
-                        phone: phone,
-                        name: name
-                    })
+                    headers: { 'Content-Type': 'application/json', 'X-Host-Domain': currentHost },
+                    body: JSON.stringify({ assistant_id: ASSISTANT_ID, conversation_id: conversationId, email, phone, name })
                 });
-                if (!res.ok) throw new Error("Status " + res.status);
-                card.innerHTML = `<div style="color: #16a34a; font-weight: 700; text-align: center; padding: 10px; font-size: 13px;">🎉 Thank you${name ? ', ' + escapeHtml(name) : ''}! We have received your phone number and email. Our team will contact you shortly.</div>`;
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(typeof data.detail === 'string' ? data.detail : 'Something went wrong. Please try again.');
+                }
+                try { sessionStorage.setItem(LEAD_DONE_KEY, conversationId); } catch (err) {}
+                card.innerHTML = `<div class="wf-lead-success">
+                    <span class="wf-lead-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                    <span>Thanks${name ? ', ' + escapeHtml(name) : ''}! We've got your details and will be in touch soon.</span>
+                </div>`;
             } catch (err) {
                 btn.disabled = false;
-                btn.innerText = "Request Call / Follow-up →";
-                alert("Error submitting details. Please try again.");
+                btn.textContent = 'Send my details';
+                showError(err.message || 'Something went wrong. Please try again.');
             }
         };
-
         bodyEl.appendChild(card);
         bodyEl.scrollTop = bodyEl.scrollHeight;
     }

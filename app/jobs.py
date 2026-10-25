@@ -30,6 +30,7 @@ from app.ingestion import (
     PAGINATION_PATTERN,
 )
 from app.embeddings import generate_embeddings_batch
+from app.netsafe import check_public_url
 
 STEP_BUDGET_SECONDS = 20      # long-lived server worker
 # Cron ticks must finish inside the host's function time limit (10s by default on Vercel Hobby).
@@ -88,6 +89,9 @@ def start_crawl_job(assistant_id: str, kind: str, url: Optional[str] = None, max
     else:
         if not url:
             raise ValueError("A URL is required.")
+        ok, reason = check_public_url(url)
+        if not ok:
+            raise ValueError(reason)
         state = {
             "frontier": [] if kind == "sitemap" else [url],
             "visited": [],

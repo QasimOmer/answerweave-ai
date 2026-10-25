@@ -12,6 +12,7 @@ import json
 import time
 import uuid
 import secrets
+from datetime import datetime
 import re
 import urllib.parse
 import requests
@@ -20,7 +21,7 @@ from fastapi import FastAPI, HTTPException, Request, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.auth import (
     auth_middleware,
@@ -108,6 +109,7 @@ from app.db import (
     get_invite_by_token,
     accept_invite,
     set_email_verified,
+    count_workspace_visitor_messages_since,
     WORKSPACE_ROLES,
     get_crawl_job,
     list_crawl_jobs,
@@ -125,6 +127,7 @@ from app.config import (
 )
 from app.ingestion import fetch_url, crawl_website, crawl_sitemap, parse_uploaded_file, chunk_text
 from app.embeddings import generate_embeddings_batch, current_embedding_tag, reindex_assistant
+from app.netsafe import check_public_url, is_public_url
 from app.rag import (
     ASSISTANT_TONES,
     generate_grounded_response,
@@ -324,18 +327,22 @@ class CreateCustomQARequest(BaseModel):
 class UpgradePlanRequest(BaseModel):
     plan_key: str
 
+MAX_CHAT_MESSAGE_CHARS = 4000
+MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+_EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
+
 class ChatRequest(BaseModel):
     assistant_id: Optional[str] = None
-    conversation_id: Optional[str] = None
-    message: str
+    conversation_id: Optional[str] = Field(default=None, max_length=120)
+    message: str = Field(..., max_length=20000)  # trimmed to MAX_CHAT_MESSAGE_CHARS before use
 
 class LeadRequest(BaseModel):
     assistant_id: Optional[str] = None
-    conversation_id: Optional[str] = None
-    email: str
-    name: Optional[str] = ""
-    phone: Optional[str] = ""
-    note: Optional[str] = ""
+    conversation_id: Optional[str] = Field(default=None, max_length=120)
+    email: str = Field(..., max_length=254)
+    name: Optional[str] = Field(default="", max_length=120)
+    phone: Optional[str] = Field(default="", max_length=40)
+    note: Optional[str] = Field(default="", max_length=1000)
 
 class UpdateLeadStatusRequest(BaseModel):
     status: str
@@ -344,7 +351,7 @@ class TakeoverRequest(BaseModel):
     operator_name: Optional[str] = "Support Operator"
 
 class OperatorMessageRequest(BaseModel):
-    message: str
+    message: str = Field(..., max_length=4000)
     operator_name: Optional[str] = "Support Operator"
     assistant_id: Optional[str] = ""
 
@@ -801,12 +808,17 @@ def verify_assistant_domain_access(asst: Dict[str, Any], request: Request):
     if not allowed or allowed.strip() == "*":
         return
 
-    # Never block requests originating from dashboard, demo, or internal API calls
-    referer = request.headers.get("referer") or ""
-    if "/dashboard" in referer or "/demo" in referer or "/api/assistants" in referer:
-        return
-
     server_host = (request.headers.get("host") or "").split(":")[0].strip().lower()
+
+    # Our own pages (dashboard, demo, onboarding preview) may always use the widget. This compares
+    # hosts, not paths, so a page like evil.com/demo can't skip the check.
+    referer = request.headers.get("referer") or ""
+    if referer:
+        try:
+            if urllib.parse.urlparse(referer).hostname == server_host:
+                return
+        except ValueError:
+            pass
     
     # 1. Check Origin / Referer headers
     origin = request.headers.get("origin") or request.headers.get("referer")
@@ -910,6 +922,11 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
         data["launcher_icon"] = "chat"
     if "custom_css" in data and data["custom_css"] is not None:
         data["custom_css"] = data["custom_css"][:8000]
+    if data.get("webhook_url"):
+        ok, reason = check_public_url(data["webhook_url"].strip())
+        if not ok:
+            raise HTTPException(status_code=400, detail=f"Webhook URL: {reason}")
+        data["webhook_url"] = data["webhook_url"].strip()
     if "tone" in data and data["tone"] not in ASSISTANT_TONES:
         data["tone"] = "friendly"
     if "reply_length" in data and data["reply_length"] not in ("short", "balanced", "detailed"):
@@ -961,6 +978,9 @@ def api_verify_install(asst_id: str, req: VerifyInstallRequest):
         raise HTTPException(status_code=400, detail="Enter the address of the page where you added the code.")
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
+    ok, reason = check_public_url(url)
+    if not ok:
+        return {"installed": False, "checked_url": url, "reason": reason}
     try:
         resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; AnswerWeaveInstallCheck/1.0)"},
                             timeout=10, allow_redirects=True)
@@ -1019,7 +1039,9 @@ def api_reindex_assistant(asst_id: str, req: Optional[ReindexRequest] = None):
 async def api_upload_file(asst_id: str, file: UploadFile = File(...)):
     """Uploads and parses a PDF, TXT, Markdown, or CSV file."""
     try:
-        content_bytes = await file.read()
+        content_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
+        if len(content_bytes) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="That file is larger than 15 MB. Split it or upload a smaller version.")
         parsed = parse_uploaded_file(content_bytes, file.filename)
         
         src_id = add_source(asst_id, "file", parsed["title"], f"File: {file.filename}", parsed["content"])
@@ -1442,6 +1464,46 @@ def store_assistant_reply(asst_id: str, conv_id: str, result: Dict[str, Any], st
     return message_id
 
 
+def clean_visitor_message(message: str) -> str:
+    message = (message or "").strip()[:MAX_CHAT_MESSAGE_CHARS]
+    if not message:
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+    return message
+
+
+def resolve_conversation(asst_id: str, conversation_id: Optional[str]):
+    """The conversation to use; a conversation id that belongs to another assistant is refused."""
+    conv_id = (conversation_id or "").strip() or str(uuid.uuid4())
+    conv = get_conversation(conv_id)
+    if conv and conv.get("assistant_id") and conv["assistant_id"] != asst_id:
+        raise HTTPException(status_code=400, detail="This conversation belongs to a different assistant.")
+    return conv_id, conv
+
+
+def platform_quota_reply(asst: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """A polite stop when a workspace running on the platform's AI keys has used its monthly allowance.
+    Workspaces with their own API keys pay for their own usage and aren't capped here."""
+    ws_id = asst.get("workspace_id") or ""
+    if not ws_id:
+        return None
+    from app.config import PROVIDERS, get_workspace_api_key
+    if any(get_workspace_api_key(p, ws_id) for p in PROVIDERS):
+        return None
+    limit = int(get_subscription_info(ws_id).get("messages_limit") or 0)
+    if limit <= 0:
+        return None
+    month_start = datetime.utcnow().strftime("%Y-%m-01 00:00:00")
+    if count_workspace_visitor_messages_since(ws_id, month_start) <= limit:
+        return None
+    team = re.sub(r"\s+(?:ai\s+)?(?:assistant|chatbot|bot)$", "", (asst.get("name") or "").strip(), flags=re.IGNORECASE) or "our"
+    return {
+        "answer": (f"Sorry, I can't answer more questions right now. Leave your email below and the {team} team "
+                   "will get back to you personally."),
+        "sources": [], "lead_prompted": bool(asst.get("lead_capture_enabled", 1)), "knowledge_gap": False,
+        "provider": "quota", "human_requested": False, "operators_online": None,
+    }
+
+
 def answer_visitor_message(asst: Dict[str, Any], conv_id: str, message: str, request: Request) -> Dict[str, Any]:
     """Store the visitor's message, produce the reply (AI or human hand-off) and store it."""
     started = time.time()
@@ -1451,6 +1513,8 @@ def answer_visitor_message(asst: Dict[str, Any], conv_id: str, message: str, req
 
     if wants_human(message):
         result = handle_human_request(asst, conv_id, message, request)
+    elif (quota := platform_quota_reply(asst)):
+        result = quota
     else:
         result = generate_grounded_response(query=message, assistant_id=asst_id, conversation_history=history)
         result.setdefault("human_requested", False)
@@ -1469,6 +1533,9 @@ def stream_visitor_message(asst: Dict[str, Any], conv_id: str, message: str, req
 
     if wants_human(message):
         result = handle_human_request(asst, conv_id, message, request)
+        yield {"type": "token", "token": result["answer"]}
+    elif (quota := platform_quota_reply(asst)):
+        result = quota
         yield {"type": "token", "token": result["answer"]}
     else:
         result = None
@@ -1495,11 +1562,10 @@ def api_chat(req: ChatRequest, request: Request):
     if not asst:
         raise HTTPException(status_code=404, detail=f"Assistant '{asst_id}' not found")
     verify_assistant_domain_access(asst, request)
-
-    conv_id = req.conversation_id or str(uuid.uuid4())
+    req.message = clean_visitor_message(req.message)
+    conv_id, conv = resolve_conversation(asst_id, req.conversation_id)
 
     # Check if a human operator is currently assigned to this conversation
-    conv = get_conversation(conv_id)
     if conv and conv.get("status") == "human":
         add_message(conv_id, "user", req.message, assistant_id=asst_id)
         op_name = conv.get("operator_name") or "Support Specialist"
@@ -1540,11 +1606,10 @@ def api_chat_stream(req: ChatRequest, request: Request):
     if not asst:
         raise HTTPException(status_code=404, detail=f"Assistant '{asst_id}' not found")
     verify_assistant_domain_access(asst, request)
-
-    conv_id = req.conversation_id or str(uuid.uuid4())
+    req.message = clean_visitor_message(req.message)
+    conv_id, conv = resolve_conversation(asst_id, req.conversation_id)
 
     # Check if a human operator is currently assigned to this conversation
-    conv = get_conversation(conv_id)
     if conv and conv.get("status") == "human":
         add_message(conv_id, "user", req.message, assistant_id=asst_id)
         op_name = conv.get("operator_name") or "Support Specialist"
@@ -1618,8 +1683,8 @@ def api_message_feedback(conv_id: str, message_id: int, req: FeedbackRequest, re
 @app.post("/api/lead")
 def api_capture_lead(req: LeadRequest, request: Request):
     check_rate_limit(request)
-    if not req.email:
-        raise HTTPException(status_code=400, detail="Email is required.")
+    if not req.email or not _EMAIL_RE.match(req.email.strip()):
+        raise HTTPException(status_code=400, detail="Please enter a valid email address.")
 
     asst_id = req.assistant_id
     if not asst_id:
@@ -1645,7 +1710,7 @@ def api_capture_lead(req: LeadRequest, request: Request):
     )
 
     asst = get_assistant(asst_id)
-    if asst and asst.get("webhook_url"):
+    if asst and asst.get("webhook_url") and is_public_url(asst["webhook_url"]):
         try:
             webhook_payload = {
                 "event": "new_lead_captured",
@@ -1755,6 +1820,9 @@ def api_test_assistant_webhook(asst_id: str):
     url = asst.get("webhook_url")
     if not url:
         raise HTTPException(status_code=400, detail="No webhook URL configured for this assistant. Enter a URL first.")
+    ok, reason = check_public_url(url)
+    if not ok:
+        raise HTTPException(status_code=400, detail=reason)
 
     payload = {
         "event": "webhook_test",

@@ -2313,6 +2313,20 @@ def accept_invite(token: str, user_id: str, user_email: str) -> Optional[Dict[st
     return invite
 
 
+def count_workspace_visitor_messages_since(workspace_id: str, since: str) -> int:
+    """Visitor messages to this workspace's assistants since a 'YYYY-MM-DD HH:MM:SS' UTC timestamp."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*) AS n FROM messages
+        WHERE role = 'user' AND created_at >= ?
+          AND assistant_id IN (SELECT id FROM assistants WHERE workspace_id = ?)
+    """, (since, workspace_id))
+    n = int(cursor.fetchone()["n"] or 0)
+    conn.close()
+    return n
+
+
 def set_email_verified(user_id: str, verified: bool = True):
     conn = get_db()
     cursor = conn.cursor()
