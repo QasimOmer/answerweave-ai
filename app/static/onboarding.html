@@ -650,7 +650,10 @@
         }
         $('finishBtn').addEventListener('click', finish);
         $('doneDashboard').addEventListener('click', (e) => { e.preventDefault(); finish(); });
-        $('skipLink').addEventListener('click', () => { if (state.assistantId) store.set('wf_selected_asst_id', state.assistantId); });
+        $('skipLink').addEventListener('click', () => {
+            if (state.assistantId) store.set('wf_selected_asst_id', state.assistantId);
+            else store.set(`aw_setup_skipped:${store.get('aw_workspace')}`, '1');
+        });
 
         // ---------------- start
         if (state.step > 1 && !state.assistantId) state.step = 1;

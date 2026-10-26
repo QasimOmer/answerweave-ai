@@ -342,6 +342,18 @@
         <main class="flex-1 overflow-y-auto px-4 py-5 sm:p-6 lg:p-8">
             <div class="max-w-[1440px] w-full mx-auto space-y-6">
 
+                <div id="noAssistantState" class="hidden glass-panel rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-brand-500/25">
+                    <div class="flex items-start gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-brand-500/15 text-brand-300 flex items-center justify-center shrink-0"><i data-lucide="bot" class="w-5 h-5"></i></span>
+                        <div>
+                            <div class="text-[15px] font-medium text-white">This workspace doesn't have an assistant yet</div>
+                            <p class="mt-1 text-[13.5px] text-slate-400">Set one up in a few minutes: enter your website, test it, and paste one line on your site.</p>
+                            <p id="noAssistantAgentNote" class="hidden mt-1 text-[13.5px] text-slate-400">Ask an owner or admin of this workspace to create one.</p>
+                        </div>
+                    </div>
+                    <button id="noAssistantSetupBtn" onclick="startGuidedSetup()" class="bg-brand-600 hover:bg-brand-500 text-white transition h-10 px-4 rounded-lg text-[13.5px] font-medium inline-flex items-center justify-center gap-2 shrink-0">Set up an assistant <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
+                </div>
+
                 <!-- ================= TAB 1: OVERVIEW ================= -->
                 <section id="tab-analytics" class="tab-pane space-y-6">
                     <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
@@ -2476,6 +2488,8 @@
                 localStorage.removeItem(AUTH_TOKEN_KEY);
                 localStorage.removeItem('aw_user');
                 localStorage.removeItem(WORKSPACE_KEY);
+                localStorage.removeItem('wf_selected_asst_id');
+                localStorage.removeItem('aw_onboarding');
             } catch (e) {}
             window.location.replace('/?login=1');
         }
@@ -2701,10 +2715,15 @@
                 if (!assistantsList.length) {
                     currentAssistantId = '';
                     selector.innerHTML = '<option value="">No assistants yet</option>';
-                    // A new workspace starts with the guided setup.
-                    if (window.workspaceRole !== 'agent') window.location.replace('/onboarding?new=1');
+                    // A new workspace starts with the guided setup, unless the user chose to skip it.
+                    if (window.workspaceRole !== 'agent' && !setupSkipped()) {
+                        window.location.replace('/onboarding?new=1');
+                        return;
+                    }
+                    showNoAssistantState(true);
                     return;
                 }
+                showNoAssistantState(false);
 
                 selector.innerHTML = assistantsList.map(a => `
                     <option value="${a.id}" style="background-color: #0b0f17; color: #f1f5f9; padding: 6px 10px;" ${a.id === currentAssistantId ? 'selected' : ''}>
@@ -2718,6 +2737,24 @@
             } catch (err) {
                 console.error("Error loading assistants:", err);
             }
+        }
+
+        function setupSkipped() {
+            try { return localStorage.getItem(`aw_setup_skipped:${getWorkspaceId()}`) === '1'; } catch (e) { return false; }
+        }
+
+        function showNoAssistantState(show) {
+            const el = document.getElementById('noAssistantState');
+            if (!el) return;
+            el.classList.toggle('hidden', !show);
+            const canCreate = window.workspaceRole !== 'agent';
+            document.getElementById('noAssistantSetupBtn').classList.toggle('hidden', !canCreate);
+            document.getElementById('noAssistantAgentNote').classList.toggle('hidden', canCreate);
+        }
+
+        function startGuidedSetup() {
+            try { localStorage.removeItem(`aw_setup_skipped:${getWorkspaceId()}`); } catch (e) {}
+            window.location.href = '/onboarding?new=1';
         }
 
         function onAssistantChange() {
@@ -3281,6 +3318,7 @@
         }
 
         async function loadAnalytics() {
+            if (!currentAssistantId) return;
             try {
                 const getJson = (url, fallback) => fetch(url).then(r => r.ok ? r.json() : fallback).catch(() => fallback);
                 const base = `/api/assistants/${currentAssistantId}`;
@@ -3620,6 +3658,7 @@
         }
 
         async function loadSources() {
+            if (!currentAssistantId) return;
             try {
                 const res = await fetch(`/api/assistants/${currentAssistantId}/sources`);
                 sourcesData = await res.json();
@@ -3758,6 +3797,7 @@
 
         // Refresh lists without restarting a watch loop.
         async function loadSourcesQuiet() {
+            if (!currentAssistantId) return;
             try {
                 const res = await fetch(`/api/assistants/${currentAssistantId}/sources`);
                 if (!res.ok) return;
@@ -4169,6 +4209,7 @@
         }
 
         async function loadConversations(isSilent = false) {
+            if (!currentAssistantId) return;
             try {
                 const res = await fetch(`/api/assistants/${currentAssistantId}/conversations`);
                 if (!res.ok) throw new Error("Status " + res.status);
@@ -4429,6 +4470,7 @@
         }
 
         async function loadGaps() {
+            if (!currentAssistantId) return;
             try {
                 const res = await fetch(`/api/assistants/${currentAssistantId}/gaps`);
                 const gaps = await res.json();
@@ -4936,6 +4978,7 @@
         }
 
         async function loadLeads() {
+            if (!currentAssistantId) return;
             const tbody = document.getElementById('leadsTableBody');
             try {
                 const res = await fetch(`/api/assistants/${currentAssistantId}/leads`);
@@ -5475,6 +5518,9 @@
                     // Stored workspace was removed or we lost access; reset per-workspace selections.
                     setWorkspaceId(me.current_workspace_id);
                     localStorage.removeItem('wf_selected_asst_id');
+                }
+                if (me.id && me.current_workspace_id) {
+                    try { localStorage.setItem(`aw_last_ws:${me.id}`, me.current_workspace_id); } catch (e) {}
                 }
                 const selector = document.getElementById('workspaceSelector');
                 selector.innerHTML = window.workspaces.map(w =>

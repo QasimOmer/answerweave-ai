@@ -1044,11 +1044,15 @@
                 });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok && data.status === 'success') {
+                    // Nothing from a previous account on this browser carries over.
+                    ['aw_workspace', 'wf_selected_asst_id', 'aw_onboarding'].forEach(k => localStorage.removeItem(k));
                     localStorage.setItem('aw_user', JSON.stringify(data.user));
                     localStorage.setItem('aw_token', data.token);
-                    // A new account starts in its own workspace; on sign-in the server picks the first one.
-                    if (data.workspace_id) localStorage.setItem('aw_workspace', data.workspace_id);
-                    else localStorage.removeItem('aw_workspace');
+                    // A new account starts in its own workspace; on sign-in we reopen the last one used
+                    // (the server falls back to the first workspace if access was removed).
+                    const lastWs = data.user && data.user.id ? localStorage.getItem(`aw_last_ws:${data.user.id}`) : '';
+                    const ws = data.workspace_id || lastWs;
+                    if (ws) localStorage.setItem('aw_workspace', ws);
                     // New accounts go through the guided setup; returning users go to their dashboard.
                     window.location.href = isLogin ? '/dashboard' : '/onboarding?new=1';
                     return;
