@@ -351,7 +351,7 @@
             bottom: calc(var(--wf-offset-y, 24px) + 62px) !important;
             right: var(--wf-offset-x, 24px) !important;
             width: var(--wf-width, 395px) !important;
-            height: 620px !important;
+            height: var(--wf-height, 620px) !important;
             max-width: calc(100vw - 36px) !important;
             max-height: calc(100dvh - 110px) !important;
             background: var(--wf-bg, #ffffff) !important;
@@ -1859,6 +1859,67 @@
             outline: 2px solid var(--wf-primary, #6366f1) !important; outline-offset: 2px !important;
         }
 
+        /* ================= CUSTOMIZATION LAYER (dashboard settings) ================= */
+        /* Header style: gradient (default), solid brand colour, or minimal (window colour with a hairline) */
+        .wf-header-solid .wf-header { background: var(--wf-primary, #0f172a) !important; }
+        .wf-header-solid .wf-header::after, .wf-header-minimal .wf-header::after { display: none !important; }
+        .wf-root.wf-header-minimal .wf-header {
+            background: var(--wf-bg, #ffffff) !important;
+            border-bottom: 1px solid var(--wf-window-border, rgba(226, 232, 240, 0.85)) !important;
+        }
+        .wf-root.wf-header-minimal .wf-header .wf-header-title,
+        .wf-root.wf-header-minimal .wf-header .wf-verified-badge { color: var(--wf-text, #0f172a) !important; }
+        .wf-root.wf-header-minimal .wf-header .wf-status-row,
+        .wf-root.wf-header-minimal .wf-header .wf-status-row span { color: var(--wf-text-muted, #64748b) !important; }
+        .wf-root.wf-header-minimal .wf-header .wf-verified-badge { background: var(--wf-surface-hover, #f1f5f9) !important; border-color: var(--wf-window-border, #e2e8f0) !important; }
+        .wf-root.wf-header-minimal .wf-header button.wf-icon-btn { color: var(--wf-text-muted, #64748b) !important; }
+        .wf-root.wf-header-minimal .wf-header button.wf-icon-btn:hover { background: var(--wf-surface-hover, #f1f5f9) !important; color: var(--wf-text, #0f172a) !important; }
+        .wf-root.wf-header-minimal .wf-header .wf-header-divider { background: var(--wf-window-border, #e2e8f0) !important; }
+        .wf-root.wf-header-minimal .wf-avatar-circle { background: var(--wf-primary, #0f172a) !important; color: #ffffff !important; }
+        .wf-root.wf-header-minimal.wf-light-primary .wf-avatar-circle { color: #0f172a !important; }
+
+        /* Chat background */
+        .wf-bg-dots .wf-chat-body {
+            background-image: radial-gradient(color-mix(in srgb, var(--wf-text, #0f172a) 13%, transparent) 1.1px, transparent 1.3px) !important;
+            background-size: 18px 18px !important;
+        }
+        .wf-bg-glow .wf-chat-body {
+            background-image: radial-gradient(130% 55% at 50% 0%, color-mix(in srgb, var(--wf-primary, #6366f1) 13%, transparent), transparent 72%) !important;
+            background-size: 100% 100% !important;
+            background-repeat: no-repeat !important;
+        }
+
+        /* Launcher size (the pill launcher keeps its own size) */
+        .wf-launcher-small button.wf-launcher:not(.wf-launcher-pill) { width: 48px !important; height: 48px !important; min-width: 48px !important; min-height: 48px !important; }
+        .wf-launcher-large button.wf-launcher:not(.wf-launcher-pill) { width: 64px !important; height: 64px !important; min-width: 64px !important; min-height: 64px !important; }
+        .wf-launcher-large button.wf-launcher:not(.wf-launcher-pill) svg { width: 26px !important; height: 26px !important; }
+        @media (min-width: 641px) {
+            .wf-launcher-small .wf-window { bottom: calc(var(--wf-offset-y, 24px) + 54px) !important; }
+            .wf-launcher-large .wf-window { bottom: calc(var(--wf-offset-y, 24px) + 72px) !important; }
+        }
+
+        /* Visitor message colour (defaults to the brand colour) */
+        .wf-custom-user .wf-bubble-user { background: var(--wf-user-bubble) !important; }
+        .wf-root.wf-custom-user:not(.wf-light-user) .wf-bubble-user,
+        .wf-root.wf-custom-user:not(.wf-light-user) .wf-bubble-user * { color: #ffffff !important; }
+        .wf-root.wf-custom-user.wf-light-user .wf-bubble-user,
+        .wf-root.wf-custom-user.wf-light-user .wf-bubble-user * { color: #0f172a !important; }
+
+        /* Sources can be hidden; timestamps can be shown */
+        .wf-no-sources .wf-citations, .wf-no-sources .wf-citation-inline { display: none !important; }
+        .wf-msg-time {
+            display: block !important;
+            margin-top: 5px !important;
+            font-size: 10.5px !important;
+            line-height: 1 !important;
+            opacity: 0.6 !important;
+            font-variant-numeric: tabular-nums !important;
+        }
+        .wf-bubble-user .wf-msg-time { text-align: right !important; }
+
+        /* Page rules: hidden on pages the owner excluded */
+        .wf-root.wf-page-hidden { display: none !important; }
+
         @media (prefers-reduced-motion: reduce) {
             .wf-root *, .wf-root *::before, .wf-root *::after {
                 animation-duration: 0.01ms !important;
@@ -1920,6 +1981,14 @@
                             <button type="button" class="wf-menu-item" id="wf-email-btn" role="menuitem">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                                 <span>Leave my contact details</span>
+                            </button>
+                            <button type="button" class="wf-menu-item" id="wf-call-btn" role="menuitem" style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                <span>Call us</span>
+                            </button>
+                            <button type="button" class="wf-menu-item" id="wf-mail-btn" role="menuitem" style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                                <span>Email us</span>
                             </button>
                             <button type="button" class="wf-menu-item" id="wf-sound-toggle-btn" role="menuitem">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
@@ -2450,6 +2519,33 @@
         const widths = { compact: '360px', standard: '395px', wide: '440px' };
         root.style.setProperty('--wf-width', widths[botConfig.widget_width] || widths.standard);
 
+        const heights = { compact: '540px', standard: '620px', tall: '720px' };
+        root.style.setProperty('--wf-height', heights[botConfig.widget_height] || heights.standard);
+
+        // Header style, chat background, launcher size
+        const pick = (value, allowed, fallback) => allowed.includes(value) ? value : fallback;
+        const headerStyle = pick(botConfig.header_style, ['gradient', 'solid', 'minimal'], 'gradient');
+        root.classList.toggle('wf-header-solid', headerStyle === 'solid');
+        root.classList.toggle('wf-header-minimal', headerStyle === 'minimal');
+        const chatBg = pick(botConfig.chat_background, ['plain', 'dots', 'glow'], 'plain');
+        root.classList.toggle('wf-bg-dots', chatBg === 'dots');
+        root.classList.toggle('wf-bg-glow', chatBg === 'glow');
+        const launcherSize = pick(botConfig.launcher_size, ['small', 'medium', 'large'], 'medium');
+        root.classList.toggle('wf-launcher-small', launcherSize === 'small');
+        root.classList.toggle('wf-launcher-large', launcherSize === 'large');
+
+        // Visitor message colour
+        const userColor = /^#[0-9a-f]{6}$/i.test(botConfig.user_bubble_color || '') ? botConfig.user_bubble_color : '';
+        root.classList.toggle('wf-custom-user', !!userColor);
+        root.classList.toggle('wf-light-user', !!userColor && isLightColor(userColor));
+        if (userColor) root.style.setProperty('--wf-user-bubble', userColor);
+
+        // Sources and timestamps
+        root.classList.toggle('wf-no-sources', botConfig.show_sources === 0 || botConfig.show_sources === false);
+
+        // Which pages show the widget
+        applyPageRules();
+
         // Typography
         const fontKey = botConfig.font_family || 'jakarta';
         if (fontKey === 'inherit') {
@@ -2555,6 +2651,21 @@
             }
         }
 
+        // Call / email the team from the menu
+        const hideMenu = () => { const m = $('wf-menu'); if (m) m.classList.remove('wf-menu-open'); };
+        const callBtn = $('wf-call-btn');
+        const phone = String(botConfig.contact_phone || '').replace(/[^0-9+]/g, '');
+        if (callBtn) {
+            callBtn.style.display = phone ? '' : 'none';
+            callBtn.onclick = () => { hideMenu(); window.location.href = `tel:${phone}`; };
+        }
+        const mailBtn = $('wf-mail-btn');
+        const email = String(botConfig.contact_email || '').trim();
+        if (mailBtn) {
+            mailBtn.style.display = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? '' : 'none';
+            mailBtn.onclick = () => { hideMenu(); window.location.href = `mailto:${email}`; };
+        }
+
         if (botConfig.position === 'bottom-left') {
             root.classList.add('wf-position-left');
         }
@@ -2582,6 +2693,44 @@
         initProactiveTriggers();
     }
 
+    // "/pricing", "/blog/*", "*/checkout" — one rule per line; matched against the page path.
+    function pathMatches(rules, path) {
+        return String(rules || '').split('\n').map(r => r.trim()).filter(Boolean).some(rule => {
+            const norm = (p) => (p.length > 1 ? p.replace(/\/+$/, '') : p).toLowerCase();
+            const pattern = norm(rule).split('*').map(s => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+            return new RegExp(`^${pattern}$`).test(norm(path));
+        });
+    }
+    function pageAllowed() {
+        const path = (window.location && window.location.pathname) || '/';
+        if (String(botConfig.show_on_paths || '').trim() && !pathMatches(botConfig.show_on_paths, path)) return false;
+        return !pathMatches(botConfig.hide_on_paths, path);
+    }
+    let pageRuleWatcher = null;
+    function applyPageRules() {
+        root.classList.toggle('wf-page-hidden', !pageAllowed());
+        // Single-page apps change the path without reloading, so keep checking.
+        if (!pageRuleWatcher && (String(botConfig.show_on_paths || '').trim() || String(botConfig.hide_on_paths || '').trim())) {
+            let lastPath = window.location.pathname;
+            pageRuleWatcher = setInterval(() => {
+                if (window.location.pathname !== lastPath) {
+                    lastPath = window.location.pathname;
+                    root.classList.toggle('wf-page-hidden', !pageAllowed());
+                }
+            }, 1000);
+        }
+    }
+
+    function stampTime(bubble, when) {
+        if (!(botConfig.show_timestamps === 1 || botConfig.show_timestamps === true) || !bubble) return;
+        let date = when ? new Date(String(when).includes('T') || /[zZ]|[+-]\d\d:?\d\d$/.test(String(when)) ? when : String(when).replace(' ', 'T') + 'Z') : new Date();
+        if (isNaN(date.getTime())) return;
+        const el = document.createElement('span');
+        el.className = 'wf-msg-time';
+        el.textContent = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        bubble.appendChild(el);
+    }
+
     function applyLocalization() {
         const isArabicBrowser = (navigator.language && navigator.language.startsWith('ar')) ||
                                 (navigator.languages && navigator.languages.some(l => l.startsWith('ar')));
@@ -2599,6 +2748,16 @@
     let timeTriggerFired = false;
 
     function initProactiveTriggers() {
+        // 0. Open the chat by itself after a delay (desktop only, once per visit, never after a dismiss)
+        const autoSec = Number(botConfig.auto_open_delay || 0);
+        if (autoSec > 0 && window.innerWidth > 640) setTimeout(() => {
+            try {
+                if (sessionStorage.getItem(`wf_auto_opened_${ASSISTANT_ID}`) || sessionStorage.getItem(`wf_teaser_dismissed_${ASSISTANT_ID}`)) return;
+                sessionStorage.setItem(`wf_auto_opened_${ASSISTANT_ID}`, '1');
+            } catch (e) {}
+            if (!isOpen && !root.classList.contains('wf-page-hidden')) toggleChat();
+        }, autoSec * 1000);
+
         // 1. Time-on-page trigger (configurable; 0 disables)
         const delaySec = botConfig.teaser_delay === undefined || botConfig.teaser_delay === null ? 12 : Number(botConfig.teaser_delay);
         if (delaySec > 0 && botConfig.teaser_message) setTimeout(() => {
@@ -2735,8 +2894,8 @@
                 if (popSec) popSec.style.display = 'none';
             }
             for (const m of msgs) {
-                if (m.role === 'user') appendMsg('user', m.content);
-                else if (m.role === 'assistant') appendMsg('bot', m.content, m.sources || [], { silent: true, messageId: m.id, feedback: m.feedback || 0, cards: m.cards || [] });
+                if (m.role === 'user') appendMsg('user', m.content, [], { time: m.created_at });
+                else if (m.role === 'assistant') appendMsg('bot', m.content, m.sources || [], { silent: true, messageId: m.id, feedback: m.feedback || 0, cards: m.cards || [], time: m.created_at });
                 else if (m.role === 'operator') appendOperatorMsg(m.content, data.operator_name, { silent: true });
                 else if (m.role === 'system') appendSystemNote(m.content);
                 setLastMessageId(m.id);
@@ -3129,6 +3288,7 @@
                 announce(accumulatedText);
                 if (finalData.message_id) attachFeedback(botBubble, finalData.message_id);
                 if (finalData.cards && finalData.cards.length) renderCards(botBubble, finalData.cards);
+                stampTime(botBubble);
 
                 if (finalData.lead_prompted && botConfig.lead_capture_enabled) {
                     renderInChatLeadCard();
@@ -3298,6 +3458,7 @@
             if (opts.cards && opts.cards.length) renderCards(bubble, opts.cards);
             if (!opts.silent) playChime();
         }
+        stampTime(bubble, opts.time);
         bodyEl.appendChild(bubble);
         bodyEl.scrollTop = bodyEl.scrollHeight;
     }

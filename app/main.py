@@ -276,6 +276,18 @@ class UpdateAssistantRequest(BaseModel):
     exit_intent: Optional[bool] = None
     hide_on_mobile: Optional[bool] = None
     custom_css: Optional[str] = None
+    header_style: Optional[str] = None       # gradient | solid | minimal
+    chat_background: Optional[str] = None    # plain | dots | glow
+    widget_height: Optional[str] = None      # compact | standard | tall
+    launcher_size: Optional[str] = None      # small | medium | large
+    user_bubble_color: Optional[str] = None  # hex, or "" to use the brand colour
+    auto_open_delay: Optional[int] = None    # seconds; 0 = never
+    show_on_paths: Optional[str] = None      # one path per line, * wildcard
+    hide_on_paths: Optional[str] = None
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
+    show_sources: Optional[bool] = None
+    show_timestamps: Optional[bool] = None
     tone: Optional[str] = None
     reply_length: Optional[str] = None
     custom_instructions: Optional[str] = None
@@ -905,7 +917,7 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
         data["show_branding"] = 1 if data["show_branding"] else 0
     if "launcher_pulse" in data:
         data["launcher_pulse"] = 1 if data["launcher_pulse"] else 0
-    for flag in ("exit_intent", "hide_on_mobile"):
+    for flag in ("exit_intent", "hide_on_mobile", "show_sources", "show_timestamps"):
         if flag in data:
             data[flag] = 1 if data[flag] else 0
     # Clamp layout values so a bad input can't push the widget off-screen.
@@ -922,6 +934,28 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
         data["launcher_icon"] = "chat"
     if "custom_css" in data and data["custom_css"] is not None:
         data["custom_css"] = data["custom_css"][:8000]
+    for key, choices, default in (("header_style", ("gradient", "solid", "minimal"), "gradient"),
+                                  ("chat_background", ("plain", "dots", "glow"), "plain"),
+                                  ("widget_height", ("compact", "standard", "tall"), "standard"),
+                                  ("launcher_size", ("small", "medium", "large"), "medium")):
+        if key in data and data[key] not in choices:
+            data[key] = default
+    if "user_bubble_color" in data:
+        color = (data["user_bubble_color"] or "").strip()
+        data["user_bubble_color"] = color if re.fullmatch(r"#[0-9a-fA-F]{6}", color) else ""
+    if "auto_open_delay" in data and data["auto_open_delay"] is not None:
+        data["auto_open_delay"] = max(0, min(600, int(data["auto_open_delay"])))
+    for key in ("show_on_paths", "hide_on_paths"):
+        if key in data:
+            lines = [ln.strip() for ln in (data[key] or "").splitlines() if ln.strip()]
+            data[key] = "\n".join(ln if ln.startswith("/") or ln.startswith("*") else "/" + ln for ln in lines[:50])[:2000]
+    if "contact_phone" in data:
+        data["contact_phone"] = re.sub(r"[^0-9+()\-\s]", "", data["contact_phone"] or "").strip()[:30]
+    if "contact_email" in data:
+        email = (data["contact_email"] or "").strip()[:254]
+        if email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            raise HTTPException(status_code=400, detail="Contact email doesn't look like an email address.")
+        data["contact_email"] = email
     if data.get("webhook_url"):
         ok, reason = check_public_url(data["webhook_url"].strip())
         if not ok:

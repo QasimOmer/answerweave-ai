@@ -277,6 +277,19 @@ SCHEMA_COLUMNS = [
     ("assistants", "reply_length", "TEXT DEFAULT 'balanced'"),
     ("assistants", "custom_instructions", "TEXT DEFAULT ''"),
     ("assistants", "avoid_topics", "TEXT DEFAULT ''"),
+    # Widget appearance & behaviour
+    ("assistants", "header_style", "TEXT DEFAULT 'gradient'"),
+    ("assistants", "chat_background", "TEXT DEFAULT 'plain'"),
+    ("assistants", "widget_height", "TEXT DEFAULT 'standard'"),
+    ("assistants", "launcher_size", "TEXT DEFAULT 'medium'"),
+    ("assistants", "user_bubble_color", "TEXT DEFAULT ''"),
+    ("assistants", "auto_open_delay", "INTEGER DEFAULT 0"),
+    ("assistants", "show_on_paths", "TEXT DEFAULT ''"),
+    ("assistants", "hide_on_paths", "TEXT DEFAULT ''"),
+    ("assistants", "contact_phone", "TEXT DEFAULT ''"),
+    ("assistants", "contact_email", "TEXT DEFAULT ''"),
+    ("assistants", "show_sources", "INTEGER DEFAULT 1"),
+    ("assistants", "show_timestamps", "INTEGER DEFAULT 0"),
 ]
 
 
@@ -1037,6 +1050,7 @@ def update_assistant(assistant_id: str, data: Dict[str, Any]) -> bool:
         "teaser_message", "lead_title", "lead_fields", "sound_enabled", "show_branding", "whatsapp_number",
         "input_placeholder", "launcher_pulse", "border_radius",
         "font_family", "widget_width", "offset_x", "offset_y", "launcher_icon", "teaser_delay", "exit_intent", "hide_on_mobile", "custom_css",
+        "header_style", "chat_background", "widget_height", "launcher_size", "user_bubble_color", "auto_open_delay", "show_on_paths", "hide_on_paths", "contact_phone", "contact_email", "show_sources", "show_timestamps",
         "tone", "reply_length", "custom_instructions", "avoid_topics", "industry",
         "recrawl_frequency", "crawl_root_url", "crawl_max_pages", "installed_epoch", "installed_url"
     ]

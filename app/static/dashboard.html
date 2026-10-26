@@ -1220,6 +1220,14 @@
                                             <input type="text" id="asstWhatsapp" placeholder="+971505594888" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none font-mono" />
                                         </div>
                                         <div>
+                                            <label for="asstContactPhone" class="block text-xs font-semibold text-slate-300 mb-1">Phone ("Call us" in the menu)</label>
+                                            <input type="tel" id="asstContactPhone" maxlength="30" placeholder="+1 555 010 0199" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none font-mono" />
+                                        </div>
+                                        <div>
+                                            <label for="asstContactEmail" class="block text-xs font-semibold text-slate-300 mb-1">Email ("Email us" in the menu)</label>
+                                            <input type="email" id="asstContactEmail" maxlength="254" placeholder="hello@yourstore.com" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                        </div>
+                                        <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">White-Label Footer</label>
                                             <select id="asstShowBranding" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
                                                 <option value="true">Show "Powered by AnswerWeave"</option>
@@ -1360,6 +1368,66 @@
                                             <input type="number" id="asstOffsetY" min="0" max="200" step="1" placeholder="24" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
                                         </div>
                                     </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div>
+                                            <label for="asstHeaderStyle" class="block text-xs font-semibold text-slate-300 mb-1">Header style</label>
+                                            <select id="asstHeaderStyle" onchange="applyPreviewExtras()" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="gradient">Gradient (default)</option>
+                                                <option value="solid">Solid brand colour</option>
+                                                <option value="minimal">Minimal (light)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="asstChatBg" class="block text-xs font-semibold text-slate-300 mb-1">Chat background</label>
+                                            <select id="asstChatBg" onchange="applyPreviewExtras()" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="plain">Plain</option>
+                                                <option value="dots">Dot pattern</option>
+                                                <option value="glow">Soft brand glow</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="asstHeight" class="block text-xs font-semibold text-slate-300 mb-1">Chat window height</label>
+                                            <select id="asstHeight" onchange="applyPreviewExtras()" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="compact">Compact (540px)</option>
+                                                <option value="standard">Standard (620px)</option>
+                                                <option value="tall">Tall (720px)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="asstLauncherSize" class="block text-xs font-semibold text-slate-300 mb-1">Launcher size</label>
+                                            <select id="asstLauncherSize" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="small">Small (48px)</option>
+                                                <option value="medium">Medium (56px)</option>
+                                                <option value="large">Large (64px)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="asstUserColorText" class="block text-xs font-semibold text-slate-300 mb-1">Visitor message colour</label>
+                                            <div class="flex items-center gap-2">
+                                                <input type="color" id="asstUserColorPicker" value="#2f5cf6" oninput="document.getElementById('asstUserColorText').value = this.value; applyPreviewExtras()" class="w-9 h-9 rounded-lg bg-transparent border border-white/15 cursor-pointer shrink-0" aria-label="Pick visitor message colour" />
+                                                <input type="text" id="asstUserColorText" maxlength="7" placeholder="Same as brand colour" oninput="if (/^#[0-9a-f]{6}$/i.test(this.value)) document.getElementById('asstUserColorPicker').value = this.value; applyPreviewExtras()" class="glass-input flex-1 min-w-0 text-xs rounded-xl px-3 py-2 outline-none font-mono" />
+                                                <button type="button" onclick="document.getElementById('asstUserColorText').value=''; applyPreviewExtras()" class="text-[11px] text-slate-400 hover:text-white shrink-0">Reset</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="asstShowSources" class="block text-xs font-semibold text-slate-300 mb-1">Source links under answers</label>
+                                            <select id="asstShowSources" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="true">Show sources</option>
+                                                <option value="false">Hide sources</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="asstShowTimestamps" class="block text-xs font-semibold text-slate-300 mb-1">Message times</label>
+                                            <select id="asstShowTimestamps" onchange="applyPreviewExtras()" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="false">Hide</option>
+                                                <option value="true">Show (e.g. 3:42 PM)</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                     <p class="text-[11.5px] text-slate-500">Raise the bottom spacing if the launcher overlaps a cookie banner or another floating button on your site. Header and button text switch to dark automatically on light brand colors.</p>
                                 </div>
 
@@ -1390,6 +1458,22 @@
                                             </select>
                                         </div>
                                     </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div>
+                                            <label for="asstAutoOpen" class="block text-xs font-semibold text-slate-300 mb-1">Open chat by itself after (sec)</label>
+                                            <input type="number" id="asstAutoOpen" min="0" max="600" step="1" placeholder="0" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
+                                            <p class="text-[11px] text-slate-500 mt-1">0 = never. Desktop only, once per visit.</p>
+                                        </div>
+                                        <div>
+                                            <label for="asstShowOnPaths" class="block text-xs font-semibold text-slate-300 mb-1">Only show on pages</label>
+                                            <textarea id="asstShowOnPaths" rows="3" spellcheck="false" placeholder="/pricing&#10;/products/*" class="glass-input w-full font-mono text-[11.5px] rounded-xl px-3 py-2 outline-none leading-relaxed"></textarea>
+                                        </div>
+                                        <div>
+                                            <label for="asstHideOnPaths" class="block text-xs font-semibold text-slate-300 mb-1">Hide on pages</label>
+                                            <textarea id="asstHideOnPaths" rows="3" spellcheck="false" placeholder="/checkout&#10;/account/*" class="glass-input w-full font-mono text-[11.5px] rounded-xl px-3 py-2 outline-none leading-relaxed"></textarea>
+                                        </div>
+                                    </div>
+                                    <p class="text-[11.5px] text-slate-500 -mt-1">One page path per line; <code class="font-mono text-slate-400">*</code> matches anything, e.g. <code class="font-mono text-slate-400">/blog/*</code>. Leave "Only show on" empty to show it everywhere.</p>
                                     <div>
                                         <label for="asstLeadTitle" class="block text-xs font-semibold text-slate-300 mb-1">Lead form title</label>
                                         <input type="text" id="asstLeadTitle" placeholder="Get in touch with our team" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none" />
@@ -2826,6 +2910,19 @@
             setVal('asstHideMobile', asst.hide_on_mobile === 1 ? 'true' : 'false');
             setVal('asstLeadTitle', asst.lead_title || '');
             setVal('asstCustomCss', asst.custom_css || '');
+            setVal('asstContactPhone', asst.contact_phone || '');
+            setVal('asstContactEmail', asst.contact_email || '');
+            setVal('asstHeaderStyle', asst.header_style || 'gradient');
+            setVal('asstChatBg', asst.chat_background || 'plain');
+            setVal('asstHeight', asst.widget_height || 'standard');
+            setVal('asstLauncherSize', asst.launcher_size || 'medium');
+            setVal('asstUserColorText', asst.user_bubble_color || '');
+            if (asst.user_bubble_color) setVal('asstUserColorPicker', asst.user_bubble_color);
+            setVal('asstShowSources', asst.show_sources === 0 ? 'false' : 'true');
+            setVal('asstShowTimestamps', asst.show_timestamps === 1 ? 'true' : 'false');
+            setVal('asstAutoOpen', asst.auto_open_delay ?? 0);
+            setVal('asstShowOnPaths', asst.show_on_paths || '');
+            setVal('asstHideOnPaths', asst.hide_on_paths || '');
             setVal('asstTone', asst.tone || 'friendly');
             setVal('asstIndustry', asst.industry || 'auto');
             setVal('asstReplyLength', asst.reply_length || 'balanced');
@@ -2856,6 +2953,7 @@
             onLivePositionChange(asst.position || 'bottom-right');
             onLiveFontChange(asst.font_family || 'jakarta');
             onLiveWidthChange(asst.widget_width || 'standard');
+            applyPreviewExtras();
             mockWindowOpen = true;
             const win = document.getElementById('prevChatWindow');
             const teaser = document.getElementById('prevTeaserBubble');
@@ -2918,6 +3016,46 @@
             // Mirror the widget's automatic contrast: dark text on light brand colors.
             const onPrimary = isLightHex(val) ? '#0f172a' : '#ffffff';
             [prevHeader, prevBubble, prevSendBtn].forEach(el => { if (el) el.style.color = onPrimary; });
+            applyPreviewExtras();
+        }
+
+        // Mirrors the widget's header style, background, height and visitor message colour in the preview.
+        function applyPreviewExtras() {
+            const val = (id, d) => { const el = document.getElementById(id); return (el && el.value) || d; };
+            const brand = val('asstColorText', '#081726');
+            const dark = val('asstThemeMode', 'light') === 'dark';
+            const header = document.getElementById('prevHeader');
+            const body = document.getElementById('prevChatBody');
+            const win = document.getElementById('prevChatWindow');
+            const style = val('asstHeaderStyle', 'gradient');
+            if (header) {
+                const onBrand = isLightHex(brand) ? '#0f172a' : '#ffffff';
+                if (style === 'minimal') {
+                    header.style.background = dark ? '#0f172a' : '#ffffff';
+                    header.style.color = dark ? '#f1f5f9' : '#0f172a';
+                    header.style.borderBottom = `1px solid ${dark ? '#1e293b' : '#e2e8f0'}`;
+                } else {
+                    header.style.background = style === 'solid' ? brand : `linear-gradient(135deg, ${brand} 0%, color-mix(in srgb, ${brand} 70%, #6366f1) 100%)`;
+                    header.style.color = onBrand;
+                    header.style.borderBottom = 'none';
+                }
+            }
+            if (body) {
+                const bg = val('asstChatBg', 'plain');
+                body.style.backgroundColor = dark ? '#0b1120' : '#f8fafc';
+                body.style.backgroundSize = '16px 16px';
+                body.style.backgroundImage = bg === 'dots'
+                    ? `radial-gradient(${dark ? '#334155' : '#cbd5e1'} 1.2px, transparent 1.2px)`
+                    : bg === 'glow' ? `radial-gradient(130% 55% at 50% 0%, color-mix(in srgb, ${brand} 16%, transparent), transparent 72%)` : 'none';
+                if (bg === 'glow') body.style.backgroundSize = 'auto';
+            }
+            if (win) {
+                win.style.height = { compact: '390px', standard: '430px', tall: '480px' }[val('asstHeight', 'standard')] || '430px';
+                const userColor = /^#[0-9a-f]{6}$/i.test(val('asstUserColorText', '')) ? val('asstUserColorText', '') : brand;
+                win.style.setProperty('--prev-user', userColor);
+                win.style.setProperty('--prev-user-text', isLightHex(userColor) ? '#0f172a' : '#ffffff');
+                win.dataset.times = val('asstShowTimestamps', 'false');
+            }
         }
 
         function isLightHex(hex) {
@@ -3109,6 +3247,7 @@
                 }
             }
             renderMockPopularCards(document.getElementById('asstQuestions') ? document.getElementById('asstQuestions').value : '');
+            applyPreviewExtras();
         }
 
         function toggleMockWindow() {
@@ -3275,8 +3414,16 @@
             
             // Append user bubble
             const userBubble = document.createElement('div');
-            userBubble.className = "bg-brand-600 text-white p-2.5 rounded-xl rounded-br-sm text-[11.5px] ml-auto max-w-[80%] leading-relaxed";
+            userBubble.className = "p-2.5 rounded-xl rounded-br-sm text-[11.5px] ml-auto max-w-[80%] leading-relaxed";
+            userBubble.style.background = 'var(--prev-user, #2f5cf6)';
+            userBubble.style.color = 'var(--prev-user-text, #ffffff)';
             userBubble.innerText = q;
+            if (document.getElementById('prevChatWindow').dataset.times === 'true') {
+                const t = document.createElement('div');
+                t.className = 'text-[9.5px] opacity-60 text-right mt-1';
+                t.textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                userBubble.appendChild(t);
+            }
             body.appendChild(userBubble);
             body.scrollTop = body.scrollHeight;
 
@@ -5108,6 +5255,18 @@
                 hide_on_mobile: document.getElementById('asstHideMobile').value === 'true',
                 lead_title: document.getElementById('asstLeadTitle').value.trim(),
                 custom_css: document.getElementById('asstCustomCss').value,
+                contact_phone: document.getElementById('asstContactPhone').value.trim(),
+                contact_email: document.getElementById('asstContactEmail').value.trim(),
+                header_style: document.getElementById('asstHeaderStyle').value,
+                chat_background: document.getElementById('asstChatBg').value,
+                widget_height: document.getElementById('asstHeight').value,
+                launcher_size: document.getElementById('asstLauncherSize').value,
+                user_bubble_color: document.getElementById('asstUserColorText').value.trim(),
+                show_sources: document.getElementById('asstShowSources').value === 'true',
+                show_timestamps: document.getElementById('asstShowTimestamps').value === 'true',
+                auto_open_delay: parseIntOr(document.getElementById('asstAutoOpen').value, 0),
+                show_on_paths: document.getElementById('asstShowOnPaths').value,
+                hide_on_paths: document.getElementById('asstHideOnPaths').value,
                 tone: document.getElementById('asstTone').value,
                 industry: document.getElementById('asstIndustry').value,
                 reply_length: document.getElementById('asstReplyLength').value,
@@ -5121,7 +5280,11 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                await res.json();
+                const saved = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    showToast(typeof saved.detail === 'string' ? saved.detail : 'Could not save the widget settings', 'alert-circle');
+                    return;
+                }
                 showToast("Assistant widget settings saved");
                 loadAssistants();
             } catch (err) {
