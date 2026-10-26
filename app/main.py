@@ -288,6 +288,7 @@ class UpdateAssistantRequest(BaseModel):
     contact_email: Optional[str] = None
     show_sources: Optional[bool] = None
     show_timestamps: Optional[bool] = None
+    animation_style: Optional[str] = None    # lively | subtle | off
     tone: Optional[str] = None
     reply_length: Optional[str] = None
     custom_instructions: Optional[str] = None
@@ -937,7 +938,8 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
     for key, choices, default in (("header_style", ("gradient", "solid", "minimal"), "gradient"),
                                   ("chat_background", ("plain", "dots", "glow"), "plain"),
                                   ("widget_height", ("compact", "standard", "tall"), "standard"),
-                                  ("launcher_size", ("small", "medium", "large"), "medium")):
+                                  ("launcher_size", ("small", "medium", "large"), "medium"),
+                                  ("animation_style", ("lively", "subtle", "off"), "lively")):
         if key in data and data[key] not in choices:
             data[key] = default
     if "user_bubble_color" in data:

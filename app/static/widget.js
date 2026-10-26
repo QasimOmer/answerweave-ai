@@ -316,24 +316,28 @@
         .wf-is-open .wf-has-pulse::before {
             display: none !important;
         }
-        .wf-is-open .wf-teaser-bubble {
+        .wf-is-open .wf-teaser-bubble,
+        .wf-teaser-bubble:not(.wf-teaser-show) {
             display: none !important;
         }
-        .wf-has-pulse::before {
+        /* Attention pulse: two staggered ripples drawn with box-shadow, so they always sit
+           outside the button (no z-index tricks) and take the brand colour. */
+        .wf-has-pulse::before, .wf-has-pulse::after {
             content: '' !important;
             position: absolute !important;
-            inset: -5px !important;
+            inset: 0 !important;
             border-radius: inherit !important;
-            background: inherit !important;
-            opacity: 0.45 !important;
-            z-index: -1 !important;
-            animation: wfPulseRing 2.4s cubic-bezier(0.24, 0, 0.38, 1) infinite !important;
             pointer-events: none !important;
+            box-shadow: 0 0 0 0 color-mix(in srgb, var(--wf-primary, #4f46e5) 55%, transparent) !important;
+            animation: wfRipple 2.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite !important;
         }
-        @keyframes wfPulseRing {
-            0% { transform: scale(1); opacity: 0.45; }
-            60% { transform: scale(1.22); opacity: 0; }
-            100% { transform: scale(1.22); opacity: 0; }
+        .wf-has-pulse::after { animation-delay: 1.3s !important; }
+        .wf-has-pulse:hover::before, .wf-has-pulse:hover::after { animation-play-state: paused !important; opacity: 0 !important; }
+        .wf-is-open .wf-has-pulse::after { display: none !important; }
+        @keyframes wfRipple {
+            0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--wf-primary, #4f46e5) 55%, transparent); opacity: 1; }
+            70% { box-shadow: 0 0 0 16px color-mix(in srgb, var(--wf-primary, #4f46e5) 0%, transparent); opacity: 0; }
+            100% { box-shadow: 0 0 0 16px transparent; opacity: 0; }
         }
         button.wf-launcher svg {
             width: 22px !important;
@@ -1435,8 +1439,16 @@
             border-bottom-right-radius: 4px !important;
             text-align: right !important;
         }
-        .wf-pulse-once {
-            animation: wf-pulse 0.8s ease 2 !important;
+        button.wf-launcher.wf-pulse-once {
+            animation: wfNudge 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) 1 !important;
+        }
+        @keyframes wfNudge {
+            0%, 100% { transform: none; }
+            15% { transform: scale(1.12) rotate(-8deg); }
+            30% { transform: scale(1.12) rotate(7deg); }
+            45% { transform: scale(1.08) rotate(-5deg); }
+            60% { transform: scale(1.04) rotate(3deg); }
+            75% { transform: scale(1.02) rotate(0); }
         }
 
         /* ================= Header menu, contact card, message formatting ================= */
@@ -1859,6 +1871,82 @@
             outline: 2px solid var(--wf-primary, #6366f1) !important; outline-offset: 2px !important;
         }
 
+        /* ================= MOTION LAYER ================= */
+        /* Launcher springs in once the widget loads */
+        .wf-launcher-wrap { animation: wfLauncherIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.35s both !important; }
+        @keyframes wfLauncherIn {
+            from { opacity: 0; transform: translateY(18px) scale(0.6); }
+            to { opacity: 1; transform: none; }
+        }
+        /* Chat icon <-> close icon spin */
+        #wf-btn-icon { display: inline-flex !important; align-items: center !important; justify-content: center !important; }
+        #wf-btn-icon.wf-icon-swap { animation: wfIconSwap 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both !important; }
+        @keyframes wfIconSwap {
+            from { opacity: 0; transform: rotate(-90deg) scale(0.5); }
+            to { opacity: 1; transform: none; }
+        }
+        /* The window grows out of the launcher's corner */
+        .wf-window { transform-origin: bottom right !important; }
+        .wf-position-left .wf-window { transform-origin: bottom left !important; }
+        /* Teaser pops from the launcher, shows typing dots, then its message */
+        .wf-teaser-bubble { transform-origin: bottom right !important; animation: wfTeaserIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both !important; }
+        .wf-position-left .wf-teaser-bubble { transform-origin: bottom left !important; }
+        @keyframes wfTeaserIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.7); }
+            to { opacity: 1; transform: none; }
+        }
+        .wf-teaser-dots { display: none !important; gap: 4px !important; align-items: center !important; padding: 4px 2px !important; }
+        .wf-teaser-dots span {
+            width: 6px !important; height: 6px !important; border-radius: 50% !important;
+            background: var(--wf-text-subtle, #94a3b8) !important;
+            animation: wfTeaserDot 1s ease-in-out infinite !important;
+        }
+        .wf-teaser-dots span:nth-child(2) { animation-delay: 0.15s !important; }
+        .wf-teaser-dots span:nth-child(3) { animation-delay: 0.3s !important; }
+        @keyframes wfTeaserDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-4px); opacity: 1; } }
+        .wf-teaser-typing .wf-teaser-dots { display: inline-flex !important; }
+        .wf-teaser-typing #wf-teaser-text, .wf-teaser-typing .wf-teaser-close { display: none !important; }
+        #wf-teaser-text { animation: wfFadeUp 0.3s ease-out both !important; }
+        /* Popular questions slide in one after another when the chat opens */
+        .wf-window.wf-open button.wf-question-card { animation: wfFadeUp 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both !important; }
+        .wf-window.wf-open button.wf-question-card:nth-child(1) { animation-delay: 0.12s !important; }
+        .wf-window.wf-open button.wf-question-card:nth-child(2) { animation-delay: 0.19s !important; }
+        .wf-window.wf-open button.wf-question-card:nth-child(3) { animation-delay: 0.26s !important; }
+        .wf-window.wf-open button.wf-question-card:nth-child(4) { animation-delay: 0.33s !important; }
+        .wf-window.wf-open button.wf-question-card:nth-child(n+5) { animation-delay: 0.4s !important; }
+        /* Unread badge bounces in */
+        .wf-unread-badge.wf-badge-pop { animation: wfBadgePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both !important; }
+        @keyframes wfBadgePop { 0% { transform: scale(0); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+        /* Paper plane takes off when a message is sent */
+        button.wf-send-btn.wf-send-fly svg { animation: wfSendFly 0.55s cubic-bezier(0.5, 0, 0.3, 1) both !important; }
+        @keyframes wfSendFly {
+            0% { transform: none; opacity: 1; }
+            45% { transform: translate(14px, -14px) scale(0.6); opacity: 0; }
+            46% { transform: translate(-12px, 12px) scale(0.6); opacity: 0; }
+            100% { transform: none; opacity: 1; }
+        }
+
+        /* Animation level (dashboard setting): subtle keeps fades, drops springs, staggers and flourishes */
+        .wf-motion-subtle .wf-launcher-wrap,
+        .wf-motion-subtle #wf-btn-icon.wf-icon-swap,
+        .wf-motion-subtle button.wf-send-btn.wf-send-fly svg,
+        .wf-motion-subtle .wf-header::after,
+        .wf-motion-subtle .wf-has-pulse::after { animation: none !important; }
+        .wf-motion-subtle .wf-teaser-bubble { animation: wfFadeUp 0.3s ease-out both !important; }
+        .wf-motion-subtle .wf-window.wf-open button.wf-question-card,
+        .wf-motion-subtle .wf-lcard { animation-delay: 0s !important; }
+        .wf-motion-subtle .wf-has-pulse::after { display: none !important; }
+        .wf-motion-subtle button.wf-launcher:hover { transform: none !important; }
+        /* off: no animation or movement at all. :not(#wf-x) adds ID weight so this beats every
+           class-based animation rule above, however specific. */
+        .wf-motion-off *:not(#wf-x), .wf-motion-off *:not(#wf-x)::before, .wf-motion-off *:not(#wf-x)::after {
+            animation: none !important;
+            transition: none !important;
+        }
+        .wf-motion-off .wf-window:not(.wf-open) { opacity: 0 !important; }
+        .wf-motion-off .wf-has-pulse::before, .wf-motion-off .wf-has-pulse::after { display: none !important; }
+        .wf-motion-off button.wf-launcher:hover, .wf-motion-off .wf-window.wf-open { transform: none !important; }
+
         /* ================= CUSTOMIZATION LAYER (dashboard settings) ================= */
         /* Header style: gradient (default), solid brand colour, or minimal (window colour with a hairline) */
         .wf-header-solid .wf-header { background: var(--wf-primary, #0f172a) !important; }
@@ -1921,6 +2009,7 @@
         .wf-root.wf-page-hidden { display: none !important; }
 
         @media (prefers-reduced-motion: reduce) {
+            .wf-has-pulse::before, .wf-has-pulse::after, .wf-teaser-dots span { display: none !important; }
             .wf-root *, .wf-root *::before, .wf-root *::after {
                 animation-duration: 0.01ms !important;
                 animation-delay: 0s !important;
@@ -2073,6 +2162,7 @@
         <!-- Floating Launcher Button Wrap -->
         <div class="wf-launcher-wrap">
             <div class="wf-teaser-bubble" id="wf-teaser-bubble">
+                <span class="wf-teaser-dots" aria-hidden="true"><span></span><span></span><span></span></span>
                 <span id="wf-teaser-text">${botConfig.teaser_message}</span>
                 <span class="wf-teaser-close" id="wf-teaser-close">&times;</span>
             </div>
@@ -2598,11 +2688,14 @@
             if (btnLabel) btnLabel.style.display = 'none';
         }
 
-        if (botConfig.launcher_pulse !== 0 && botConfig.launcher_pulse !== false) {
-            triggerBtn.classList.add('wf-has-pulse');
-        } else {
-            triggerBtn.classList.remove('wf-has-pulse');
-        }
+        // The pulse invites a first click; once the visitor has opened the chat it stops for the visit.
+        let pulseDone = false;
+        try { pulseDone = sessionStorage.getItem(PULSE_DONE_KEY) === '1'; } catch (e) {}
+        triggerBtn.classList.toggle('wf-has-pulse', botConfig.launcher_pulse !== 0 && botConfig.launcher_pulse !== false && !pulseDone);
+
+        const motion = ['lively', 'subtle', 'off'].includes(botConfig.animation_style) ? botConfig.animation_style : 'lively';
+        root.classList.toggle('wf-motion-subtle', motion === 'subtle');
+        root.classList.toggle('wf-motion-off', motion === 'off');
 
         // Input Placeholder
         if (inputEl) {
@@ -2678,7 +2771,7 @@
             const teaserText = $('wf-teaser-text');
             if (teaserText) teaserText.innerText = botConfig.teaser_message;
         } else {
-            if (teaserBubble) teaserBubble.style.display = 'none';
+            if (teaserBubble) teaserBubble.classList.remove('wf-teaser-show');
         }
 
         if (botConfig.show_branding === 0 || botConfig.show_branding === false) {
@@ -2747,6 +2840,30 @@
     let exitIntentTriggered = false;
     let timeTriggerFired = false;
 
+    const PULSE_DONE_KEY = `wf_pulse_done_${ASSISTANT_ID}`;
+
+    // Restarts a one-shot CSS animation class on an element.
+    function replayAnimation(el, cls, ms) {
+        if (!el) return;
+        el.classList.remove(cls);
+        void el.offsetWidth;
+        el.classList.add(cls);
+        clearTimeout(el['_wf_' + cls]);
+        el['_wf_' + cls] = setTimeout(() => el.classList.remove(cls), ms);
+    }
+
+    // Teaser: typing dots for a moment, then the message, plus a nudge on the launcher.
+    function showTeaser() {
+        if (!teaserBubble || isOpen) return;
+        teaserBubble.classList.add('wf-teaser-show');
+        const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!reduce && !root.classList.contains('wf-motion-off')) {
+            teaserBubble.classList.add('wf-teaser-typing');
+            setTimeout(() => teaserBubble.classList.remove('wf-teaser-typing'), 1100);
+        }
+        replayAnimation(triggerBtn, 'wf-pulse-once', 1000);
+    }
+
     function initProactiveTriggers() {
         // 0. Open the chat by itself after a delay (desktop only, once per visit, never after a dismiss)
         const autoSec = Number(botConfig.auto_open_delay || 0);
@@ -2763,10 +2880,7 @@
         if (delaySec > 0 && botConfig.teaser_message) setTimeout(() => {
             if (!isOpen && !timeTriggerFired && !sessionStorage.getItem(`wf_teaser_dismissed_${ASSISTANT_ID}`)) {
                 timeTriggerFired = true;
-                if (teaserBubble) {
-                    teaserBubble.style.display = 'block';
-                    triggerBtn.classList.add('wf-pulse-once');
-                }
+                showTeaser();
             }
         }, delaySec * 1000);
 
@@ -2780,8 +2894,7 @@
                     if (teaserText && !botConfig.teaser_message) {
                         teaserText.innerText = "Have a quick question before you go?";
                     }
-                    teaserBubble.style.display = 'block';
-                    triggerBtn.classList.add('wf-pulse-once');
+                    showTeaser();
                 }
             }
         });
@@ -2815,8 +2928,14 @@
         const badge = $('wf-unread-badge');
         if (!badge) return;
         if (unreadCount > 0 && !isOpen) {
-            badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+            const next = unreadCount > 9 ? '9+' : String(unreadCount);
+            const changed = badge.textContent !== next || badge.style.display === 'none';
+            badge.textContent = next;
             badge.style.display = 'block';
+            if (changed) {
+                replayAnimation(badge, 'wf-badge-pop', 600);
+                replayAnimation(triggerBtn, 'wf-pulse-once', 1000);
+            }
         } else {
             badge.style.display = 'none';
         }
@@ -2920,7 +3039,7 @@
                         const teaserText = $('wf-teaser-text');
                         if (teaserBubble && teaserText) {
                             teaserText.innerText = `${data.operator_name || 'Support'}: ${m.content.slice(0, 80)}${m.content.length > 80 ? '…' : ''}`;
-                            teaserBubble.style.display = 'block';
+                            showTeaser();
                         }
                     }
                 } else if (m.role === 'system') {
@@ -2993,8 +3112,11 @@
                 hostContainer.style.height = '100vh';
                 hostContainer.style.pointerEvents = 'auto';
             }
-            if (teaserBubble) teaserBubble.style.display = 'none';
+            if (teaserBubble) teaserBubble.classList.remove('wf-teaser-show');
+            triggerBtn.classList.remove('wf-has-pulse');
+            try { sessionStorage.setItem(PULSE_DONE_KEY, '1'); } catch (e) {}
             const iconEl = $('wf-btn-icon');
+            replayAnimation(iconEl, 'wf-icon-swap', 450);
             if (iconEl) {
                 iconEl.innerHTML = `
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -3014,6 +3136,7 @@
             }
             const iconEl = $('wf-btn-icon');
             if (iconEl) iconEl.innerHTML = launcherIconHtml();
+            replayAnimation(iconEl, 'wf-icon-swap', 450);
         }
     }
 
@@ -3039,7 +3162,7 @@
     if (teaserClose) {
         teaserClose.addEventListener('click', (e) => {
             e.stopPropagation();
-            teaserBubble.style.display = 'none';
+            teaserBubble.classList.remove('wf-teaser-show');
         });
     }
 
@@ -3172,6 +3295,7 @@
     async function submitQuery() {
         const query = inputEl.value.trim();
         if (!query) return;
+        replayAnimation(sendBtn, 'wf-send-fly', 600);
 
         inputEl.value = '';
         resizeInput();

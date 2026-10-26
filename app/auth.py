@@ -396,7 +396,7 @@ PUBLIC_ASSISTANT_FIELDS = {
     "lead_fields", "sound_enabled", "show_branding", "whatsapp_number", "input_placeholder",
     "launcher_pulse", "border_radius", "font_family", "widget_width", "offset_x", "offset_y",
     "launcher_icon", "teaser_delay", "exit_intent", "hide_on_mobile", "custom_css",
-    "header_style", "chat_background", "widget_height", "launcher_size", "user_bubble_color", "auto_open_delay", "show_on_paths", "hide_on_paths", "contact_phone", "contact_email", "show_sources", "show_timestamps",
+    "header_style", "chat_background", "widget_height", "launcher_size", "user_bubble_color", "auto_open_delay", "show_on_paths", "hide_on_paths", "contact_phone", "contact_email", "show_sources", "show_timestamps", "animation_style",
 }
 
 

@@ -155,7 +155,21 @@
         .menu-item.is-danger { color: #f87171; }
         .menu-item.is-danger:hover { background: rgba(239, 68, 68, .1); }
 
+        /* Widget preview: the launcher's attention ripple (mirrors the real widget) */
+        .prev-pulse { position: relative; }
+        .prev-pulse::before, .prev-pulse::after {
+            content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+            box-shadow: 0 0 0 0 var(--prev-pulse, rgba(47, 92, 246, .55));
+            animation: prevRipple 2.6s cubic-bezier(.22, .61, .36, 1) infinite;
+        }
+        .prev-pulse::after { animation-delay: 1.3s; }
+        @keyframes prevRipple {
+            0% { box-shadow: 0 0 0 0 var(--prev-pulse, rgba(47, 92, 246, .55)); opacity: 1; }
+            70%, 100% { box-shadow: 0 0 0 12px transparent; opacity: 0; }
+        }
+
         @media (prefers-reduced-motion: reduce) {
+            .prev-pulse::before, .prev-pulse::after { display: none; }
             *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
         }
     </style>
@@ -1412,7 +1426,15 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div>
+                                            <label for="asstAnimation" class="block text-xs font-semibold text-slate-300 mb-1">Animations</label>
+                                            <select id="asstAnimation" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
+                                                <option value="lively">Lively (default)</option>
+                                                <option value="subtle">Subtle (fades only)</option>
+                                                <option value="off">Off</option>
+                                            </select>
+                                        </div>
                                         <div>
                                             <label for="asstShowSources" class="block text-xs font-semibold text-slate-300 mb-1">Source links under answers</label>
                                             <select id="asstShowSources" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
@@ -2920,6 +2942,7 @@
             if (asst.user_bubble_color) setVal('asstUserColorPicker', asst.user_bubble_color);
             setVal('asstShowSources', asst.show_sources === 0 ? 'false' : 'true');
             setVal('asstShowTimestamps', asst.show_timestamps === 1 ? 'true' : 'false');
+            setVal('asstAnimation', asst.animation_style || 'lively');
             setVal('asstAutoOpen', asst.auto_open_delay ?? 0);
             setVal('asstShowOnPaths', asst.show_on_paths || '');
             setVal('asstHideOnPaths', asst.hide_on_paths || '');
@@ -3385,11 +3408,9 @@
                 return;
             }
 
-            if (enabled) {
-                bubble.classList.add('ring-4', 'ring-brand-400/50', 'animate-pulse');
-            } else {
-                bubble.classList.remove('ring-4', 'ring-brand-400/50', 'animate-pulse');
-            }
+            const brand = (document.getElementById('asstColorText') && document.getElementById('asstColorText').value) || '#2f5cf6';
+            bubble.style.setProperty('--prev-pulse', `color-mix(in srgb, ${brand} 55%, transparent)`);
+            bubble.classList.toggle('prev-pulse', !!enabled);
         }
 
         function onLiveSoundChange(enabled) {
@@ -5264,6 +5285,7 @@
                 user_bubble_color: document.getElementById('asstUserColorText').value.trim(),
                 show_sources: document.getElementById('asstShowSources').value === 'true',
                 show_timestamps: document.getElementById('asstShowTimestamps').value === 'true',
+                animation_style: document.getElementById('asstAnimation').value,
                 auto_open_delay: parseIntOr(document.getElementById('asstAutoOpen').value, 0),
                 show_on_paths: document.getElementById('asstShowOnPaths').value,
                 hide_on_paths: document.getElementById('asstHideOnPaths').value,

@@ -290,6 +290,7 @@ SCHEMA_COLUMNS = [
     ("assistants", "contact_email", "TEXT DEFAULT ''"),
     ("assistants", "show_sources", "INTEGER DEFAULT 1"),
     ("assistants", "show_timestamps", "INTEGER DEFAULT 0"),
+    ("assistants", "animation_style", "TEXT DEFAULT 'lively'"),
 ]
 
 
@@ -1050,7 +1051,7 @@ def update_assistant(assistant_id: str, data: Dict[str, Any]) -> bool:
         "teaser_message", "lead_title", "lead_fields", "sound_enabled", "show_branding", "whatsapp_number",
         "input_placeholder", "launcher_pulse", "border_radius",
         "font_family", "widget_width", "offset_x", "offset_y", "launcher_icon", "teaser_delay", "exit_intent", "hide_on_mobile", "custom_css",
-        "header_style", "chat_background", "widget_height", "launcher_size", "user_bubble_color", "auto_open_delay", "show_on_paths", "hide_on_paths", "contact_phone", "contact_email", "show_sources", "show_timestamps",
+        "header_style", "chat_background", "widget_height", "launcher_size", "user_bubble_color", "auto_open_delay", "show_on_paths", "hide_on_paths", "contact_phone", "contact_email", "show_sources", "show_timestamps", "animation_style",
         "tone", "reply_length", "custom_instructions", "avoid_topics", "industry",
         "recrawl_frequency", "crawl_root_url", "crawl_max_pages", "installed_epoch", "installed_url"
     ]
