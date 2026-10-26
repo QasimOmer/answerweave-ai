@@ -26,7 +26,7 @@ from app.ingestion import (
     discover_sitemap_urls,
     fetch_page_with_links,
     normalize_crawl_url,
-    EXCLUDE_URL_PATTERN,
+    is_crawlable_link,
     PAGINATION_PATTERN,
 )
 from app.embeddings import generate_embeddings_batch
@@ -180,7 +180,7 @@ def run_job_step(job_id: str, budget_seconds: float = STEP_BUDGET_SECONDS) -> Op
         since_save = 0
         while frontier and counts["pages_done"] < max_pages and time.time() < deadline:
             url = normalize_crawl_url(frontier.pop(0))
-            if not url or url in visited or EXCLUDE_URL_PATTERN.search(url):
+            if not url or url in visited or not is_crawlable_link(url):
                 continue
             visited.add(url)
             fetched = fetch_page_with_links(url, timeout=PAGE_TIMEOUT_SECONDS)

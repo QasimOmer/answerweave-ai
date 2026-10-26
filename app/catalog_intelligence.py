@@ -421,7 +421,8 @@ def extract_catalog_items_from_chunk(
 
         # Direct URL
         direct_url = url
-        url_match = re.search(r'(?:•\s*)?(?:Direct URL|URL|Link):\s*(https?://[^\s\n]+)', b, re.I)
+        # Anchored to the start of a line, so "Image URL:" is never taken as the product link.
+        url_match = re.search(r'(?:^|\n)\s*(?:•\s*)?(?:Direct URL|URL|Link):\s*(https?://[^\s\n]+)', b, re.I)
         if url_match:
             direct_url = url_match.group(1).strip()
 
@@ -438,7 +439,7 @@ def extract_catalog_items_from_chunk(
             desc = desc_match.group(1).strip()
 
         def _field(label_pattern: str) -> str:
-            m = re.search(r'(?:•\s*)?(?:' + label_pattern + r'):\s*([^\n]+)', b, re.I)
+            m = re.search(r'(?:^|\n)\s*(?:•\s*)?(?:' + label_pattern + r'):\s*([^\n]+)', b, re.I)
             return m.group(1).strip() if m else ""
 
         bathrooms = _field("Bathrooms|Baths")

@@ -20,6 +20,76 @@ from bs4 import BeautifulSoup
 from app.netsafe import check_public_url, is_public_url
 from pypdf import PdfReader
 
+def _offer_price(offer: Dict[str, Any]) -> tuple:
+    """(price, currency, frequency) from a schema.org Offer, AggregateOffer or priceSpecification.
+
+    WooCommerce puts simple-product prices in offers[].priceSpecification[] and variable
+    products in an AggregateOffer with lowPrice/highPrice, so both are read here.
+    """
+    def _s(v) -> str:
+        return "" if v is None else str(v).strip()
+
+    specs = offer.get("priceSpecification")
+    specs = [s for s in (specs if isinstance(specs, list) else [specs]) if isinstance(s, dict)]
+    spec = specs[0] if specs else {}
+    curr = _s(offer.get("priceCurrency")) or _s(spec.get("priceCurrency"))
+    freq = _s(spec.get("unitText") or spec.get("billingIncrement"))
+    low, high = _s(offer.get("lowPrice")), _s(offer.get("highPrice"))
+    price = _s(offer.get("price")) or _s(spec.get("price"))
+    if not price and low:
+        price = f"{low} - {high}" if high and high != low else low
+    return price, curr, freq
+
+
+def extract_product_grid(soup: BeautifulSoup, base_url: str = "", limit: int = 60) -> str:
+    """Product cards on shop/category pages (WooCommerce, Shopify and similar themes).
+
+    Each card that has a link, a name and a price becomes a structured block, so
+    listing pages turn into real catalog items instead of a wall of button labels.
+    """
+    cards = soup.select("li.product, div.product-grid-item, div.product-item, li.product-item, div.product-card, li.grid__item")
+    blocks, seen = [], set()
+    for card in cards:
+        if len(blocks) >= limit:
+            break
+        title_el = card.select_one(".woocommerce-loop-product__title, .product-title, .product-name, .product-item-link, .card__heading, h2, h3")
+        name = title_el.get_text(" ", strip=True) if title_el else ""
+        link_el = (title_el.find_parent("a", href=True) if title_el else None) or (title_el.find("a", href=True) if title_el else None) or card.find("a", href=True)
+        href = urllib.parse.urljoin(base_url, link_el["href"]).split("#")[0].rstrip("/") if link_el else ""
+        price_el = card.select_one(".price, .product-price, .price-item, [class*=price]")
+        price_text = re.sub(r"\s+", " ", price_el.get_text(" ", strip=True)) if price_el else ""
+        # "$ 260.00 – $ 270.00 Price range: ..." -> "$260.00 - $270.00"
+        price_text = re.sub(r"([$€£])\s+(?=\d)", r"\1", price_text.split("Price range")[0]).replace("–", "-").strip()
+        if not (name and href.startswith("http") and re.search(r"\d", price_text)) or href in seen:
+            continue
+        seen.add(href)
+        img_el = card.find("img")
+        img = ""
+        if img_el:
+            img = img_el.get("data-src") or img_el.get("src") or ""
+            if img.startswith("data:"):
+                img = img_el.get("data-lazy-src") or ""
+            img = urllib.parse.urljoin(base_url, img) if img else ""
+        lines = [f"• Item Name: {name[:150]}", f"• Price: {price_text[:60]}"]
+        if card.select_one(".out-of-stock, .outofstock, .sold-out") or "outofstock" in " ".join(card.get("class", [])):
+            lines.append("• Availability: OutOfStock")
+        if img.startswith("http"):
+            lines.append(f"• Image URL: {img}")
+        lines.append(f"• Direct URL: {href}")
+        blocks.append("🏷️ STRUCTURED PRODUCT SPECIFICATION:\n" + "\n".join(lines))
+    return "\n\n".join(blocks)
+
+
+# Page furniture that adds noise (and other products' prices) to a page's text.
+NOISE_SELECTORS = (
+    "section.related, .related.products, .upsells, .cross-sells, #reviews, .woocommerce-Reviews, #respond, .comment-respond, "
+    ".yith-wcwl-add-to-wishlist, .yith-wcwl-wishlistexistsbrowse, [class*=wishlist], .compare, .woocommerce-breadcrumb, "
+    "[class*=quick-view], [class*=quickview], .quick-view, "
+    ".screen-reader-text, .sr-only, .visually-hidden, .woocommerce-result-count, .woocommerce-ordering, .share, .social-share, "
+    "form.cart, form.variations_form, form.comment-form, form.search-form, form[role=search], select, button"
+)
+
+
 def extract_structured_metadata(soup: BeautifulSoup, base_url: str = "") -> str:
     """
     Extracts structured product, real estate, and offer metadata from JSON-LD,
@@ -53,25 +123,13 @@ def extract_structured_metadata(soup: BeautifulSoup, base_url: str = "") -> str:
                     name = item.get("name") or item.get("headline") or ""
                     desc = item.get("description") or ""
                     
-                    price = ""
-                    curr = ""
-                    freq = ""
                     offers = item.get("offers")
-                    if isinstance(offers, dict):
-                        price = str(offers.get("price", ""))
-                        curr = str(offers.get("priceCurrency", ""))
-                        ps = offers.get("priceSpecification", {})
-                        if isinstance(ps, dict):
-                            freq = str(ps.get("unitText") or ps.get("billingIncrement") or "")
-                    elif isinstance(offers, list) and len(offers) > 0 and isinstance(offers[0], dict):
-                        price = str(offers[0].get("price", ""))
-                        curr = str(offers[0].get("priceCurrency", ""))
-                        ps = offers[0].get("priceSpecification", {})
-                        if isinstance(ps, dict):
-                            freq = str(ps.get("unitText") or ps.get("billingIncrement") or "")
-                    elif "price" in item:
-                        price = str(item.get("price", ""))
-                        curr = str(item.get("priceCurrency", ""))
+                    if isinstance(offers, list) and offers and isinstance(offers[0], dict):
+                        price, curr, freq = _offer_price(offers[0])
+                    elif isinstance(offers, dict):
+                        price, curr, freq = _offer_price(offers)
+                    else:
+                        price, curr, freq = _offer_price(item)
 
                     # Detect rental frequency
                     is_rental = False
@@ -230,14 +288,24 @@ def clean_html(html_content: str, base_url: str = "") -> Dict[str, str]:
 
     # Pre-extract structured catalog & property schema before removing script tags
     structured_block = extract_structured_metadata(soup, base_url=base_url)
+    # Shop and category pages: one block per product card (a product page already has its own schema).
+    if "PRODUCT SPECIFICATION" not in structured_block:
+        grid_block = extract_product_grid(soup, base_url=base_url)
+        if grid_block:
+            structured_block = (structured_block + "\n\n" + grid_block).strip()
 
     # Remove irrelevant tags
     for tag in soup(["script", "style", "nav", "footer", "header", "aside", "noscript", "iframe", "svg"]):
         tag.decompose()
-        
+    for tag in soup.select(NOISE_SELECTORS):
+        tag.decompose()
+
     main = soup.find("main") or soup.find("article") or soup.find("div", {"id": re.compile(r"content|main|body", re.I)}) or soup.body
     text = main.get_text(separator="\n", strip=True) if main else soup.get_text(separator="\n", strip=True)
 
+    # Prices split over lines by inline markup: "$\n260.00\n–\n$\n270.00" -> "$260.00 – $270.00"
+    text = re.sub(r"([$€£])\n(?=\d)", r"\1", text)
+    text = re.sub(r"(\d)\n([–-])\n(?=[$€£\d])", r"\1 \2 ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = re.sub(r"[ \t]+", " ", text)
     
@@ -262,6 +330,26 @@ def fetch_url(url: str, timeout: int = 15) -> Dict[str, str]:
     resp.raise_for_status()
     return clean_html(resp.text, base_url=url)
 
+def _sitemap_priority(url: str) -> int:
+    """Order sub-sitemaps so a page budget goes to what visitors ask about.
+
+    Site pages (shipping, returns, contact) are few and answer the most questions, then
+    products/listings, then categories, then blog posts. Tag and author archives are skipped.
+    """
+    name = url.lower().rsplit("/", 1)[-1].replace("sitemap", "")  # "sitemap" itself contains "item"
+    if re.search(r"tag|author|attachment|media|image|video", name):
+        return 9
+    if re.search(r"page", name) and "product" not in name:
+        return 0
+    if re.search(r"product|listing|propert|item|inventory", name) and not re.search(r"_cat|categor", name):
+        return 1
+    if re.search(r"categor|_cat|collection", name):
+        return 2
+    if re.search(r"post|blog|news|article", name):
+        return 3
+    return 2
+
+
 def crawl_sitemap(sitemap_url: str, max_urls: int = 100) -> List[str]:
     """Extracts page URLs from a sitemap.xml, including nested sitemap indexes."""
     headers = {
@@ -279,9 +367,10 @@ def crawl_sitemap(sitemap_url: str, max_urls: int = 100) -> List[str]:
         locs = re.findall(r"<loc>\s*(https?://[^\s<]+)\s*</loc>", resp.text, re.I)
         
         # Check for nested sub-sitemaps
-        sub_sitemaps = [u for u in locs if u.endswith(".xml") or "sitemap" in u]
+        sub_sitemaps = sorted((u for u in locs if u.endswith(".xml") or "sitemap" in u), key=_sitemap_priority)
+        sub_sitemaps = [u for u in sub_sitemaps if _sitemap_priority(u) < 9]
         if sub_sitemaps:
-            for sm_url in sub_sitemaps[:5]:
+            for sm_url in sub_sitemaps[:10]:
                 try:
                     if not is_public_url(sm_url):
                         continue
@@ -313,8 +402,21 @@ EXCLUDE_URL_PATTERN = re.compile(
     r"(wp-admin|wp-includes|wp-json|xmlrpc|feed|comments|\?add-to-cart|cart|checkout|my-account|login|logout|register|\.(pdf|png|jpg|jpeg|gif|zip|exe|mp4|svg|webp|css|js|woff|woff2|ttf))(\?|$)",
     re.I
 )
-# Catalog pagination: /page/2, ?page=2, ?p=2, ?paged=2, ?pg=2, offset=10
-PAGINATION_PATTERN = re.compile(r"(/page/\d+|[?&](page|p|paged|pg|offset)=\d+)", re.I)
+# Button and filter links (compare, wishlist, add to cart, sorting, filters, search, reply).
+# They don't lead to new content, and stores often answer them with 404 or 429.
+ACTION_LINK_PATTERN = re.compile(
+    r"[?&](add-to-cart|add_to_cart|add-to-compare|add_to_compare|add_to_wishlist|add-to-wishlist|remove_item|"
+    r"wishlist|compare|orderby|order|sort|sort_by|filter_[a-z_]*|min_price|max_price|stock_status|on_sale|"
+    r"shop_view|per_page|product_view|s|replytocom|share|_wpnonce)=",
+    re.I,
+)
+# Catalog pagination: /page/2, ?page=2, ?p=2, ?paged=2, ?pg=2, offset=10 (at the end of the URL, so
+# "/shop/page/5/?add-to-compare=1" or "/shop/page/5/6209" are not treated as listing pages)
+PAGINATION_PATTERN = re.compile(r"(/page/\d{1,3}/?$|[?&](page|p|paged|pg|offset)=\d{1,4}$)", re.I)
+
+
+def is_crawlable_link(url: str) -> bool:
+    return not EXCLUDE_URL_PATTERN.search(url) and not ACTION_LINK_PATTERN.search(url)
 
 
 def normalize_crawl_url(url: str) -> str:
@@ -361,10 +463,13 @@ def fetch_page_with_links(url: str, timeout: int = 10) -> Dict[str, Any]:
     domain = urllib.parse.urlparse(url).netloc
     links: List[str] = []
     seen: Set[str] = set()
-    for a_tag in BeautifulSoup(resp.text, "html.parser").find_all("a", href=True):
+    link_soup = BeautifulSoup(resp.text, "html.parser")
+    for tag in link_soup.select(NOISE_SELECTORS):  # wishlist/compare/share buttons, reviews, related items
+        tag.decompose()
+    for a_tag in link_soup.find_all("a", href=True):
         resolved = normalize_crawl_url(urllib.parse.urljoin(url, a_tag["href"]))
         if (resolved and resolved not in seen and urllib.parse.urlparse(resolved).netloc == domain
-                and resolved.startswith("http") and not EXCLUDE_URL_PATTERN.search(resolved)):
+                and resolved.startswith("http") and is_crawlable_link(resolved)):
             seen.add(resolved)
             links.append(resolved)
     # Catalog pagination first, so every page of products/listings gets indexed.
@@ -384,7 +489,7 @@ def crawl_website(start_url: str, max_pages: int = 50) -> List[Dict[str, str]]:
     results: List[Dict[str, str]] = []
     while to_visit and len(visited) < max_pages:
         current = normalize_crawl_url(to_visit.pop(0))
-        if not current or current in visited or EXCLUDE_URL_PATTERN.search(current):
+        if not current or current in visited or not is_crawlable_link(current):
             continue
         visited.add(current)
         fetched = fetch_page_with_links(current)

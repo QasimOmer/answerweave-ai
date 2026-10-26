@@ -761,7 +761,7 @@ def api_create_assistant(req: CreateAssistantRequest, request: Request):
     job = None
     if req.website_url and req.crawl_whole_site:
         try:
-            job = crawl_jobs.start_crawl_job(asst_id, "crawl", req.website_url, max_pages=50,
+            job = crawl_jobs.start_crawl_job(asst_id, "crawl", req.website_url, max_pages=100,
                                              created_by=request.state.user["id"])
         except Exception as e:
             print(f"Could not queue the site crawl for {asst_id}: {e}")

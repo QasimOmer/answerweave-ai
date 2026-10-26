@@ -410,7 +410,7 @@
                 if (state.assistantId && state.url !== url) {
                     // Same assistant, new address: point it at the new site and crawl that instead.
                     await api(`/api/assistants/${state.assistantId}`, { method: 'PATCH', body: JSON.stringify({ name, industry, domain: new URL(url).hostname, welcome_message: greetingFor(name), suggested_questions: questionsFor(industry) }) });
-                    const r = await api(`/api/assistants/${state.assistantId}/jobs`, { method: 'POST', body: JSON.stringify({ kind: 'crawl', url, max_pages: 50 }) });
+                    const r = await api(`/api/assistants/${state.assistantId}/jobs`, { method: 'POST', body: JSON.stringify({ kind: 'crawl', url, max_pages: 100 }) });
                     state.jobId = r.job.id;
                 } else if (!state.assistantId) {
                     const created = await api('/api/assistants', { method: 'POST', body: JSON.stringify({

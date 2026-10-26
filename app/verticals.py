@@ -81,10 +81,21 @@ def resolve_industry(asst: Optional[Dict[str, Any]], assistant_id: str) -> str:
     return "general"
 
 
+def _singular(word: str) -> str:
+    """'shawls' -> 'shawl', 'dresses' -> 'dress', 'watches' -> 'watch', so plurals still match product names."""
+    if len(word) > 4 and re.search(r"(ss|x|ch|sh)es$", word):
+        return word[:-2]
+    if len(word) > 4 and word.endswith("ies"):
+        return word[:-3] + "y"
+    if len(word) > 3 and word.endswith("s") and not word.endswith(("ss", "us", "is")):
+        return word[:-1]
+    return word
+
+
 def _keywords(query: str) -> List[str]:
     words = re.findall(r"[a-z0-9][a-z0-9-]*", query.lower())
     return list(dict.fromkeys(
-        w for w in words
+        _singular(w) for w in words
         if len(w) >= 3 and w not in STOPWORDS and w not in _GENERIC_WORDS and not re.fullmatch(r"\d+(?:k|m)?", w)
     ))
 
@@ -114,9 +125,12 @@ def find_matches(assistant_id: str, query: str, industry: str = "general",
 
     words = _keywords(query)
 
+    # Whole words (plurals allowed): "cap" matches "caps" but not "capacity".
+    patterns = [re.compile(r"\b" + re.escape(w) + r"(?:s|es)?\b") for w in words]
+
     def relevance(it: Dict[str, Any]) -> float:
         text = " ".join(str(it.get(k) or "") for k in ("name", "specs", "category", "brand", "location", "description")).lower()
-        hits = sum(1 for w in words if w in text)
+        hits = sum(1 for p in patterns if p.search(text))
         loc_hit = any(w in (it.get("location") or "").lower() for w in words)
         return hits + (1.5 if loc_hit else 0.0) + (0.5 if it.get("image_url") else 0.0)
 
