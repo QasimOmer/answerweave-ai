@@ -90,6 +90,39 @@
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 4px solid var(--accent); cursor: pointer; }
         input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 4px solid var(--accent); cursor: pointer; }
 
+        /* Product-card mockups in the demo */
+        .mock-card { flex: 0 0 200px; border-radius: 14px; overflow: hidden; background: rgba(255,255,255,.03); border: 1px solid var(--line); transition: transform .25s ease, border-color .25s ease; }
+        .mock-card:hover { transform: translateY(-3px); border-color: var(--line-strong); }
+        .mock-media { position: relative; height: 104px; display: flex; align-items: center; justify-content: center; }
+        .mock-tag { position: absolute; top: 8px; left: 8px; font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: rgba(0,0,0,.45); color: #dcdde1; }
+        .mock-price { position: absolute; bottom: 8px; right: 8px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 7px; background: rgba(0,0,0,.6); color: #fff; }
+        .mock-chip { font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,.06); color: #9398a3; }
+        .mock-chip-ok { background: rgba(16,185,129,.12); color: #6ee7b7; }
+        .mock-chip-warn { background: rgba(245,158,11,.12); color: #fcd34d; }
+        .mock-btn { font-size: 11.5px; text-align: center; padding: 5px 0; border-radius: 7px; border: 1px solid var(--line-strong); color: #dcdde1; }
+        .mock-btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+        .text-gradient { background: linear-gradient(100deg, #fff 10%, #90b8ff 60%, #6b9bff 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .demo-frame { position: relative; }
+        .demo-frame::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; background: linear-gradient(180deg, rgba(144,184,255,.35), rgba(255,255,255,0) 40%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+        .feature { transition: background-color .2s ease; }
+        .feature:hover { background: #0f1013; }
+        .step-num { position: relative; z-index: 1; width: 32px; height: 32px; flex-shrink: 0; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font: 500 13px/1 "Geist Mono", monospace; color: #90b8ff; background: #11141c; border: 1px solid rgba(70,119,255,.35); }
+        .cta-card { background: linear-gradient(180deg, #141a2e 0%, #0f1117 100%); }
+        .cta-glow { background: radial-gradient(50% 70% at 50% 0%, rgba(47,92,246,.35), transparent 70%); }
+        .sync-bar { width: 97%; animation: sync 3.2s ease-in-out infinite; }
+        @keyframes sync { 0% { width: 18%; } 70%, 100% { width: 97%; } }
+        .spin-slow { animation: spin 3s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Scroll reveal: content stays visible if JS is off (class added by script). */
+        .js-reveal .reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1); }
+        .js-reveal .reveal.is-visible { opacity: 1; transform: none; }
+        @media (prefers-reduced-motion: reduce) {
+            .js-reveal .reveal { opacity: 1; transform: none; }
+            .sync-bar, .spin-slow { animation: none; }
+        }
+
         details.faq summary::-webkit-details-marker { display: none; }
         details.faq[open] .faq-icon { transform: rotate(45deg); }
 
@@ -100,6 +133,8 @@
     </style>
 </head>
 <body class="font-sans min-h-screen flex flex-col">
+
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-3 focus:py-2 focus:rounded-lg focus:bg-brand-600 focus:text-white">Skip to content</a>
 
     <!-- ================= NAV ================= -->
     <header class="sticky top-0 z-40 border-b border-white/7 bg-ink-950/80 backdrop-blur-lg">
@@ -113,19 +148,34 @@
 
             <nav class="hidden md:flex items-center gap-7 text-[14px] text-slate-400" aria-label="Main">
                 <a href="#product" class="hover:text-white transition">Product</a>
+                <a href="#industries" class="hover:text-white transition">Industries</a>
                 <a href="#how" class="hover:text-white transition">How it works</a>
                 <a href="#pricing" class="hover:text-white transition">Pricing</a>
                 <a href="#faq" class="hover:text-white transition">FAQ</a>
             </nav>
 
             <div class="flex items-center gap-2">
-                <button onclick="openAuthModal('login')" class="h-9 px-3 rounded-lg text-[14px] font-medium text-slate-300 hover:text-white hover:bg-white/5 transition">Sign in</button>
+                <button onclick="openAuthModal('login')" class="hidden sm:inline-flex h-9 px-3 items-center rounded-lg text-[14px] font-medium text-slate-300 hover:text-white hover:bg-white/5 transition">Sign in</button>
                 <button onclick="openAuthModal('signup')" class="btn-primary h-9 px-3.5 rounded-lg text-[14px] font-medium">Start free</button>
+                <button id="mobileMenuBtn" type="button" onclick="toggleMobileMenu()" class="md:hidden w-9 h-9 inline-flex items-center justify-center rounded-lg text-slate-300 hover:text-white hover:bg-white/5" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
             </div>
         </div>
+        <!-- Mobile menu -->
+        <nav id="mobileMenu" class="md:hidden hidden border-t border-white/7 bg-ink-950/95 backdrop-blur-lg" aria-label="Mobile">
+            <div class="px-4 py-3 flex flex-col text-[15px]">
+                <a href="#product" class="mobile-link py-2.5 text-slate-300 hover:text-white">Product</a>
+                <a href="#industries" class="mobile-link py-2.5 text-slate-300 hover:text-white">Industries</a>
+                <a href="#how" class="mobile-link py-2.5 text-slate-300 hover:text-white">How it works</a>
+                <a href="#pricing" class="mobile-link py-2.5 text-slate-300 hover:text-white">Pricing</a>
+                <a href="#faq" class="mobile-link py-2.5 text-slate-300 hover:text-white">FAQ</a>
+                <button onclick="toggleMobileMenu(false); openAuthModal('login')" class="mt-2 h-10 rounded-lg btn-secondary text-[14px] font-medium">Sign in</button>
+            </div>
+        </nav>
     </header>
 
-    <main class="flex-1">
+    <main id="main" class="flex-1">
 
         <!-- ================= HERO ================= -->
         <section class="relative overflow-hidden">
@@ -133,33 +183,37 @@
             <div class="absolute inset-0 grid-fade pointer-events-none"></div>
 
             <div class="relative max-w-6xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-14 text-center">
-                <a href="#product" class="inline-flex items-center gap-2 h-8 pl-1.5 pr-3 rounded-full border border-white/10 bg-white/[0.03] text-[13px] text-slate-300 hover:border-white/20 transition">
-                    <span class="px-2 py-0.5 rounded-full bg-brand-600/20 text-brand-200 text-[12px] font-medium">New</span>
-                    Knowledge gaps: see what visitors asked that your docs don't cover
-                    <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-500"></i>
+                <a href="#industries" class="reveal inline-flex items-center gap-2 h-8 pl-1.5 pr-3 rounded-full border border-white/10 bg-white/[0.03] text-[13px] text-slate-300 hover:border-white/20 transition max-w-full">
+                    <span class="px-2 py-0.5 rounded-full bg-brand-600/20 text-brand-200 text-[12px] font-medium shrink-0">New</span>
+                    <span class="truncate">Property &amp; product cards for real estate and online stores</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-500 shrink-0"></i>
                 </a>
 
-                <h1 class="mt-7 mx-auto max-w-3xl text-[2.5rem] leading-[1.05] sm:text-6xl sm:leading-[1.04] font-semibold tracking-[-0.035em] text-white">
-                    Website answers you can actually trust
+                <h1 class="reveal mt-7 mx-auto max-w-3xl text-[2.5rem] leading-[1.05] sm:text-6xl sm:leading-[1.04] font-semibold tracking-[-0.035em] text-white">
+                    Website answers you can <span class="text-gradient">actually trust</span>
                 </h1>
-                <p class="mt-5 mx-auto max-w-2xl text-[16px] sm:text-[18px] leading-relaxed text-slate-400">
-                    AnswerWeave turns your pages, PDFs and FAQs into an AI assistant that answers only from your content, cites its sources, and hands the chat to your team when it should.
+                <p class="reveal mt-5 mx-auto max-w-2xl text-[16px] sm:text-[18px] leading-relaxed text-slate-400">
+                    AnswerWeave reads your website, PDFs and FAQs and turns them into an assistant that talks like your best team member, answers only from your content, shows your products and listings, and hands the chat to a person when it should.
                 </p>
 
-                <div class="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+                <div class="reveal mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
                     <button onclick="openAuthModal('signup')" class="btn-primary h-11 px-5 rounded-lg text-[15px] font-medium inline-flex items-center justify-center gap-2">
-                        Start free <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        Build my assistant free <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                     <button onclick="openLiveWidget()" class="btn-secondary h-11 px-5 rounded-lg text-[15px] font-medium inline-flex items-center justify-center gap-2">
                         <i data-lucide="message-circle" class="w-4 h-4 text-slate-400"></i> Try the assistant on this page
                     </button>
                 </div>
-                <p class="mt-4 text-[13px] text-slate-500">Free plan · No credit card · Works with any website</p>
+                <ul class="reveal mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] text-slate-500">
+                    <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>Free plan</li>
+                    <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>No credit card</li>
+                    <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>Guided setup in minutes</li>
+                </ul>
             </div>
 
             <!-- Product demo -->
-            <div id="product" class="relative max-w-5xl mx-auto px-4 sm:px-6 pb-20 scroll-mt-20">
-                <div class="card rounded-2xl overflow-hidden shadow-[0_40px_120px_-40px_rgba(0,0,0,.8)]">
+            <div id="product" class="reveal relative max-w-5xl mx-auto px-4 sm:px-6 pb-20 scroll-mt-20">
+                <div class="card rounded-2xl overflow-hidden shadow-[0_40px_120px_-40px_rgba(0,0,0,.8)] demo-frame">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-b border-white/7 bg-white/[0.015]">
                         <div class="flex items-center gap-2 text-[12.5px] text-slate-500 min-w-0">
                             <span class="flex gap-1.5 shrink-0" aria-hidden="true">
@@ -170,7 +224,8 @@
                             <span class="ml-2 truncate">Example · Northwind Outfitters (fictional store)</span>
                         </div>
                         <div role="tablist" aria-label="Product views" class="flex items-center p-0.5 rounded-lg bg-white/[0.04] border border-white/7 text-[13px] self-start sm:self-auto overflow-x-auto max-w-full">
-                            <button role="tab" id="tab-visitor" aria-selected="true" aria-controls="panel-visitor" onclick="switchDemo('visitor')" class="demo-tab whitespace-nowrap h-7 px-3 rounded-md text-slate-400 hover:text-white transition">Visitor</button>
+                            <button role="tab" id="tab-visitor" aria-selected="true" aria-controls="panel-visitor" onclick="switchDemo('visitor')" class="demo-tab whitespace-nowrap h-7 px-3 rounded-md text-slate-400 hover:text-white transition">Cited answers</button>
+                            <button role="tab" id="tab-cards" aria-selected="false" aria-controls="panel-cards" onclick="switchDemo('cards')" class="demo-tab whitespace-nowrap h-7 px-3 rounded-md text-slate-400 hover:text-white transition">Product cards</button>
                             <button role="tab" id="tab-operator" aria-selected="false" aria-controls="panel-operator" onclick="switchDemo('operator')" class="demo-tab whitespace-nowrap h-7 px-3 rounded-md text-slate-400 hover:text-white transition">Live takeover</button>
                             <button role="tab" id="tab-brief" aria-selected="false" aria-controls="panel-brief" onclick="switchDemo('brief')" class="demo-tab whitespace-nowrap h-7 px-3 rounded-md text-slate-400 hover:text-white transition">Lead brief</button>
                         </div>
@@ -187,7 +242,7 @@
                             <div class="flex gap-3">
                                 <span class="w-7 h-7 rounded-full bg-white/[0.06] border border-white/8 flex items-center justify-center shrink-0 text-[12px]">N</span>
                                 <div class="max-w-[85%] bg-white/[0.04] border border-white/8 text-slate-200 text-[14px] leading-relaxed px-4 py-3 rounded-2xl rounded-tl-md space-y-2.5">
-                                    <p>Yes — footwear can be returned within <strong class="text-white font-medium">60 days</strong>, even if it's been worn outdoors, as long as it isn't damaged<button class="cite" onclick="hitSource(1)" aria-label="Source 1">1</button>.</p>
+                                    <p>Yes, footwear can be returned within <strong class="text-white font-medium">60 days</strong>, even if it's been worn outdoors, as long as it isn't damaged<button class="cite" onclick="hitSource(1)" aria-label="Source 1">1</button>.</p>
                                     <p>Start the return from your order page and we'll email a prepaid label. Refunds go back to the original payment method in 3–5 business days<button class="cite" onclick="hitSource(2)" aria-label="Source 2">2</button>.</p>
                                 </div>
                             </div>
@@ -219,9 +274,53 @@
                             </div>
                             <div class="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] p-3.5">
                                 <div class="flex items-center gap-2 text-[12.5px] text-amber-200"><i data-lucide="circle-help" class="w-3.5 h-3.5"></i>Logged as a knowledge gap</div>
-                                <p class="mt-1.5 text-[13px] text-slate-400">"Do you price match Amazon?" — answer it once in the dashboard and the assistant will use it next time.</p>
+                                <p class="mt-1.5 text-[13px] text-slate-400">"Do you price match Amazon?" Answer it once in the dashboard and the assistant will use it next time.</p>
                             </div>
                         </aside>
+                    </div>
+
+                    <!-- Product cards view -->
+                    <div id="panel-cards" role="tabpanel" aria-labelledby="tab-cards" class="hidden text-left p-5 sm:p-7">
+                        <div class="flex justify-end">
+                            <div class="max-w-[85%] bg-brand-600 text-white text-[14px] leading-relaxed px-4 py-2.5 rounded-2xl rounded-br-md">
+                                Waterproof boots under $160?
+                            </div>
+                        </div>
+                        <div class="mt-4 flex gap-3">
+                            <span class="w-7 h-7 rounded-full bg-white/[0.06] border border-white/8 flex items-center justify-center shrink-0 text-[12px]">N</span>
+                            <div class="min-w-0 flex-1">
+                                <div class="max-w-[85%] bg-white/[0.04] border border-white/8 text-slate-200 text-[14px] leading-relaxed px-4 py-3 rounded-2xl rounded-tl-md">
+                                    The <strong class="text-white font-medium">TrailMax GTX</strong> is the best fit: fully waterproof and under budget. The Ridgeline Mid is lighter if you mostly hike in dry weather.
+                                </div>
+                                <div class="mt-3 flex gap-3 overflow-x-auto pb-1 snap-x" aria-label="Example product cards">
+                                    <div class="mock-card snap-start">
+                                        <div class="mock-media" style="background: linear-gradient(135deg,#2a3a2f,#1b2620)">
+                                            <i data-lucide="mountain" class="w-8 h-8 text-emerald-200/50"></i>
+                                            <span class="mock-tag">Hiking boots</span><span class="mock-price">$149</span>
+                                        </div>
+                                        <div class="p-3"><div class="text-[13px] font-medium text-white">TrailMax GTX</div><div class="mt-1.5 flex gap-1"><span class="mock-chip mock-chip-ok">In stock</span><span class="mock-chip">Waterproof</span></div>
+                                            <div class="mt-3 grid grid-cols-2 gap-1.5"><span class="mock-btn">View</span><span class="mock-btn mock-btn-primary">Ask about it</span></div></div>
+                                    </div>
+                                    <div class="mock-card snap-start">
+                                        <div class="mock-media" style="background: linear-gradient(135deg,#3a2f26,#241c16)">
+                                            <i data-lucide="footprints" class="w-8 h-8 text-amber-200/50"></i>
+                                            <span class="mock-tag">Hiking boots</span><span class="mock-price">$129</span>
+                                        </div>
+                                        <div class="p-3"><div class="text-[13px] font-medium text-white">Ridgeline Mid</div><div class="mt-1.5 flex gap-1"><span class="mock-chip mock-chip-ok">In stock</span><span class="mock-chip">Lightweight</span></div>
+                                            <div class="mt-3 grid grid-cols-2 gap-1.5"><span class="mock-btn">View</span><span class="mock-btn mock-btn-primary">Ask about it</span></div></div>
+                                    </div>
+                                    <div class="mock-card snap-start opacity-60">
+                                        <div class="mock-media" style="background: linear-gradient(135deg,#26303a,#171d24)">
+                                            <i data-lucide="snowflake" class="w-8 h-8 text-sky-200/50"></i>
+                                            <span class="mock-tag">Winter boots</span><span class="mock-price">$189</span>
+                                        </div>
+                                        <div class="p-3"><div class="text-[13px] font-medium text-white">Glacier Pro</div><div class="mt-1.5 flex gap-1"><span class="mock-chip mock-chip-warn">Over budget</span></div>
+                                            <div class="mt-3 grid grid-cols-2 gap-1.5"><span class="mock-btn">View</span><span class="mock-btn mock-btn-primary">Ask about it</span></div></div>
+                                    </div>
+                                </div>
+                                <p class="mt-3 text-[12.5px] text-slate-500">Products and listings are read from your site automatically. Prices, stock and photos come from your own pages, never invented.</p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Operator view -->
@@ -250,7 +349,7 @@
                             <div class="text-[12.5px] font-medium text-slate-400">Why take over?</div>
                             <ul class="mt-3 space-y-3 text-[13.5px] text-slate-300">
                                 <li class="flex gap-2.5"><i data-lucide="check" class="w-4 h-4 text-slate-500 mt-0.5 shrink-0"></i>Step in on high-value conversations from the live inbox.</li>
-                                <li class="flex gap-2.5"><i data-lucide="check" class="w-4 h-4 text-slate-500 mt-0.5 shrink-0"></i>The visitor sees a person joined — no page reload.</li>
+                                <li class="flex gap-2.5"><i data-lucide="check" class="w-4 h-4 text-slate-500 mt-0.5 shrink-0"></i>The visitor sees a person joined, with no page reload.</li>
                                 <li class="flex gap-2.5"><i data-lucide="check" class="w-4 h-4 text-slate-500 mt-0.5 shrink-0"></i>Hand it back to the assistant whenever you're done.</li>
                             </ul>
                         </aside>
@@ -279,7 +378,7 @@
                             </div>
                             <div class="rounded-xl border border-white/8 p-4">
                                 <div class="text-[12px] text-slate-500">Intent</div>
-                                <div class="mt-1 text-[14px] text-slate-100">High — asked about bulk pricing</div>
+                                <div class="mt-1 text-[14px] text-slate-100">High: asked about bulk pricing</div>
                             </div>
                         </div>
                         <div class="mt-3 rounded-xl border border-white/8 p-4">
@@ -294,51 +393,153 @@
         <!-- ================= WORKS WITH ================= -->
         <section class="border-y border-white/7 bg-white/[0.012]">
             <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col md:flex-row items-center gap-5 md:gap-10">
-                <p class="text-[13px] text-slate-500 shrink-0">One script tag. Works on</p>
+                <p class="text-[13px] text-slate-500 shrink-0">One line of code. Works on</p>
                 <ul class="flex flex-wrap justify-center md:justify-start gap-x-8 gap-y-3 text-[15px] font-medium text-slate-400">
                     <li>WordPress</li><li>Shopify</li><li>Webflow</li><li>Wix</li><li>Squarespace</li><li>Next.js &amp; React</li><li>Plain HTML</li>
                 </ul>
             </div>
         </section>
 
-        <!-- ================= FEATURES ================= -->
-        <section class="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
-            <div class="max-w-2xl">
-                <div class="eyebrow">What you get</div>
-                <h2 class="section-title mt-3">An assistant that knows where its answers come from</h2>
-                <p class="mt-4 text-[16px] text-slate-400 leading-relaxed">Generic chatbots improvise. AnswerWeave retrieves from your own sources first and answers from what it finds — and when nothing matches, it says so instead of making something up.</p>
+        <!-- ================= INDUSTRIES ================= -->
+        <section id="industries" class="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28 scroll-mt-16">
+            <div class="reveal max-w-2xl">
+                <div class="eyebrow">Built for your industry</div>
+                <h2 class="section-title mt-3">It knows how your business sells</h2>
+                <p class="mt-4 text-[16px] text-slate-400 leading-relaxed">Pick your business type during setup, or let AnswerWeave detect it. The assistant changes how it talks, what it asks, and what it shows.</p>
             </div>
 
-            <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-px rounded-2xl overflow-hidden border border-white/7 bg-white/7">
-                <div class="bg-ink-950 p-6 sm:p-7">
-                    <i data-lucide="quote" class="w-5 h-5 text-brand-300"></i>
-                    <h3 class="mt-4 text-[16px] font-medium text-white">Answers with citations</h3>
-                    <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Every answer links back to the page or PDF it came from, so visitors — and you — can check it.</p>
+            <div class="mt-12 grid lg:grid-cols-3 gap-4">
+                <article class="reveal card rounded-2xl p-6 flex flex-col">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/12 text-emerald-300 flex items-center justify-center"><i data-lucide="home" class="w-5 h-5"></i></div>
+                    <h3 class="mt-5 text-[17px] font-medium text-white">Real estate</h3>
+                    <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Acts like a sharp property consultant: asks about budget, area and bedrooms one question at a time, then shows matching listings.</p>
+                    <ul class="mt-5 space-y-2 text-[13.5px] text-slate-300">
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-px"></i>Listing cards with photos, price and beds</li>
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-px"></i>Filters rent vs buy, budget and location</li>
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-px"></i>"Book viewing" turns interest into a lead</li>
+                    </ul>
+                    <div class="mt-6 rounded-xl border border-white/8 bg-white/[0.02] p-3 flex items-center gap-3 mt-auto">
+                        <div class="w-14 h-12 rounded-lg shrink-0" style="background: linear-gradient(135deg,#1f3b33,#14231f)"></div>
+                        <div class="min-w-0"><div class="text-[13px] text-white truncate">Marina 2BR with sea view</div><div class="text-[12px] text-slate-500">AED 115,000 / year · 2 bed</div></div>
+                    </div>
+                </article>
+                <article class="reveal card rounded-2xl p-6 flex flex-col">
+                    <div class="w-10 h-10 rounded-xl bg-brand-500/15 text-brand-300 flex items-center justify-center"><i data-lucide="shopping-bag" class="w-5 h-5"></i></div>
+                    <h3 class="mt-5 text-[17px] font-medium text-white">Online stores</h3>
+                    <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">A shopping assistant that recommends, compares and links to products, and only states stock, sizes and shipping from your content.</p>
+                    <ul class="mt-5 space-y-2 text-[13.5px] text-slate-300">
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-300 shrink-0 mt-px"></i>Product cards with stock status</li>
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-300 shrink-0 mt-px"></i>Budget and keyword matching across your catalog</li>
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-300 shrink-0 mt-px"></i>Shipping and returns answered from your policies</li>
+                    </ul>
+                    <div class="mt-6 rounded-xl border border-white/8 bg-white/[0.02] p-3 flex items-center gap-3 mt-auto">
+                        <div class="w-14 h-12 rounded-lg shrink-0" style="background: linear-gradient(135deg,#2a3a2f,#1b2620)"></div>
+                        <div class="min-w-0"><div class="text-[13px] text-white truncate">TrailMax GTX</div><div class="text-[12px] text-slate-500">$149 · <span class="text-emerald-400">In stock</span></div></div>
+                    </div>
+                </article>
+                <article class="reveal card rounded-2xl p-6 flex flex-col">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/12 text-amber-300 flex items-center justify-center"><i data-lucide="briefcase" class="w-5 h-5"></i></div>
+                    <h3 class="mt-5 text-[17px] font-medium text-white">Services &amp; agencies</h3>
+                    <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Explains what you do, answers pricing and process questions from your pages, and captures qualified leads with a call-prep brief.</p>
+                    <ul class="mt-5 space-y-2 text-[13.5px] text-slate-300">
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-amber-300 shrink-0 mt-px"></i>Answers grounded in your service pages</li>
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-amber-300 shrink-0 mt-px"></i>Lead capture at the right moment, not on every reply</li>
+                        <li class="flex gap-2"><i data-lucide="check" class="w-4 h-4 text-amber-300 shrink-0 mt-px"></i>Hand-off to your team with full context</li>
+                    </ul>
+                    <div class="mt-6 rounded-xl border border-white/8 bg-white/[0.02] p-3 mt-auto">
+                        <div class="text-[12px] text-slate-500">New lead · AI brief</div>
+                        <div class="text-[13px] text-white mt-0.5">"Wants a site redesign before Q3 launch"</div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- ================= FEATURES ================= -->
+        <section class="border-t border-white/7">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
+                <div class="reveal max-w-2xl">
+                    <div class="eyebrow">What you get</div>
+                    <h2 class="section-title mt-3">An assistant that knows where its answers come from</h2>
+                    <p class="mt-4 text-[16px] text-slate-400 leading-relaxed">Generic chatbots improvise. AnswerWeave searches your own content first and answers from what it finds. When nothing matches, it says so instead of making something up.</p>
                 </div>
-                <div class="bg-ink-950 p-6 sm:p-7">
-                    <i data-lucide="circle-help" class="w-5 h-5 text-brand-300"></i>
-                    <h3 class="mt-4 text-[16px] font-medium text-white">Knowledge gaps</h3>
-                    <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Questions your content can't answer are collected for you. Write the answer once and it's used from then on.</p>
+
+                <div class="reveal mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-px rounded-2xl overflow-hidden border border-white/7 bg-white/7">
+                    <div class="feature bg-ink-950 p-6 sm:p-7">
+                        <i data-lucide="message-square-text" class="w-5 h-5 text-brand-300"></i>
+                        <h3 class="mt-4 text-[16px] font-medium text-white">Talks like a person</h3>
+                        <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Natural replies that remember the conversation, understand follow-ups like "how much is it?", and answer general questions too.</p>
+                    </div>
+                    <div class="feature bg-ink-950 p-6 sm:p-7">
+                        <i data-lucide="quote" class="w-5 h-5 text-brand-300"></i>
+                        <h3 class="mt-4 text-[16px] font-medium text-white">Answers with sources</h3>
+                        <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Facts about your business link back to the page or PDF they came from, so visitors and you can check them.</p>
+                    </div>
+                    <div class="feature bg-ink-950 p-6 sm:p-7">
+                        <i data-lucide="circle-help" class="w-5 h-5 text-brand-300"></i>
+                        <h3 class="mt-4 text-[16px] font-medium text-white">Knowledge gaps</h3>
+                        <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Questions your content can't answer, and replies visitors mark as unhelpful, are collected so you can teach the right answer once.</p>
+                    </div>
+                    <div class="feature bg-ink-950 p-6 sm:p-7">
+                        <i data-lucide="headset" class="w-5 h-5 text-brand-300"></i>
+                        <h3 class="mt-4 text-[16px] font-medium text-white">Live human takeover</h3>
+                        <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Get alerted when a visitor asks for a person, jump in from the inbox, and hand back to the assistant when you're done.</p>
+                    </div>
+                    <div class="feature bg-ink-950 p-6 sm:p-7">
+                        <i data-lucide="user-plus" class="w-5 h-5 text-brand-300"></i>
+                        <h3 class="mt-4 text-[16px] font-medium text-white">Leads with call-prep briefs</h3>
+                        <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">When a visitor leaves their details you get a short brief: what they need, what worries them, and how to open the call.</p>
+                    </div>
+                    <div class="feature bg-ink-950 p-6 sm:p-7">
+                        <i data-lucide="bar-chart-3" class="w-5 h-5 text-brand-300"></i>
+                        <h3 class="mt-4 text-[16px] font-medium text-white">Answer quality analytics</h3>
+                        <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Visitor ratings, how often answers came from your content, reply speed, and the replies people didn't find helpful.</p>
+                    </div>
+                    <div class="feature bg-ink-950 p-6 sm:p-7">
+                        <i data-lucide="users-round" class="w-5 h-5 text-brand-300"></i>
+                        <h3 class="mt-4 text-[16px] font-medium text-white">Built for teams</h3>
+                        <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Workspaces with owner, admin and agent roles, email invites, and separate workspaces for each client or brand.</p>
+                    </div>
+                    <div class="feature bg-ink-950 p-6 sm:p-7">
+                        <i data-lucide="paintbrush" class="w-5 h-5 text-brand-300"></i>
+                        <h3 class="mt-4 text-[16px] font-medium text-white">Fully on-brand</h3>
+                        <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Colours, avatar, tone of voice, greeting and custom CSS. The widget lives in its own Shadow DOM, so your styles never clash.</p>
+                    </div>
+                    <div class="feature bg-ink-950 p-6 sm:p-7">
+                        <i data-lucide="cpu" class="w-5 h-5 text-brand-300"></i>
+                        <h3 class="mt-4 text-[16px] font-medium text-white">Your choice of model</h3>
+                        <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Works out of the box, or bring your own key for Gemini, Groq, OpenAI, DeepSeek, Qwen or OpenRouter, with automatic failover.</p>
+                    </div>
                 </div>
-                <div class="bg-ink-950 p-6 sm:p-7">
-                    <i data-lucide="headset" class="w-5 h-5 text-brand-300"></i>
-                    <h3 class="mt-4 text-[16px] font-medium text-white">Live human takeover</h3>
-                    <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Watch conversations as they happen and jump in from the inbox. Hand back to the assistant when you're done.</p>
+            </div>
+        </section>
+
+        <!-- ================= ALWAYS IN SYNC ================= -->
+        <section class="border-t border-white/7">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                <div class="reveal">
+                    <div class="eyebrow">Always in sync</div>
+                    <h2 class="section-title mt-3">Your site changes. Your assistant keeps up.</h2>
+                    <p class="mt-4 text-[16px] text-slate-400 leading-relaxed">AnswerWeave re-reads your website daily or weekly in the background. Only pages that changed are re-learned, new pages and listings are picked up, and removed pages are dropped, so sold properties and out-of-stock products don't linger.</p>
+                    <ul class="mt-6 space-y-3 text-[14.5px] text-slate-300">
+                        <li class="flex gap-2.5"><i data-lucide="refresh-cw" class="w-4 h-4 text-brand-300 shrink-0 mt-1"></i>Scheduled re-crawls with a live progress view</li>
+                        <li class="flex gap-2.5"><i data-lucide="file-text" class="w-4 h-4 text-brand-300 shrink-0 mt-1"></i>Add PDFs, FAQs and catalog CSVs alongside your pages</li>
+                        <li class="flex gap-2.5"><i data-lucide="search" class="w-4 h-4 text-brand-300 shrink-0 mt-1"></i>Semantic search finds answers even when visitors word things differently</li>
+                    </ul>
                 </div>
-                <div class="bg-ink-950 p-6 sm:p-7">
-                    <i data-lucide="user-plus" class="w-5 h-5 text-brand-300"></i>
-                    <h3 class="mt-4 text-[16px] font-medium text-white">Leads with call-prep briefs</h3>
-                    <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">When a visitor leaves their details, you get a short brief: what they need, what worries them, how to open the call.</p>
-                </div>
-                <div class="bg-ink-950 p-6 sm:p-7">
-                    <i data-lucide="paintbrush" class="w-5 h-5 text-brand-300"></i>
-                    <h3 class="mt-4 text-[16px] font-medium text-white">Fully on-brand widget</h3>
-                    <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Colors, fonts, launcher, position, teasers and custom CSS — rendered in Shadow DOM so your site's styles never clash.</p>
-                </div>
-                <div class="bg-ink-950 p-6 sm:p-7">
-                    <i data-lucide="cpu" class="w-5 h-5 text-brand-300"></i>
-                    <h3 class="mt-4 text-[16px] font-medium text-white">Your choice of model</h3>
-                    <p class="mt-2 text-[14.5px] text-slate-400 leading-relaxed">Start with the built-in local engine — no API key needed — or connect Gemini, Groq, OpenAI, DeepSeek, Qwen or OpenRouter.</p>
+                <div class="reveal card rounded-2xl p-5 sm:p-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-[14px] font-medium text-white"><i data-lucide="refresh-cw" class="w-4 h-4 text-brand-300 spin-slow"></i>Website sync</div>
+                        <span class="text-[11.5px] px-2 py-0.5 rounded-full bg-brand-500/15 text-brand-300">Scheduled · daily</span>
+                    </div>
+                    <div class="mt-4 h-1.5 rounded-full bg-white/[0.06] overflow-hidden"><div class="sync-bar h-full rounded-full bg-brand-500"></div></div>
+                    <div class="mt-2 flex justify-between text-[12px] text-slate-500"><span>148 / 152 pages</span><span class="font-mono">/listings/marina-2br</span></div>
+                    <div class="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                        <div class="rounded-lg border border-white/8 p-3"><div class="text-[18px] font-semibold text-white">3</div><div class="text-[11.5px] text-slate-500">new</div></div>
+                        <div class="rounded-lg border border-white/8 p-3"><div class="text-[18px] font-semibold text-white">7</div><div class="text-[11.5px] text-slate-500">updated</div></div>
+                        <div class="rounded-lg border border-white/8 p-3"><div class="text-[18px] font-semibold text-white">136</div><div class="text-[11.5px] text-slate-500">unchanged</div></div>
+                        <div class="rounded-lg border border-white/8 p-3"><div class="text-[18px] font-semibold text-white">2</div><div class="text-[11.5px] text-slate-500">removed</div></div>
+                    </div>
+                    <p class="mt-4 text-[12px] text-slate-500">Illustrative example of the sync panel in your dashboard.</p>
                 </div>
             </div>
         </section>
@@ -346,35 +547,37 @@
         <!-- ================= HOW IT WORKS ================= -->
         <section id="how" class="border-t border-white/7 scroll-mt-16">
             <div class="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28 grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-                <div>
+                <div class="reveal">
                     <div class="eyebrow">How it works</div>
-                    <h2 class="section-title mt-3">Live on your site in a few minutes</h2>
-                    <ol class="mt-10 space-y-8">
-                        <li class="flex gap-4">
-                            <span class="w-8 h-8 rounded-full border border-white/12 flex items-center justify-center text-[13px] font-mono text-slate-300 shrink-0">1</span>
+                    <h2 class="section-title mt-3">From signup to live in a few minutes</h2>
+                    <p class="mt-4 text-[16px] text-slate-400 leading-relaxed">A guided setup walks you through every step, with a live preview of your assistant.</p>
+                    <ol class="mt-10 space-y-8 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-px before:bg-white/10">
+                        <li class="relative flex gap-4">
+                            <span class="step-num">1</span>
                             <div>
-                                <h3 class="text-[16px] font-medium text-white">Add your content</h3>
-                                <p class="mt-1.5 text-[14.5px] text-slate-400 leading-relaxed">Enter your website or sitemap, upload PDFs, or paste FAQs. We extract the text and index it.</p>
+                                <h3 class="text-[16px] font-medium text-white">Enter your website</h3>
+                                <p class="mt-1.5 text-[14.5px] text-slate-400 leading-relaxed">We read your pages in the background and show what was learned as it happens. Add PDFs and FAQs any time.</p>
                             </div>
                         </li>
-                        <li class="flex gap-4">
-                            <span class="w-8 h-8 rounded-full border border-white/12 flex items-center justify-center text-[13px] font-mono text-slate-300 shrink-0">2</span>
+                        <li class="relative flex gap-4">
+                            <span class="step-num">2</span>
                             <div>
-                                <h3 class="text-[16px] font-medium text-white">Make it yours</h3>
-                                <p class="mt-1.5 text-[14.5px] text-slate-400 leading-relaxed">Set the greeting, suggested questions and brand styling in Widget Studio, with a live preview.</p>
+                                <h3 class="text-[16px] font-medium text-white">Test it and make it yours</h3>
+                                <p class="mt-1.5 text-[14.5px] text-slate-400 leading-relaxed">Chat with the real assistant, then pick your colour, avatar, greeting and tone of voice.</p>
                             </div>
                         </li>
-                        <li class="flex gap-4">
-                            <span class="w-8 h-8 rounded-full border border-white/12 flex items-center justify-center text-[13px] font-mono text-slate-300 shrink-0">3</span>
+                        <li class="relative flex gap-4">
+                            <span class="step-num">3</span>
                             <div>
-                                <h3 class="text-[16px] font-medium text-white">Paste one script tag</h3>
-                                <p class="mt-1.5 text-[14.5px] text-slate-400 leading-relaxed">Add the snippet before <code class="font-mono text-[13px] text-slate-300">&lt;/body&gt;</code>. The assistant is restricted to the domains you allow.</p>
+                                <h3 class="text-[16px] font-medium text-white">Paste one line and go live</h3>
+                                <p class="mt-1.5 text-[14.5px] text-slate-400 leading-relaxed">Step-by-step guides for WordPress, Shopify, Wix, Squarespace and Webflow, plus a one-click check that it's installed.</p>
                             </div>
                         </li>
                     </ol>
+                    <button onclick="openAuthModal('signup')" class="btn-primary mt-10 h-11 px-5 rounded-lg text-[15px] font-medium inline-flex items-center gap-2">Start the guided setup <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
                 </div>
 
-                <div class="card rounded-2xl overflow-hidden lg:mt-14">
+                <div class="reveal card rounded-2xl overflow-hidden lg:mt-14">
                     <div class="flex items-center justify-between px-4 py-2.5 border-b border-white/7">
                         <span class="text-[12.5px] text-slate-500 font-mono">index.html</span>
                         <button onclick="copySnippetCode()" id="copyCodeBtn" class="h-7 px-2.5 rounded-md text-[12.5px] text-slate-300 hover:text-white hover:bg-white/5 inline-flex items-center gap-1.5 transition">
@@ -382,6 +585,44 @@
                         </button>
                     </div>
                     <pre class="p-5 text-[13px] leading-relaxed font-mono text-slate-300 overflow-x-auto"><code id="embedCodeSnippet"></code></pre>
+                    <div class="px-5 pb-5">
+                        <div class="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.05] p-3.5 flex items-center gap-3">
+                            <span class="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-300 flex items-center justify-center shrink-0"><i data-lucide="check" class="w-4 h-4"></i></span>
+                            <div class="text-[13px]"><div class="text-emerald-200 font-medium">It's live!</div><div class="text-slate-400">Installation check found the widget on your site.</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TRUST ================= -->
+        <section class="border-t border-white/7 bg-white/[0.012]">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-24">
+                <div class="reveal max-w-2xl">
+                    <div class="eyebrow">Safe on your site</div>
+                    <h2 class="section-title mt-3">Built so you can put your name on it</h2>
+                </div>
+                <div class="reveal mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="rounded-2xl border border-white/7 p-5">
+                        <i data-lucide="shield-check" class="w-5 h-5 text-emerald-300"></i>
+                        <h3 class="mt-3 text-[15px] font-medium text-white">No invented facts</h3>
+                        <p class="mt-1.5 text-[13.5px] text-slate-400 leading-relaxed">Prices, policies and availability come only from your content. Discounts and promises are never made up.</p>
+                    </div>
+                    <div class="rounded-2xl border border-white/7 p-5">
+                        <i data-lucide="globe-lock" class="w-5 h-5 text-emerald-300"></i>
+                        <h3 class="mt-3 text-[15px] font-medium text-white">Your domains only</h3>
+                        <p class="mt-1.5 text-[13.5px] text-slate-400 leading-relaxed">Each assistant only runs on the websites you allow, so nobody can borrow it on theirs.</p>
+                    </div>
+                    <div class="rounded-2xl border border-white/7 p-5">
+                        <i data-lucide="lock-keyhole" class="w-5 h-5 text-emerald-300"></i>
+                        <h3 class="mt-3 text-[15px] font-medium text-white">Isolated workspaces</h3>
+                        <p class="mt-1.5 text-[13.5px] text-slate-400 leading-relaxed">Each workspace's content, conversations, leads and API keys are kept separate, with role-based access.</p>
+                    </div>
+                    <div class="rounded-2xl border border-white/7 p-5">
+                        <i data-lucide="user-round-check" class="w-5 h-5 text-emerald-300"></i>
+                        <h3 class="mt-3 text-[15px] font-medium text-white">Honest about being AI</h3>
+                        <p class="mt-1.5 text-[13.5px] text-slate-400 leading-relaxed">It never pretends to be a person, and offers your team whenever a visitor wants one.</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -389,13 +630,13 @@
         <!-- ================= ESTIMATE ================= -->
         <section id="estimate" class="border-t border-white/7">
             <div class="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
-                <div class="max-w-2xl">
+                <div class="reveal max-w-2xl">
                     <div class="eyebrow">Estimate</div>
                     <h2 class="section-title mt-3">What's an answered question worth?</h2>
-                    <p class="mt-4 text-[16px] text-slate-400 leading-relaxed">A rough model with your own numbers. Set the lift to whatever you think is realistic — we'd rather you be conservative.</p>
+                    <p class="mt-4 text-[16px] text-slate-400 leading-relaxed">A rough model with your own numbers. Set the lift to whatever you think is realistic. We'd rather you be conservative.</p>
                 </div>
 
-                <div class="mt-10 card rounded-2xl grid lg:grid-cols-5 overflow-hidden">
+                <div class="reveal mt-10 card rounded-2xl grid lg:grid-cols-5 overflow-hidden">
                     <div class="lg:col-span-3 p-6 sm:p-8 space-y-7">
                         <div>
                             <div class="flex items-center justify-between text-[14px]"><label for="calcVisitors" class="text-slate-300">Monthly visitors</label><span id="calcVisitorsVal" class="font-mono text-white">25,000</span></div>
@@ -419,7 +660,7 @@
                             <div class="text-[13px] text-slate-400">Estimated extra revenue / month</div>
                             <div id="calcExtraRevenue" class="mt-2 text-[2.5rem] leading-none font-semibold tracking-tight text-white tabular-nums">$0</div>
                             <div class="mt-4 text-[14px] text-slate-400"><span id="calcExtraLeads" class="text-white font-medium">0</span> additional conversions / month</div>
-                            <p class="mt-4 text-[12.5px] text-slate-500 leading-relaxed">visitors × conversion rate × lift × value. An estimate, not a promise — results depend on your traffic and content.</p>
+                            <p class="mt-4 text-[12.5px] text-slate-500 leading-relaxed">visitors × conversion rate × lift × value. An estimate, not a promise: results depend on your traffic and content.</p>
                         </div>
                         <button onclick="openAuthModal('signup')" class="btn-primary h-10 rounded-lg text-[14px] font-medium">Try it on your site</button>
                     </div>
@@ -430,54 +671,75 @@
         <!-- ================= PRICING ================= -->
         <section id="pricing" class="border-t border-white/7 scroll-mt-16">
             <div class="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
-                <div class="text-center max-w-2xl mx-auto">
+                <div class="reveal text-center max-w-2xl mx-auto">
                     <div class="eyebrow">Pricing</div>
                     <h2 class="section-title mt-3">Flat monthly pricing</h2>
                     <p class="mt-4 text-[16px] text-slate-400">No per-token surprises. Start free and upgrade when you need more.</p>
                 </div>
-                <div id="pricingGrid" class="mt-12 grid sm:grid-cols-2 lg:grid-cols-5 gap-3"></div>
+                <div id="pricingGrid" class="reveal mt-12 grid sm:grid-cols-2 lg:grid-cols-5 gap-3"></div>
             </div>
         </section>
 
         <!-- ================= FAQ ================= -->
         <section id="faq" class="border-t border-white/7 scroll-mt-16">
             <div class="max-w-3xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
-                <h2 class="section-title text-center">Questions</h2>
-                <div class="mt-10 divide-y divide-white/7 border-y border-white/7">
+                <h2 class="reveal section-title text-center">Questions</h2>
+                <div class="reveal mt-10 divide-y divide-white/7 border-y border-white/7">
                     <details class="faq group py-5">
                         <summary class="flex items-center justify-between gap-4 cursor-pointer list-none text-[15.5px] font-medium text-white">
                             How does it avoid making things up?
                             <i data-lucide="plus" class="faq-icon w-4 h-4 text-slate-500 shrink-0 transition-transform"></i>
                         </summary>
-                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">Before answering, AnswerWeave searches your indexed content using keyword and semantic retrieval together. Answers are built from the passages it finds and cite them. If nothing relevant turns up, the assistant says it doesn't know, offers to connect a person, and logs the question as a knowledge gap for you to answer.</p>
+                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">Before answering, AnswerWeave searches your content using keyword and semantic search together. Facts about your business come only from the passages it finds, with the sources shown. If nothing relevant turns up, it says so, offers to connect a person, and logs the question as a knowledge gap for you to answer.</p>
+                    </details>
+                    <details class="faq group py-5">
+                        <summary class="flex items-center justify-between gap-4 cursor-pointer list-none text-[15.5px] font-medium text-white">
+                            Can it show my products or property listings?
+                            <i data-lucide="plus" class="faq-icon w-4 h-4 text-slate-500 shrink-0 transition-transform"></i>
+                        </summary>
+                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">Yes. It reads product and listing details that most store and property sites publish (names, prices, photos, stock, bedrooms), or you can upload a catalog CSV. Visitors see matching items as cards, filtered by budget, location and what they asked for.</p>
+                    </details>
+                    <details class="faq group py-5">
+                        <summary class="flex items-center justify-between gap-4 cursor-pointer list-none text-[15.5px] font-medium text-white">
+                            Does it stay up to date when my website changes?
+                            <i data-lucide="plus" class="faq-icon w-4 h-4 text-slate-500 shrink-0 transition-transform"></i>
+                        </summary>
+                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">Turn on daily or weekly re-crawls and it re-reads your site in the background. Only changed pages are re-learned, new pages are added, and pages you delete are removed. You can also re-crawl any time with one click.</p>
                     </details>
                     <details class="faq group py-5">
                         <summary class="flex items-center justify-between gap-4 cursor-pointer list-none text-[15.5px] font-medium text-white">
                             Do I need an OpenAI or Gemini API key?
                             <i data-lucide="plus" class="faq-icon w-4 h-4 text-slate-500 shrink-0 transition-transform"></i>
                         </summary>
-                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">No. The built-in local engine works without any key. If you want more natural phrasing, connect Gemini, Groq, OpenAI, DeepSeek, Qwen, SiliconFlow or OpenRouter in settings.</p>
+                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">No, it works out of the box. If you prefer, add your own key for Gemini, Groq, OpenAI, DeepSeek, Qwen, SiliconFlow or OpenRouter in settings, and AnswerWeave falls back to another provider automatically if one has an outage.</p>
+                    </details>
+                    <details class="faq group py-5">
+                        <summary class="flex items-center justify-between gap-4 cursor-pointer list-none text-[15.5px] font-medium text-white">
+                            Can my team use it together?
+                            <i data-lucide="plus" class="faq-icon w-4 h-4 text-slate-500 shrink-0 transition-transform"></i>
+                        </summary>
+                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">Yes. Invite people by email as owners, admins or agents. Agents work the live inbox, leads and knowledge gaps; admins manage content and settings. Agencies can keep a separate workspace for each client.</p>
                     </details>
                     <details class="faq group py-5">
                         <summary class="flex items-center justify-between gap-4 cursor-pointer list-none text-[15.5px] font-medium text-white">
                             Will the widget clash with my theme?
                             <i data-lucide="plus" class="faq-icon w-4 h-4 text-slate-500 shrink-0 transition-transform"></i>
                         </summary>
-                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">The widget renders inside a Shadow DOM, so your site's CSS doesn't leak into it and its styles don't leak out. You can still match your brand with colors, fonts and custom CSS from Widget Studio.</p>
+                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">No. The widget renders inside a Shadow DOM, so your site's CSS doesn't leak in and its styles don't leak out. Match your brand with colours, avatar, fonts and custom CSS.</p>
                     </details>
                     <details class="faq group py-5">
                         <summary class="flex items-center justify-between gap-4 cursor-pointer list-none text-[15.5px] font-medium text-white">
                             How does live takeover work?
                             <i data-lucide="plus" class="faq-icon w-4 h-4 text-slate-500 shrink-0 transition-transform"></i>
                         </summary>
-                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">Open any conversation in the inbox and click Take over. Automatic replies pause, the visitor sees that a person has joined, and you chat directly. Release it when you're done and the assistant picks back up.</p>
+                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">When a visitor asks for a person, your team gets an alert. Open the conversation in the inbox and click Take over: automatic replies pause, the visitor sees that a person joined, and you chat directly. Release it when you're done.</p>
                     </details>
                     <details class="faq group py-5">
                         <summary class="flex items-center justify-between gap-4 cursor-pointer list-none text-[15.5px] font-medium text-white">
                             Does it support Arabic and right-to-left languages?
                             <i data-lucide="plus" class="faq-icon w-4 h-4 text-slate-500 shrink-0 transition-transform"></i>
                         </summary>
-                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">Yes. When the visitor's browser is set to Arabic, or your assistant's greeting is in Arabic, the widget switches to a right-to-left layout automatically.</p>
+                        <p class="mt-3 text-[14.5px] text-slate-400 leading-relaxed">Yes. It replies in the visitor's language, and when the visitor's browser is set to Arabic, or your assistant's greeting is in Arabic, the widget switches to a right-to-left layout automatically.</p>
                     </details>
                 </div>
             </div>
@@ -485,29 +747,50 @@
 
         <!-- ================= CTA ================= -->
         <section class="border-t border-white/7">
-            <div class="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-24 text-center">
-                <h2 class="section-title">Give visitors answers you'd stand behind</h2>
-                <p class="mt-4 text-[16px] text-slate-400">Set up your first assistant free. No credit card.</p>
-                <div class="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
-                    <button onclick="openAuthModal('signup')" class="btn-primary h-11 px-5 rounded-lg text-[15px] font-medium">Create free account</button>
-                    <button onclick="openAuthModal('login')" class="btn-secondary h-11 px-5 rounded-lg text-[15px] font-medium">Sign in</button>
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-24">
+                <div class="reveal cta-card relative overflow-hidden rounded-3xl border border-white/10 px-6 py-14 sm:px-12 sm:py-16 text-center">
+                    <div class="absolute inset-0 pointer-events-none cta-glow" aria-hidden="true"></div>
+                    <h2 class="relative section-title">Give visitors answers you'd stand behind</h2>
+                    <p class="relative mt-4 text-[16px] text-slate-300">Set up your first assistant free in a few minutes. No credit card.</p>
+                    <div class="relative mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+                        <button onclick="openAuthModal('signup')" class="btn-primary h-11 px-6 rounded-lg text-[15px] font-medium inline-flex items-center justify-center gap-2">Build my assistant free <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
+                        <button onclick="openLiveWidget()" class="btn-secondary h-11 px-5 rounded-lg text-[15px] font-medium">Try the live demo</button>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
     <footer class="border-t border-white/7">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-5 text-[13.5px] text-slate-500">
-            <div class="flex items-center gap-2.5">
-                <span class="w-6 h-6 rounded-md bg-brand-600 flex items-center justify-center text-white"><i data-lucide="align-left" class="w-3.5 h-3.5"></i></span>
-                <span>&copy; <span id="footerYear">2026</span> AnswerWeave</span>
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 text-[13.5px]">
+            <div class="lg:col-span-2">
+                <a href="/" class="flex items-center gap-2.5">
+                    <span class="w-7 h-7 rounded-md bg-brand-600 flex items-center justify-center text-white"><i data-lucide="align-left" class="w-3.5 h-3.5"></i></span>
+                    <span class="text-[15px] font-semibold text-white">AnswerWeave</span>
+                </a>
+                <p class="mt-3 max-w-sm text-slate-500 leading-relaxed">AI assistants that answer from your own content, show your products and listings, and hand off to your team.</p>
             </div>
-            <nav class="flex flex-wrap justify-center gap-x-6 gap-y-2" aria-label="Footer">
-                <a href="/dashboard" class="hover:text-white transition">Dashboard</a>
-                <a href="/demo" class="hover:text-white transition">Widget demo</a>
-                <a href="/docs" class="hover:text-white transition">API docs</a>
-                <a href="https://github.com/QasimOmer/answerweave-ai" target="_blank" rel="noopener" class="hover:text-white transition">GitHub</a>
+            <nav aria-label="Product">
+                <div class="text-[12px] font-medium uppercase tracking-wider text-slate-500">Product</div>
+                <ul class="mt-3 space-y-2 text-slate-400">
+                    <li><a href="#product" class="hover:text-white transition">Overview</a></li>
+                    <li><a href="#industries" class="hover:text-white transition">Industries</a></li>
+                    <li><a href="#pricing" class="hover:text-white transition">Pricing</a></li>
+                    <li><a href="/demo" class="hover:text-white transition">Widget demo</a></li>
+                </ul>
             </nav>
+            <nav aria-label="Resources">
+                <div class="text-[12px] font-medium uppercase tracking-wider text-slate-500">Resources</div>
+                <ul class="mt-3 space-y-2 text-slate-400">
+                    <li><a href="/dashboard" class="hover:text-white transition">Dashboard</a></li>
+                    <li><a href="/docs" class="hover:text-white transition">API docs</a></li>
+                    <li><a href="#faq" class="hover:text-white transition">FAQ</a></li>
+                    <li><a href="https://github.com/QasimOmer/answerweave-ai" target="_blank" rel="noopener" class="hover:text-white transition">GitHub</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="border-t border-white/7">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 py-5 text-[12.5px] text-slate-500">&copy; <span id="footerYear">2026</span> AnswerWeave</div>
         </div>
     </footer>
 
@@ -562,9 +845,32 @@
         lucide.createIcons();
         document.getElementById('footerYear').textContent = new Date().getFullYear();
 
+        // ---------- Mobile menu ----------
+        function toggleMobileMenu(force) {
+            const menu = document.getElementById('mobileMenu');
+            const btn = document.getElementById('mobileMenuBtn');
+            const open = typeof force === 'boolean' ? force : menu.classList.contains('hidden');
+            menu.classList.toggle('hidden', !open);
+            btn.setAttribute('aria-expanded', String(open));
+            btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+            btn.innerHTML = `<i data-lucide="${open ? 'x' : 'menu'}" class="w-5 h-5"></i>`;
+            lucide.createIcons();
+        }
+        document.querySelectorAll('.mobile-link').forEach(a => a.addEventListener('click', () => toggleMobileMenu(false)));
+        window.matchMedia('(min-width: 768px)').addEventListener('change', e => { if (e.matches) toggleMobileMenu(false); });
+
+        // ---------- Scroll reveal ----------
+        if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            document.documentElement.classList.add('js-reveal');
+            const io = new IntersectionObserver(entries => entries.forEach(e => {
+                if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); }
+            }), { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+            document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+        }
+
         // ---------- Product demo tabs ----------
         function switchDemo(view) {
-            ['visitor', 'operator', 'brief'].forEach(v => {
+            ['visitor', 'cards', 'operator', 'brief'].forEach(v => {
                 const tab = document.getElementById(`tab-${v}`);
                 const panel = document.getElementById(`panel-${v}`);
                 const active = v === view;
