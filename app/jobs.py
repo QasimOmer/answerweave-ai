@@ -17,6 +17,7 @@ import hashlib
 import os
 import threading
 import time
+import urllib.parse
 from typing import Any, Dict, List, Optional
 
 from app import db
@@ -44,6 +45,14 @@ JOB_KINDS = ("crawl", "sitemap", "resync", "page")
 
 class JobConflict(Exception):
     """The assistant already has a crawl running."""
+
+
+def _same_site(url: str, root_url: str) -> bool:
+    """Same host as the crawl root, ignoring a leading "www."."""
+    def host(u: str) -> str:
+        h = (urllib.parse.urlparse(u).hostname or "").lower()
+        return h[4:] if h.startswith("www.") else h
+    return bool(host(url)) and host(url) == host(root_url)
 
 
 def _hash(text: str) -> str:
@@ -168,7 +177,11 @@ def run_job_step(job_id: str, budget_seconds: float = STEP_BUDGET_SECONDS) -> Op
                 if not seeds:
                     raise RuntimeError("No page URLs found in that sitemap.")
             else:
-                seeds = discover_sitemap_urls(state.get("root") or job["start_url"], max_urls=max_pages)
+                root_url = state.get("root") or job["start_url"]
+                seeds = discover_sitemap_urls(root_url, max_urls=max_pages)
+                # A site's robots.txt/sitemap can point at a different domain (e.g. a planned
+                # custom domain). When crawling a website, only take pages from that same site.
+                seeds = [u for u in seeds if _same_site(u, root_url)]
             for u in seeds:
                 u = normalize_crawl_url(u)
                 if u and u not in visited and u not in frontier:

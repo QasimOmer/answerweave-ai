@@ -43,7 +43,9 @@ def check_public_url(url: str) -> Tuple[bool, str]:
     host = parsed.hostname
     try:
         infos = socket.getaddrinfo(host, parsed.port or (443 if parsed.scheme == "https" else 80), proto=socket.IPPROTO_TCP)
-    except socket.gaierror:
+    except (OSError, UnicodeError, ValueError):
+        # gaierror is the usual "no such domain", but some runtimes (e.g. Vercel/AWS Lambda)
+        # raise a plain OSError such as "[Errno 16] Device or resource busy" for the same thing.
         return False, f"We couldn't find the website {host}. Check the address."
     for info in infos:
         if _is_private_ip(info[4][0]):
