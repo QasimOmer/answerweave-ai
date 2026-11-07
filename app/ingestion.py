@@ -1,5 +1,5 @@
 """
-Document ingestion pipeline for WeaveFlow AI.
+Document ingestion pipeline for Hi Bot.
 Supports:
 - Web crawling & HTML cleaning
 - Sitemap.xml bulk URL extraction

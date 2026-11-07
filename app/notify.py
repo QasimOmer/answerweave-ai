@@ -37,7 +37,7 @@ def send_email(to: List[str], subject: str, text: str, html_body: str = "") -> T
     provider = email_provider()
     try:
         if provider == "resend":
-            sender = os.environ.get("ALERT_EMAIL_FROM") or "AnswerWeave <onboarding@resend.dev>"
+            sender = os.environ.get("ALERT_EMAIL_FROM") or "Hi Bot <onboarding@resend.dev>"
             payload = {"from": sender, "to": to, "subject": subject, "text": text}
             if html_body:
                 payload["html"] = html_body

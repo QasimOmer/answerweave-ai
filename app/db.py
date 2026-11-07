@@ -1,12 +1,12 @@
 """
-Database layer for WeaveFlow AI SaaS Platform.
+Database layer for Hi Bot.
 Supports:
 - Multi-assistant tenant isolation
 - Knowledge sources, chunks, embeddings
 - Leads with AI Call-Prep dossiers
 - Full visitor chat transcripts & inbox
 - Unanswered questions / Knowledge Gaps queue
-- Subscription plans & usage tracking (AnswerWeave flat-fee tier model)
+- Subscription plans & usage tracking (flat-fee tier model)
 """
 
 import sqlite3
@@ -250,7 +250,7 @@ def _default_admin_password() -> str:
     if not USE_POSTGRES:
         return "admin123"
     generated = secrets.token_urlsafe(12)
-    print(f"[AnswerWeave] Created admin@answerweave.ai with a random password: {generated} (set AW_ADMIN_PASSWORD to choose one)")
+    print(f"[Hi Bot] Created admin@answerweave.ai with a random password: {generated} (set AW_ADMIN_PASSWORD to choose one)")
     return generated
 
 

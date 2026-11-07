@@ -1,5 +1,5 @@
 /**
- * WeaveFlow AI - Universal Embedded Chatbot Widget
+ * Hi Bot - Universal Embedded Chatbot Widget
  * Engineered for 100% Host-Website Isolation via Shadow DOM & Scoped CSS Resets.
  * - Prevents WordPress, Elementor, Kadence, Astra theme CSS leaks
  * - Dynamic Assistant Branding (EcomAlign Assistant default)
@@ -36,7 +36,7 @@
     const ASSISTANT_ID = currentScript && currentScript.getAttribute('data-assistant-id');
 
     if (!ASSISTANT_ID) {
-        console.warn("[AnswerWeave] Chatbot widget initialization skipped: Missing 'data-assistant-id' attribute on widget script tag.");
+        console.warn("[Hi Bot] Chatbot widget initialization skipped: Missing 'data-assistant-id' attribute on widget script tag.");
         return;
     }
 
@@ -2152,7 +2152,7 @@
                     </svg>
                 </button>
             </form>
-            <div class="wf-footer" id="wf-footer">Powered by AnswerWeave</div>
+            <div class="wf-footer" id="wf-footer">Powered by Hi Bot</div>
             <button type="button" class="wf-jump-btn" id="wf-jump-btn" aria-label="Jump to latest message" tabindex="-1">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
             </button>
@@ -2289,7 +2289,7 @@
         if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.vercel.app') || host === 'vercel.app') {
             return true;
         }
-        // Previews inside the AnswerWeave app itself (dashboard, onboarding) are always allowed.
+        // Previews inside the Hi Bot app itself (dashboard, onboarding) are always allowed.
         try { if (host === new URL(API_BASE).hostname.toLowerCase()) return true; } catch (e) {}
         const patterns = allowedPattern.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
         for (let pat of patterns) {
@@ -2346,7 +2346,7 @@
         }
     })
     .catch(err => {
-        console.warn(`[AnswerWeave] Widget blocked: ${err.message}`);
+        console.warn(`[Hi Bot] Widget blocked: ${err.message}`);
         // Ensure widget is completely hidden and detached from DOM
         if (hostContainer && hostContainer.parentNode) {
             hostContainer.parentNode.removeChild(hostContainer);

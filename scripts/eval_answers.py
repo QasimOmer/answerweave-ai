@@ -1,5 +1,5 @@
 """
-Answer-quality evaluation for AnswerWeave assistants.
+Answer-quality evaluation for Hi Bot assistants.
 
 Runs a fixed set of visitor questions through the real answer pipeline and checks
 each reply against the behaviour expected for its category. It is READ-ONLY:

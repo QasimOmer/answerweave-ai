@@ -1,11 +1,11 @@
 """
-Grounded, conversation-aware answer engine for WeaveFlow AI SaaS.
+Grounded, conversation-aware answer engine for Hi Bot.
 Features:
 - Multi-turn memory with follow-up query rewriting before retrieval
 - Grounded answers about the business; helpful general answers for everything else
 - Real token streaming with provider failover (see app.llm)
 - Automated lead triggering and knowledge-gap logging
-- Signature AnswerWeave-style AI Call-Prep Briefs for sales teams
+- Signature AI Call-Prep Briefs for sales teams
 """
 
 import re
@@ -955,7 +955,7 @@ Be specific to this conversation and concise. Don't invent facts that aren't in 
 
 def generate_call_prep_brief(conversation_history: List[Dict[str, Any]], assistant_id: Optional[str] = None) -> str:
     """
-    Signature AnswerWeave feature: Generates an AI Call-Prep Brief for the sales team.
+    Signature Hi Bot feature: Generates an AI Call-Prep Brief for the sales team.
     Includes Intent, Pain Points, and Recommended Talking Points for follow-up.
     """
     if not conversation_history:

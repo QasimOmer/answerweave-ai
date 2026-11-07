@@ -1,5 +1,5 @@
 """
-WeaveFlow AI - Complete SaaS Platform API
+Hi Bot - Complete SaaS Platform API
 Multi-Assistant Website Management, Grounded RAG, AI Call-Prep Briefs,
 PDF & File Ingestion, Visitor Conversation Inbox, Knowledge Gaps resolution,
 and Subscription Tier Management.
@@ -148,7 +148,7 @@ from app import jobs as crawl_jobs  # noqa: E402  (after init_db so the jobs tab
 crawl_jobs.start_background_worker()
 
 app = FastAPI(
-    title="WeaveFlow AI SaaS Engine",
+    title="Hi Bot API",
     description="Multi-tenant grounded AI website assistant platform with lead capture, file uploads, conversation inbox, and Call-Prep intelligence",
     version="2.2.0"
 )
@@ -430,18 +430,18 @@ def send_account_email(to: str, subject: str, intro: str, link: str, button: str
             f"color:#fff;border-radius:8px;text-decoration:none\">{button}</a></p>"
             f"<p style=\"color:#64748b;font-size:13px\">If you didn't expect this email, you can ignore it.</p>")
     if not email_provider():
-        print(f"[AnswerWeave] No email provider configured. {subject} for {to}: {link}")
+        print(f"[Hi Bot] No email provider configured. {subject} for {to}: {link}")
         return False
     ok, detail = send_email([to], subject, text, body)
     if not ok:
-        print(f"[AnswerWeave] Could not send '{subject}' to {to}: {detail}")
+        print(f"[Hi Bot] Could not send '{subject}' to {to}: {detail}")
     return ok
 
 
 def send_verification_email(user: Dict[str, Any], request: Request) -> bool:
     token = create_purpose_token(user["id"], "verify", VERIFY_TTL_SECONDS)
     link = f"{app_base_url(request)}/account?verify={token}"
-    return send_account_email(user["email"], "Confirm your email for AnswerWeave",
+    return send_account_email(user["email"], "Confirm your email for Hi Bot",
                               f"Hi {user.get('name') or 'there'}, please confirm your email address.", link, "Confirm email")
 
 
@@ -485,7 +485,7 @@ def api_forgot_password(req: ForgotPasswordRequest, request: Request):
     row = get_user_by_email(req.email or "")
     if row:
         token = create_purpose_token(row["id"], "reset", RESET_TTL_SECONDS)
-        send_account_email(row["email"], "Reset your AnswerWeave password",
+        send_account_email(row["email"], "Reset your Hi Bot password",
                            "Someone asked to reset the password for this account. The link works for one hour.",
                            f"{app_base_url(request)}/account?reset={token}", "Choose a new password")
     # Same answer either way, so the form can't be used to find out who has an account.
@@ -629,7 +629,7 @@ def api_invite_member(req: InviteRequest, request: Request):
     invite = create_invite(ws["id"], email, req.role, request.state.user["id"])
     link = f"{app_base_url(request)}/account?invite={invite['token']}"
     inviter = request.state.user.get("name") or request.state.user["email"]
-    sent = send_account_email(email, f"{inviter} invited you to {ws['name']} on AnswerWeave",
+    sent = send_account_email(email, f"{inviter} invited you to {ws['name']} on Hi Bot",
                               f"{inviter} invited you to join the {ws['name']} workspace as {'an' if req.role[0] in 'aeiou' else 'a'} {req.role}. The invite expires in 7 days.",
                               link, "Accept invite")
     # The inviter can share the link themselves if email isn't set up (or lands in spam).
@@ -693,7 +693,7 @@ def api_test_alert(asst_id: str):
     recipients = [e.strip() for e in (asst.get("notification_email") or "").replace(";", ",").split(",") if "@" in e]
     ok, detail = send_email(
         recipients,
-        f"Test alert from AnswerWeave — {asst.get('name') or asst_id}",
+        f"Test alert from Hi Bot — {asst.get('name') or asst_id}",
         "This is a test. You'll get an email like this when a visitor asks to talk to a person.",
     )
     return {"status": "success" if ok else "error", "detail": detail, "provider": email_provider() or None, "recipients": recipients}
@@ -1018,7 +1018,7 @@ def api_verify_install(asst_id: str, req: VerifyInstallRequest):
     if not ok:
         return {"installed": False, "checked_url": url, "reason": reason}
     try:
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; AnswerWeaveInstallCheck/1.0)"},
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; HiBotInstallCheck/1.0)"},
                             timeout=10, allow_redirects=True)
         html = resp.text if resp.ok else ""
     except requests.RequestException as e:
@@ -1866,7 +1866,7 @@ def api_test_assistant_webhook(asst_id: str):
         "assistant_name": asst.get("name"),
         "timestamp": time.time(),
         "test_data": {
-            "message": "WeaveFlow AI Webhook Test Successful!",
+            "message": "Hi Bot webhook test successful!",
             "lead_sample": {
                 "name": "Jane Doe",
                 "email": "jane@example.com",
@@ -1949,7 +1949,7 @@ def api_test_llm(req: TestLLMRequest, request: Request):
             detail=f"No API key provided or found in system for '{provider}'."
         )
 
-    test_prompt = "Hello! Please reply with 'WeaveFlow AI is connected!' to confirm our API integration."
+    test_prompt = "Hello! Please reply with 'Hi Bot is connected!' to confirm our API integration."
     test_system = "You are a connectivity tester. Respond concisely."
 
     try:

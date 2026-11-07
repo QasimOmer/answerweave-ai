@@ -1,5 +1,5 @@
 """
-Entry point to launch the AnswerWeave AI Chatbot server.
+Entry point to launch the Hi Bot chatbot server.
 """
 
 import sys
@@ -8,7 +8,7 @@ import os
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("🚀 Starting AnswerWeave AI Engine...")
+    print("🚀 Starting Hi Bot...")
     print("📍 Dashboard & Admin Console: http://127.0.0.1:8000")
     print("🌐 External Website Widget Demo: http://127.0.0.1:8000/demo")
     print("📄 API Documentation (Swagger):  http://127.0.0.1:8000/docs")

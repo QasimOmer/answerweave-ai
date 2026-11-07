@@ -1,5 +1,5 @@
 """
-Catalog and Property Intelligence Engine for AnswerWeave / WeaveFlow AI.
+Catalog and Property Intelligence Engine for Hi Bot.
 Specialized in:
 - E-Commerce product discovery & budget filtering
 - Real Estate property search (Rentals vs Sales, bedrooms, locations, budget)

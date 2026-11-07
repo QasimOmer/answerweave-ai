@@ -1,6 +1,6 @@
-# WeaveFlow AI - Multi-Website Grounded Chatbot & Lead Capture SaaS
+# Hi Bot - Multi-Website Grounded Chatbot & Lead Capture SaaS
 
-A complete, production-ready SaaS platform built as a 1:1 equivalent of **AnswerWeave**, powered by **Grounded RAG**, **Zero Hallucination Guardrails**, **AI Call-Prep Briefs**, and **Multi-Website Tenancy**.
+**Hi Bot** is a complete, production-ready SaaS platform powered by **Grounded RAG**, **Zero Hallucination Guardrails**, **AI Call-Prep Briefs**, and **Multi-Website Tenancy**.
 
 ---
 
@@ -49,7 +49,7 @@ This repository is pre-configured for **instant serverless deployment on Vercel*
 ```bash
 git init
 git add .
-git commit -m "Initial commit of WeaveFlow AI"
+git commit -m "Initial commit of Hi Bot"
 git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
 git push -u origin main
@@ -65,7 +65,7 @@ git push -u origin main
    - `GROQ_API_KEY`: *(Optional Groq key)*
 5. Click **Deploy**!
 
-Within ~60 seconds, your WeaveFlow AI SaaS platform will be live at `https://your-project.vercel.app` with free SSL!
+Within ~60 seconds, your Hi Bot platform will be live at `https://your-project.vercel.app` with free SSL!
 
 ---
 

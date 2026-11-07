@@ -41,7 +41,7 @@ OPENAI_COMPATIBLE = {
     "openrouter": {
         "url": "https://openrouter.ai/api/v1/chat/completions",
         "model": DEFAULT_OPENROUTER_MODEL,
-        "headers": {"HTTP-Referer": "https://answerweave-ai.vercel.app", "X-Title": "WeaveFlow AI"},
+        "headers": {"HTTP-Referer": "https://answerweave-ai.vercel.app", "X-Title": "Hi Bot"},
     },
     "groq": {"url": "https://api.groq.com/openai/v1/chat/completions", "model": None},  # discovered per key
 }

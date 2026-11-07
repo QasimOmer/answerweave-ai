@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Set up your assistant · AnswerWeave</title>
+    <title>Set up your assistant · Hi Bot</title>
     <meta name="robots" content="noindex">
     <meta name="theme-color" content="#0b0c0e">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f5cf6'/%3E%3Cpath d='M8 11h16M8 16h16M8 21h10' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -85,7 +85,7 @@
             <span class="w-7 h-7 rounded-lg bg-[#2f5cf6] flex items-center justify-center" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 32 32"><path d="M8 11h16M8 16h16M8 21h10" stroke="white" stroke-width="3" stroke-linecap="round"/></svg>
             </span>
-            AnswerWeave
+            Hi Bot
         </a>
         <a href="/dashboard" id="skipLink" class="text-[13px] text-slate-400 hover:text-white">Skip to dashboard</a>
     </header>
@@ -618,7 +618,7 @@
             $('platformTabs').querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => show(t.dataset.p)));
             show(tabs[0]);
             const body = `Hi,\n\nPlease add our website chat assistant. Paste this code just before </body> on every page:\n\n${snippetText()}\n\nThanks!`;
-            $('mailDev').href = `mailto:?subject=${encodeURIComponent('Add our AnswerWeave chat assistant to the website')}&body=${encodeURIComponent(body)}`;
+            $('mailDev').href = `mailto:?subject=${encodeURIComponent('Add our Hi Bot chat assistant to the website')}&body=${encodeURIComponent(body)}`;
         }
         $('copySnippet').addEventListener('click', async () => {
             try { await navigator.clipboard.writeText(snippetText()); $('copySnippet').textContent = 'Copied!'; }

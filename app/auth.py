@@ -1,5 +1,5 @@
 """
-Authentication and authorization for the AnswerWeave admin API.
+Authentication and authorization for the Hi Bot admin API.
 
 - Stateless signed bearer tokens (HMAC-SHA256), 7-day expiry. Each token embeds a
   fingerprint of the user's password hash, so changing a password signs out

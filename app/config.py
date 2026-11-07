@@ -1,5 +1,5 @@
 """
-Configuration and settings manager for AnswerWeave clone.
+Configuration and settings manager for Hi Bot.
 Supports: Gemini (free tier), Groq (free Llama 3), OpenAI, and 100% Free Local Offline Mode.
 """
 
@@ -91,7 +91,7 @@ def get_bot_settings(workspace_id: Optional[str] = None) -> dict:
         current_provider = next((p for p in AUTO_ORDER if effective[p]), "local")  # local = zero-key engine
 
     settings = {
-        "bot_name": get_setting("bot_name", "WeaveFlow Bot"),
+        "bot_name": get_setting("bot_name", "Hi Bot"),
         "primary_color": get_setting("primary_color", "#081726"),
         "welcome_message": get_setting("welcome_message", "Hi there! 👋 How can I help you today?"),
         "suggested_questions": get_setting("suggested_questions", "What services do you provide?\nHow does pricing work?\nHow do I contact support?"),

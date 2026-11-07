@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard · AnswerWeave</title>
+    <title>Dashboard · Hi Bot</title>
     <meta name="theme-color" content="#0b0c0e">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232550f5'/%3E%3Cpath d='M8 11h16M8 16h16M8 21h10' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
     <!-- Tailwind (Play CDN, pinned) -->
@@ -195,7 +195,7 @@
                 <span class="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center text-white">
                     <i data-lucide="align-left" class="w-4 h-4"></i>
                 </span>
-                <span class="text-[15px] font-semibold tracking-tight text-white">AnswerWeave</span>
+                <span class="text-[15px] font-semibold tracking-tight text-white">Hi Bot</span>
             </a>
             <button onclick="toggleSidebar(false)" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5" aria-label="Close menu">
                 <i data-lucide="x" class="w-4 h-4"></i>
@@ -1032,7 +1032,7 @@
                                 </div>
                                 <div>
                                     <h4 class="text-xs font-semibold text-white">The Continuous Grounding &amp; Learning Loop</h4>
-                                    <p class="text-[11px] text-slate-400 mt-0.5">How AnswerWeave turns unanswered visitor questions into permanent, deterministic intelligence</p>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">How Hi Bot turns unanswered visitor questions into permanent, deterministic intelligence</p>
                                 </div>
                             </div>
 
@@ -1102,7 +1102,7 @@
                                     <div class="font-semibold text-white flex items-center gap-1.5 text-xs">
                                         <span class="text-emerald-400">✓</span> Strict Grounding Guarantee
                                     </div>
-                                    <p class="text-[11px] text-slate-400 leading-relaxed">AnswerWeave strictly forbids LLM hallucinations. If an answer isn't in your knowledge vault, it is safely flagged here.</p>
+                                    <p class="text-[11px] text-slate-400 leading-relaxed">Hi Bot strictly forbids LLM hallucinations. If an answer isn't in your knowledge vault, it is safely flagged here.</p>
                                 </div>
                             </div>
 
@@ -1244,7 +1244,7 @@
                                         <div>
                                             <label class="block text-xs font-semibold text-slate-300 mb-1">White-Label Footer</label>
                                             <select id="asstShowBranding" class="glass-input w-full text-xs rounded-xl px-3 py-2 outline-none cursor-pointer">
-                                                <option value="true">Show "Powered by AnswerWeave"</option>
+                                                <option value="true">Show "Powered by Hi Bot"</option>
                                                 <option value="false">Hidden (White-Label)</option>
                                             </select>
                                         </div>
@@ -2506,7 +2506,7 @@
                     </div>
                     <div>
                         <h3 class="text-sm font-semibold text-white leading-none">AI Call-Prep Intelligence Dossier</h3>
-                        <div class="text-[11px] text-slate-400 mt-1">Automated sales briefing synthesized by AnswerWeave AI</div>
+                        <div class="text-[11px] text-slate-400 mt-1">Automated sales briefing by Hi Bot</div>
                     </div>
                 </div>
                 <button onclick="closeBriefModal()" class="text-slate-400 hover:text-white p-1 rounded-xl text-xl leading-none">&times;</button>
@@ -2762,7 +2762,7 @@
 
             const titleEl = document.getElementById('pageTitle');
             if (titleEl) titleEl.innerText = TAB_TITLES[tab] || '';
-            document.title = `${TAB_TITLES[tab] || 'Dashboard'} · AnswerWeave`;
+            document.title = `${TAB_TITLES[tab] || 'Dashboard'} · Hi Bot`;
 
             if (window.innerWidth < 1024) toggleSidebar(false);
             const main = document.querySelector('main');
@@ -4219,7 +4219,7 @@
         const knownWaiting = new Set();
         let alertsPrimed = false;
         let titleFlashTimer = null;
-        const baseTitle = () => `${TAB_TITLES[(location.hash || '#analytics').slice(1)] || 'Dashboard'} · AnswerWeave`;
+        const baseTitle = () => `${TAB_TITLES[(location.hash || '#analytics').slice(1)] || 'Dashboard'} · Hi Bot`;
 
         function startPresenceAndAlerts() {
             const ping = () => fetch('/api/presence', { method: 'POST' }).catch(() => {});
@@ -5433,7 +5433,7 @@
                     body: JSON.stringify({ plan_key: planKey })
                 });
                 if (res.status === 403) {
-                    showToast('Plan changes are handled by the AnswerWeave team for now. Contact support to switch.', 'alert-circle');
+                    showToast('Plan changes are handled by the Hi Bot team for now. Contact support to switch.', 'alert-circle');
                     return;
                 }
                 if (!res.ok) throw new Error('Status ' + res.status);
