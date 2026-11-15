@@ -1019,14 +1019,17 @@ def list_assistants() -> List[Dict[str, Any]]:
     conn.close()
     return [dict(r) for r in rows]
 
+# Per-process cache for the widget's hot path. Each entry expires on its own: a single
+# shared timestamp let reads of *other* assistants keep a stale entry alive forever,
+# and on serverless every instance has its own copy, so an update on one instance
+# can't clear the others. Callers that show settings to their owner pass fresh=True.
 _ASSISTANTS_CACHE: Dict[str, Dict[str, Any]] = {}
-_ASSISTANTS_CACHE_TIMESTAMP: float = 0.0
+_ASSISTANTS_CACHE_AT: Dict[str, float] = {}
 _ASSISTANTS_CACHE_TTL: float = 30.0
 
-def get_assistant(assistant_id: str) -> Optional[Dict[str, Any]]:
-    global _ASSISTANTS_CACHE, _ASSISTANTS_CACHE_TIMESTAMP
+def get_assistant(assistant_id: str, fresh: bool = False) -> Optional[Dict[str, Any]]:
     now = time.time()
-    if (now - _ASSISTANTS_CACHE_TIMESTAMP) < _ASSISTANTS_CACHE_TTL and assistant_id in _ASSISTANTS_CACHE:
+    if not fresh and assistant_id in _ASSISTANTS_CACHE and now - _ASSISTANTS_CACHE_AT.get(assistant_id, 0) < _ASSISTANTS_CACHE_TTL:
         return _ASSISTANTS_CACHE[assistant_id]
 
     conn = get_db()
@@ -1037,8 +1040,9 @@ def get_assistant(assistant_id: str) -> Optional[Dict[str, Any]]:
     if row:
         res = dict(row)
         _ASSISTANTS_CACHE[assistant_id] = res
-        _ASSISTANTS_CACHE_TIMESTAMP = now
+        _ASSISTANTS_CACHE_AT[assistant_id] = now
         return res
+    _ASSISTANTS_CACHE.pop(assistant_id, None)
     return None
 
 def update_assistant(assistant_id: str, data: Dict[str, Any]) -> bool:

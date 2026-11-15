@@ -895,11 +895,15 @@ def check_rate_limit(request: Request, limit: int = RATE_LIMIT_MAX_REQUESTS, win
 
 @app.get("/api/assistants/{asst_id}")
 def api_get_assistant(asst_id: str, request: Request):
+    if can_access_assistant(getattr(request.state, "user", None), asst_id):
+        # The owner is looking at (and editing) these settings: never show a cached copy.
+        asst = get_assistant(asst_id, fresh=True)
+        if not asst:
+            raise HTTPException(status_code=404, detail="Assistant not found")
+        return asst
     asst = get_assistant(asst_id)
     if not asst:
         raise HTTPException(status_code=404, detail="Assistant not found")
-    if can_access_assistant(getattr(request.state, "user", None), asst_id):
-        return asst
     # Anonymous callers (the embedded widget) only get display settings.
     verify_assistant_domain_access(asst, request)
     return public_assistant_view(asst)
@@ -979,7 +983,7 @@ def api_update_assistant(asst_id: str, req: UpdateAssistantRequest):
     success = update_assistant(asst_id, data)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to update assistant")
-    return {"status": "success", "assistant": get_assistant(asst_id)}
+    return {"status": "success", "assistant": get_assistant(asst_id, fresh=True)}
 
 @app.delete("/api/assistants/{asst_id}")
 def api_delete_assistant(asst_id: str):
