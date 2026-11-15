@@ -40,7 +40,7 @@ _SHOPPING_INTENT = re.compile(
 
 # ---------------------------------------------------------------- catalog
 
-def all_catalog_items(assistant_id: str) -> List[Dict[str, Any]]:
+def _raw_catalog_items(assistant_id: str) -> List[Dict[str, Any]]:
     """Every listing/product parsed from the assistant's knowledge, de-duplicated (cached with the search index)."""
     index = _get_index(assistant_id)
     cached = getattr(index, "_all_items", None)
@@ -54,13 +54,31 @@ def all_catalog_items(assistant_id: str) -> List[Dict[str, Any]]:
                 continue
             seen.add(key)
             items.append(it)
-    # Pages that merely mention a price (shipping policy, pricing FAQ) aren't listings. Use the structured
-    # listings when the site has them; fall back to everything for sites that only describe items in prose.
-    structured = [it for it in items if it.get("structured")]
-    if structured:
-        items = structured
     index._all_items = items
     return items
+
+
+# Fewer priced prose passages than this, with no structured listings, is a site that mentions money, not a catalog.
+MIN_PROSE_ITEMS = 3
+
+
+def all_catalog_items(assistant_id: str, industry: str = "auto") -> List[Dict[str, Any]]:
+    """The assistant's listings/products, as the catalog panel and widget cards should show them.
+
+    Pages that merely mention a price (shipping policy, pricing FAQ, a case study's "$780M recovered")
+    aren't listings, so structured listings (schema.org, catalog CSVs, product grids) win whenever the
+    site has them. Prose items are a fallback for shops that only describe items in text: never in
+    general mode, and in auto mode only when there are enough of them to look like a catalog.
+    """
+    items = _raw_catalog_items(assistant_id)
+    structured = [it for it in items if it.get("structured")]
+    if structured:
+        return structured
+    if industry in ("real_estate", "ecommerce"):
+        return items
+    if industry == "general":
+        return []
+    return items if len(items) >= MIN_PROSE_ITEMS else []
 
 
 def resolve_industry(asst: Optional[Dict[str, Any]], assistant_id: str) -> str:
@@ -71,7 +89,8 @@ def resolve_industry(asst: Optional[Dict[str, Any]], assistant_id: str) -> str:
     label = f"{(asst or {}).get('name') or ''} {(asst or {}).get('domain') or ''}".lower()
     if any(h in label for h in _RE_HINTS):
         return "real_estate"
-    items = all_catalog_items(assistant_id)
+    raw = _raw_catalog_items(assistant_id)
+    items = [it for it in raw if it.get("structured")] or raw
     props = sum(1 for it in items if it.get("entity_type") == "property")
     prods = len(items) - props
     if props >= 3 and props >= prods:
@@ -116,7 +135,7 @@ def find_matches(assistant_id: str, query: str, industry: str = "general",
     elif industry == "ecommerce" and intent.get("entity_type") == "any":
         intent["entity_type"] = "product"
 
-    items = [dict(it) for it in all_catalog_items(assistant_id)]  # copies: matching marks them
+    items = [dict(it) for it in all_catalog_items(assistant_id, industry)]  # copies: matching marks them
     if not items:
         return intent, [], False
     ranked = match_items_against_query(items, intent)

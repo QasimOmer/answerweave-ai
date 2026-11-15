@@ -1045,11 +1045,12 @@ def api_get_catalog(asst_id: str, limit: int = 24):
     """Listings and products the assistant found in its knowledge, as the widget would show them."""
     from app import verticals
     asst = get_assistant(asst_id)
-    items = verticals.all_catalog_items(asst_id)
+    detected = verticals.resolve_industry({**(asst or {}), "industry": "auto"}, asst_id)
+    items = verticals.all_catalog_items(asst_id, verticals.resolve_industry(asst, asst_id))
     properties = sum(1 for it in items if it.get("entity_type") == "property")
     return {
         "industry": (asst or {}).get("industry") or "auto",
-        "detected_industry": verticals.resolve_industry({**(asst or {}), "industry": "auto"}, asst_id),
+        "detected_industry": detected,
         "total": len(items),
         "properties": properties,
         "products": len(items) - properties,

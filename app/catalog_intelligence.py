@@ -248,13 +248,23 @@ def parse_user_query_intent(query: str) -> Dict[str, Any]:
         "raw_query": query
     }
 
-def extract_price_and_currency(text: str) -> Tuple[Optional[float], Optional[str], Optional[str]]:
+# Text right after an amount that makes it a statistic, not a price: "$780M+ recovered", "$2B market", "AED 5bn".
+_MAGNITUDE_AFTER = re.compile(r'(?:\s*(?:million|billion|trillion|mn|bn)\b|[mMbB]\b|\+)', re.I)
+# A number with no currency next to it is only a price when it is labelled as one.
+_LABELLED_PRICE = r'(?:price|cost|rent):\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)'
+
+
+def extract_price_and_currency(text: str, require_currency: bool = False) -> Tuple[Optional[float], Optional[str], Optional[str]]:
     """
     Extracts (numeric_price, currency_code, frequency) from a text line or snippet.
     Examples:
     "• Price: 450 AED" -> (450.0, "AED", "")
     "• Price: 4,500 AED / month" -> (4500.0, "AED", "month")
     "$89.99" -> (89.99, "USD", "")
+    "recovered $780M+ for clients" -> (None, None, None)   # a statistic, not a price
+
+    require_currency=True ignores bare labelled numbers ("Price: 450"), for prose
+    where only a currency symbol/code next to the number counts as a price.
     """
     clean = text.strip()
     
@@ -288,13 +298,16 @@ def extract_price_and_currency(text: str) -> Tuple[Optional[float], Optional[str
         # "£ 450", "450 £", "450 GBP"
         r'(?:£|gbp)\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)',
         r'([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*(?:£|gbp)',
-        # Generic "Price: 450"
-        r'(?:price|cost|rent):\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)'
     ]
+    if not require_currency:
+        # Generic "Price: 450"
+        patterns.append(_LABELLED_PRICE)
 
     for pat in patterns:
-        match = re.search(pat, clean, re.I)
-        if match:
+        for match in re.finditer(pat, clean, re.I):
+            # "$780M+" / "AED 2bn": a figure about the business, not something for sale.
+            if _MAGNITUDE_AFTER.match(clean, match.end(1)):
+                continue
             num_str = match.group(1).replace(",", "")
             try:
                 num = float(num_str)
@@ -319,6 +332,31 @@ def extract_price_and_currency(text: str) -> Tuple[Optional[float], Optional[str
                 pass
 
     return None, None, None
+
+_FAQ_HEADING = re.compile(
+    r'\b(?:faqs?|frequently\s+asked|common\s+questions|questions?\s+(?:and|&)\s+answers?|q\s*&\s*a|'
+    r'quick\s+answers?|answers?\s+about|ask\s+us)\b', re.I)
+# Headings that name a page section, not an item.
+_SECTION_HEADINGS = {
+    "overview", "about", "about us", "about me", "services", "our services", "pricing", "plans", "features",
+    "contact", "contact us", "get in touch", "testimonials", "reviews", "projects", "our work", "work",
+    "case study", "case studies", "portfolio", "results", "summary", "highlights", "details", "more",
+}
+
+
+def _is_faq_or_section_block(block: str) -> bool:
+    """True for prose that is an FAQ / Q&A section or opens with a generic section heading."""
+    lines = [ln.strip() for ln in block.split("\n") if ln.strip()]
+    if not lines:
+        return True
+    first = lines[0]
+    if _FAQ_HEADING.search(first) or first.endswith("?"):
+        return True
+    if re.sub(r'[^a-z& ]', '', first.lower()).strip() in _SECTION_HEADINGS:
+        return True
+    # Several questions in one block: a Q&A list ("What is X?", "What did you do on X?").
+    return sum(1 for ln in lines if ln.endswith("?")) >= 2
+
 
 def extract_catalog_items_from_chunk(
     content: str,
@@ -355,6 +393,13 @@ def extract_catalog_items_from_chunk(
         if name_match:
             name = (name_match.group(1) or name_match.group(2) or name_match.group(3) or name_match.group(4) or "").strip()
         
+        # Schema.org, catalog CSV, product-grid or "Item Name:" blocks; anything else is page prose.
+        is_structured = bool(name_match) or any(m in b for m in ("PRODUCT SPECIFICATION", "PROPERTY LISTING", "STRUCTURED"))
+
+        # Prose: be conservative. FAQ / Q&A sections and section headings are never products.
+        if not is_structured and _is_faq_or_section_block(b):
+            continue
+
         # If no explicit name tag, check first line if it looks like a product/property title
         if not name:
             first_line = b.split("\n")[0].strip()
@@ -372,12 +417,17 @@ def extract_catalog_items_from_chunk(
         freq = ""
         
         price_line_match = re.search(r'(?:•\s*)?(?:Price|Cost|Rent|Rate):\s*([^\n]+)', b, re.I)
+        # Prose only counts a number as a price when a currency symbol/code sits right next to it.
+        require_currency = not is_structured
         if price_line_match:
             raw_price_str = price_line_match.group(1).strip()
-            price_num, curr, freq = extract_price_and_currency(raw_price_str)
+            price_num, curr, freq = extract_price_and_currency(raw_price_str, require_currency=require_currency)
+            if price_num is None and is_structured:
+                # schema.org Offer / catalog CSV with a price but no priceCurrency: "• Price: 450"
+                price_num, curr, freq = extract_price_and_currency("Price: " + raw_price_str)
             price_display = raw_price_str
         else:
-            price_num, curr, freq = extract_price_and_currency(b)
+            price_num, curr, freq = extract_price_and_currency(b, require_currency=require_currency)
             if price_num is not None:
                 price_display = f"{curr or ''} {price_num:,.2f}" if curr else f"{price_num:,.2f}"
             else:
@@ -463,7 +513,7 @@ def extract_catalog_items_from_chunk(
             "url": direct_url,
             "image_url": image_url,
             # True for listings from schema data, catalog CSVs or "Item Name:" blocks; False for prose with a price in it.
-            "structured": bool(name_match) or any(m in b for m in ("PRODUCT SPECIFICATION", "PROPERTY LISTING", "STRUCTURED")),
+            "structured": is_structured,
             "bathrooms": bathrooms,
             "size": size,
             "availability": availability,
