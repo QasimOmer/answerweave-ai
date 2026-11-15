@@ -1,5 +1,7 @@
 # Hi Bot - Multi-Website Grounded Chatbot & Lead Capture SaaS
 
+[![Tests](https://github.com/QasimOmer/answerweave-ai/actions/workflows/tests.yml/badge.svg)](https://github.com/QasimOmer/answerweave-ai/actions/workflows/tests.yml)
+
 **Hi Bot** is a complete, production-ready SaaS platform powered by **Grounded RAG**, **Zero Hallucination Guardrails**, **AI Call-Prep Briefs**, and **Multi-Website Tenancy**.
 
 ---
@@ -35,6 +37,29 @@
    - **Google Gemini (Free tier):** Gemini 2.5 / 1.5 Flash.
    - **OpenAI:** GPT-4o-mini.
    - **Zero-API-Key Local Engine (Active out-of-the-box):** 100% free, runs offline without any API key.
+
+---
+
+## 🧪 Testing
+
+78 automated tests in three layers, run by GitHub Actions on every push and daily against production:
+
+| Layer | Tool | What it covers |
+|---|---|---|
+| Unit (`tests/unit`) | PyTest | SSRF guard (private IPs, cloud metadata, DNS errors), PBKDF2 password hashing and legacy-hash upgrade, the no-invented-links filter, prompt-injection deflection, human hand-off detection, same-site crawl rules |
+| API (`tests/api`) | PyTest + FastAPI TestClient | Sign-up/sign-in, token tampering, sessions revoked on password change, no account enumeration, every private route rejects anonymous calls, widget caching and chat input limits |
+| Browser (`tests/e2e`) | Playwright | Landing page, sign-in errors, dashboard access control, no horizontal scroll at phone/tablet/desktop widths, no JavaScript errors on the widget demo |
+
+Unit and API tests run offline against a throwaway SQLite database (the suite refuses to start if it can see any other database) and finish in about 4 seconds.
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+pytest                                   # unit + API
+python -m playwright install chromium
+pytest tests/e2e --base-url https://answerweave-ai.vercel.app   # browser tests
+```
+
+Several tests are regression tests for real production bugs, e.g. Vercel raising `OSError: [Errno 16]` instead of a DNS error, and an off-site sitemap entry breaking a crawl.
 
 ---
 
